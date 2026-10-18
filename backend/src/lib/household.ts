@@ -9,12 +9,20 @@ import { users, households, householdMembers } from "../db/schema";
 // "Family" scope is derived from membership — NOT from transactions.household_id,
 // which is stamped once at creation time and therefore misses rows created
 // before the member joined (or while their household toggle was off).
+//
+// Only members who still share (users.household_enabled) are included: that
+// toggle is each member's opt-out from the family view, and turning it off must
+// hide their data from everyone else's totals.
 export function familyMemberIds(householdId: number) {
   return db
     .select({ id: users.id })
     .from(users)
     .innerJoin(householdMembers, eq(householdMembers.userId, users.id))
-    .where(and(eq(householdMembers.householdId, householdId), eq(users.householdId, householdId)));
+    .where(and(
+      eq(householdMembers.householdId, householdId),
+      eq(users.householdId, householdId),
+      eq(users.householdEnabled, true),
+    ));
 }
 
 // households.created_by has no ON DELETE action, so a user who founded a
