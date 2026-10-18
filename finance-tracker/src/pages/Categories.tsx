@@ -34,6 +34,14 @@ import { reorderCategories as reorderCategoriesApi, shareCategories } from '../a
 import { useAuth } from '../context/AuthContext'
 import type { Category } from '../types'
 
+const selectBtnStyle = (active: boolean): React.CSSProperties => ({
+  padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+  fontFamily: "'Manrope', sans-serif",
+  background: active ? 'rgba(139,92,246,0.18)' : 'var(--aurora-glass)',
+  color: active ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+  border: active ? '1px solid rgba(139,92,246,0.45)' : '1px solid var(--aurora-gline)',
+})
+
 const PRESET_COLORS = [
   '#ef4444', '#f97316', '#f59e0b', '#22c55e',
   '#10b981', '#06b6d4', '#3b82f6', '#A78BFA',
@@ -58,9 +66,10 @@ interface CardProps {
   isSwipeOpen?: boolean
   onSwipeOpen?: () => void
   severity?: 'red' | 'warning' | null
+  selected?: boolean
 }
 
-function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, severity }: CardProps) {
+function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, severity, selected }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
@@ -80,6 +89,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.4 : 1,
+        outline: selected ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1,
         boxShadow: isDragging ? '0 0 0 2px rgba(139,92,246,0.3)' : 'none',
       }}
     >
@@ -129,7 +139,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
 }
 
 function SortableListCard(props: CardProps) {
-  const { cat, status, formatAmount, onEdit, onDelete, severity } = props
+  const { cat, status, formatAmount, onEdit, onDelete, severity, selected } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
@@ -150,6 +160,7 @@ function SortableListCard(props: CardProps) {
         transition,
         display: 'flex', alignItems: 'center', gap: 12,
         opacity: isDragging ? 0.4 : 1,
+        outline: selected ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1,
         boxShadow: isDragging ? '0 0 0 2px rgba(139,92,246,0.3)' : undefined,
       }}
     >
@@ -189,7 +200,7 @@ function SortableListCard(props: CardProps) {
   )
 }
 
-function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity }: CardProps) {
+function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
@@ -207,6 +218,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
       style={{
         transform: outerTransform, transition,
         opacity: isDragging ? 0.85 : 1,
+        outline: selected ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1, borderRadius: 18,
         boxShadow: isDragging ? '0 0 0 4px rgba(124,58,237,0.3), 0 8px 24px rgba(124,58,237,0.2)' : undefined,
       }}
     >
@@ -369,6 +381,68 @@ export function CategoriesPage() {
   const [limitReserve, setLimitReserve] = useState('')
   const [sharedFlag, setSharedFlag] = useState(false)
 
+  // Bulk edit: selection mode turns card taps into toggling the selection
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkLimit, setBulkLimit] = useState('')
+  const [bulkColor, setBulkColor] = useState<string | null>(null)
+  const [bulkShared, setBulkShared] = useState<'keep' | 'share' | 'unshare'>('keep')
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+
+  function cardClick(cat: Category) {
+    if (!selectMode) { openEdit(cat); return }
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(cat.id!)) next.delete(cat.id!); else next.add(cat.id!)
+      return next
+    })
+  }
+
+  function exitSelectMode() { setSelectMode(false); setSelectedIds(new Set()) }
+
+  function openBulk() {
+    setBulkLimit(''); setBulkColor(null); setBulkShared('keep')
+    setBulkOpen(true)
+  }
+
+  async function applyBulk() {
+    const ids = [...selectedIds]
+    const limit = bulkLimit ? parseFloat(bulkLimit.replace(',', '.')) : NaN
+    setBulkBusy(true)
+    let failed = 0
+    for (const id of ids) {
+      const changes: Partial<Category> = {}
+      if (Number.isFinite(limit) && limit > 0) { changes.budgetLimit = limit; changes.autoLimit = false }
+      if (bulkColor) changes.color = bulkColor
+      if (Object.keys(changes).length > 0) {
+        try { await updateCategory(id, changes) } catch { failed++ }
+      }
+    }
+    if (bulkShared !== 'keep') {
+      try { await shareCategories(ids.filter(id => categories.find(c => c.id === id)?.type === 'expense'), bulkShared === 'share') } catch { failed++ }
+    }
+    await reload()
+    setBulkBusy(false)
+    setBulkOpen(false)
+    if (failed > 0) alert(t.expenses.categories.bulkPartialError.replace('{n}', String(failed)))
+    exitSelectMode()
+  }
+
+  async function deleteSelected() {
+    setBulkBusy(true)
+    let blocked = 0
+    for (const id of selectedIds) {
+      try { await deleteCategory(id) } catch { blocked++ }
+    }
+    await reload()
+    setBulkBusy(false)
+    setBulkDeleteOpen(false)
+    if (blocked > 0) alert(t.expenses.categories.bulkDeleteBlocked.replace('{n}', String(blocked)))
+    exitSelectMode()
+  }
+
   function openAdd() {
     setEditing(null); setName(''); setColor(PRESET_COLORS[6]); setIcon('🛒'); setBudgetLimit(''); setCatType('expense'); setAutoLimit(false); setLimitReserve(''); setSharedFlag(false)
     setSheetOpen(true)
@@ -518,6 +592,13 @@ export function CategoriesPage() {
             </GlassCard>
           ) : (
             <>
+              {/* Select toggle — mobile */}
+              <div className="lg:hidden" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                <button onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))} style={selectBtnStyle(selectMode)}>
+                  {selectMode ? t.expenses.categories.selectDone : t.expenses.categories.selectMode}
+                </button>
+              </div>
+
               {/* View toggle — desktop only */}
               <div className="hidden lg:flex" style={{alignItems:'center',gap:10, marginTop: 8}}>
                 <div style={{display:'inline-flex',background:'var(--aurora-glass)',border:'1px solid var(--aurora-gline)',borderRadius:14,padding:3,gap:2}}>
@@ -538,6 +619,9 @@ export function CategoriesPage() {
                     </button>
                   ))}
                 </div>
+                <button onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))} style={selectBtnStyle(selectMode)}>
+                  {selectMode ? t.expenses.categories.selectDone : t.expenses.categories.selectMode}
+                </button>
               </div>
 
               {/* Desktop — dnd-kit sortable */}
@@ -561,9 +645,9 @@ export function CategoriesPage() {
                         const status = budgetStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
                         if (view === 'list') {
-                          return <SortableListCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={openEdit} onDelete={id => setDeleteId(id)} severity={severity} />
+                          return <SortableListCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
                         }
-                        return <SortableGridCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={openEdit} onDelete={id => setDeleteId(id)} severity={severity} />
+                        return <SortableGridCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
                       })}
                     </div>
                   </SortableContext>
@@ -585,7 +669,7 @@ export function CategoriesPage() {
                       {sortedCategories.map(cat => {
                         const status = budgetStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
-                        return <SortableMobileCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={openEdit} onDelete={(id) => setDeleteId(id)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
+                        return <SortableMobileCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={(id) => setDeleteId(id)} selected={selectedIds.has(cat.id!)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
                       })}
                     </div>
                   </SortableContext>
@@ -600,7 +684,7 @@ export function CategoriesPage() {
       </div>
 
       {/* FAB — mobile only */}
-      {!sheetOpen && deleteId === null && (
+      {!sheetOpen && deleteId === null && !selectMode && (
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
@@ -609,6 +693,80 @@ export function CategoriesPage() {
           <Plus size={26} />
         </button>
       )}
+
+      {/* Bulk action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div style={{ position: 'fixed', left: 16, right: 16, bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))', zIndex: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 18, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', boxShadow: '0 10px 30px rgba(0,0,0,0.35)', maxWidth: 560, margin: '0 auto' }}>
+          <span style={{ flex: 1, fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)' }}>
+            {t.expenses.categories.selectedCount.replace('{n}', String(selectedIds.size))}
+          </span>
+          <button onClick={openBulk} style={{ padding: '8px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: 'white', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', fontFamily: "'Outfit', sans-serif" }}>
+            {t.expenses.categories.bulkEdit}
+          </button>
+          <button onClick={() => setBulkDeleteOpen(true)} aria-label={t.expenses.categories.bulkDelete} style={{ width: 36, height: 36, borderRadius: 12, border: '1px solid rgba(251,113,133,0.3)', background: 'rgba(251,113,133,0.1)', color: 'var(--aurora-rose)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Trash2 size={15} />
+          </button>
+        </div>
+      )}
+
+      <CompactModal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
+        title={t.expenses.categories.bulkEditTitle.replace('{n}', String(selectedIds.size))}
+        accent="#8B5CF6" accent2="#EC4899"
+        onSubmit={applyBulk}
+        submitDisabled={bulkBusy || (!bulkLimit && !bulkColor && bulkShared === 'keep')}
+      >
+        <p style={{ fontSize: 12, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", margin: 0, lineHeight: 1.4 }}>{t.expenses.categories.bulkHint}</p>
+        <input
+          type="text"
+          inputMode="decimal"
+          placeholder={`${t.expenses.categories.limitLabel} · ${t.expenses.categories.bulkLimitHint}`}
+          value={bulkLimit}
+          onChange={e => {
+            const raw = e.target.value.replace(/[^0-9,]/g, '')
+            if ((raw.match(/,/g) || []).length > 1) return
+            setBulkLimit(raw)
+          }}
+          style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
+          {PRESET_COLORS.map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setBulkColor(prev => (prev === c ? null : c))}
+              style={{
+                width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', flexShrink: 0,
+                boxShadow: bulkColor === c ? `0 0 0 2px var(--aurora-panel), 0 0 0 4px ${c}` : 'none',
+              }}
+            />
+          ))}
+        </div>
+        {sharingOn && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['keep', 'share', 'unshare'] as const).map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setBulkShared(v)}
+                style={{ ...selectBtnStyle(bulkShared === v), flex: 1, padding: '9px 6px' }}
+              >
+                {v === 'keep' ? t.expenses.categories.bulkSharedKeep : v === 'share' ? `👥 ${t.expenses.categories.bulkShare}` : t.expenses.categories.bulkUnshare}
+              </button>
+            ))}
+          </div>
+        )}
+      </CompactModal>
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        message={t.expenses.categories.bulkDeleteConfirm.replace('{n}', String(selectedIds.size))}
+        onConfirm={deleteSelected}
+        onCancel={() => setBulkDeleteOpen(false)}
+      />
 
       {/* Edit/Add sheet */}
       <CompactModal
