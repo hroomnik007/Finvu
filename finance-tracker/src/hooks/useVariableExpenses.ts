@@ -1,9 +1,10 @@
 import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from '../api/transactions'
+import { createTransaction, updateTransaction, deleteTransaction } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
 import type { VariableExpense, ApiTransaction } from '../types'
 import type { DataScope } from './useIncomes'
+import { getAllTransactions } from '../api/allTransactions'
 
 function toVariableExpense(t: ApiTransaction): VariableExpense {
   return {
@@ -33,7 +34,7 @@ export async function fetchVariableExpenses(month?: number, year?: number, scope
     const monthStr = month !== undefined && year !== undefined
       ? `${year}-${String(month).padStart(2, '0')}`
       : undefined
-    const { data } = await getTransactions({ type: 'expense', isFixed: false, month: monthStr, limit: 200, scope })
+    const data = await getAllTransactions({ type: 'expense', isFixed: false, month: monthStr, scope })
     return data.map(toVariableExpense)
   } catch {
     return []

@@ -13,7 +13,7 @@ import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
 import type { Translations } from '../i18n'
 import { todayISO } from '../utils/format'
-import { getTransactions } from '../api/transactions'
+import { getAllTransactions } from '../api/allTransactions'
 import type { Income } from '../types'
 import { SwipeableRow } from '../components/SwipeableRow'
 
@@ -117,9 +117,9 @@ export function IncomePage({ month, year }: IncomePageProps) {
     const months = Array.from({ length: 12 }, (_, i) =>
       `${year}-${String(i + 1).padStart(2, '0')}`
     )
-    Promise.all(months.map(m => getTransactions({ type: 'income', month: m, limit: 200 })))
+    Promise.all(months.map(m => getAllTransactions({ type: 'income', month: m })))
       .then(results => {
-        const total = results.flatMap(r => r.data).reduce((s, tx) => s + tx.amount, 0)
+        const total = results.flat().reduce((s, tx) => s + tx.amount, 0)
         setYearlyIncome(total)
       })
       .catch(() => {})

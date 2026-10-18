@@ -13,8 +13,8 @@ import type { PinDevice } from '../api/auth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { PasskeySection } from '../components/PasskeySection'
 import { parseUserAgent } from '../utils/parseUserAgent'
+import { getAllTransactions } from '../api/allTransactions'
 import { getTransactions, deleteTransaction } from '../api/transactions'
-import type { TransactionParams } from '../api/transactions'
 import { getCategories } from '../api/categories'
 import { createHousehold, joinHousehold, toggleHousehold } from '../api/households'
 import {
@@ -181,17 +181,7 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-async function fetchAllTransactions(params: Omit<TransactionParams, 'limit' | 'offset'>): Promise<ApiTransaction[]> {
-  const all: ApiTransaction[] = []
-  let offset = 0
-  while (true) {
-    const { data } = await getTransactions({ ...params, limit: 200, offset })
-    all.push(...data)
-    if (data.length < 200) break
-    offset += 200
-  }
-  return all
-}
+const fetchAllTransactions = getAllTransactions
 
 // Shared by CSV/PDF/XLSX export so all three formats agree on what "the
 // selected period" means.

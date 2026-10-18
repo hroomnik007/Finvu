@@ -1,10 +1,11 @@
 import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
+import { createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
 import type { FixedExpense, ApiTransaction } from '../types'
 import type { DataScope } from './useIncomes'
 import { todayISO } from '../utils/format'
+import { getAllTransactions } from '../api/allTransactions'
 
 export function parseDescription(desc: string | null, fallbackDay: number): { label: string; note: string; dayOfMonth: number } {
   if (!desc) return { label: '', note: '', dayOfMonth: fallbackDay }
@@ -88,7 +89,7 @@ export async function fetchFixedExpenses(
     if (!monthStr) {
       // "Now": each series once, at its price for the current month, with its
       // price history; ended series only when asked for (the management page).
-      const { data } = await getTransactions({ type: 'expense', isFixed: true, limit: 200, scope })
+      const data = await getAllTransactions({ type: 'expense', isFixed: true, scope })
       const now = new Date()
       const nowYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
       const bySeries = new Map<string, ApiTransaction[]>()
@@ -113,11 +114,7 @@ export async function fetchFixedExpenses(
     // each distinct bill (keyed by its description) counts once for the viewed
     // month using its most recent occurrence at or before that month's end,
     // matching the dedup in the getSummaryCards backend endpoint.
-    // TODO: paginate if a user accumulates >200 fixed expense records.
-    const { data } = await getTransactions({ type: 'expense', isFixed: true, limit: 200, scope })
-    if (data.length === 200) {
-      console.warn('useFixedExpenses: fixed expense limit reached, some records may be missing')
-    }
+    const data = await getAllTransactions({ type: 'expense', isFixed: true, scope })
     const latestByIdentity = new Map<string, ApiTransaction>()
     for (const t of data) {
       if (t.date.substring(0, 7) > monthStr) continue
