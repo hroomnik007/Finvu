@@ -27,6 +27,8 @@ export interface FixedExpense {
   dayOfMonth: number
   categoryId?: string | null
   note: string
+  /** User who owns the row — lets the family view tell members' bills apart. */
+  ownerId?: string
   // Display data of the row's category — lets the family view group by name,
   // since categories are per user and another member's ids don't match ours.
   categoryName?: string | null

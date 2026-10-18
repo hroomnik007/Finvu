@@ -7,6 +7,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { generateInviteCode } from "../utils/inviteCode";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
+import { fixedDayOfMonth, isFixedDue } from "../lib/recurring";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -268,45 +269,19 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
   const now = new Date();
   const yearRaw = parseInt((req.query["year"] as string) ?? "", 10);
   const monthRaw = parseInt((req.query["month"] as string) ?? "", 10);
-  const year = isNaN(yearRaw) ? now.getFullYear() : yearRaw;
-  const monthNum = isNaN(monthRaw) ? now.getMonth() + 1 : monthRaw;
+  const year = yearRaw >= 2000 && yearRaw <= 2100 ? yearRaw : now.getFullYear();
+  const monthNum = monthRaw >= 1 && monthRaw <= 12 ? monthRaw : now.getMonth() + 1;
   const month = String(monthNum).padStart(2, "0");
   const start = `${year}-${month}-01`;
   const nextMonth = monthNum === 12 ? `${year + 1}-01-01` : `${year}-${String(monthNum + 1).padStart(2, "0")}-01`;
 
-  const rows = await db
+  const members = familyMemberIds(householdId);
+
+  // One-off rows count in the month they are dated.
+  const oneOff = await db
     .select({
-      createdBy: transactions.createdBy,
+      userId: transactions.userId,
       type: transactions.type,
-      total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
-      creatorName: users.name,
-    })
-    .from(transactions)
-    .leftJoin(users, eq(transactions.createdBy, users.id))
-    .where(
-      and(
-        inArray(transactions.userId, familyMemberIds(householdId)),
-        sql`${transactions.date} >= ${start}`,
-        sql`${transactions.date} < ${nextMonth}`
-      )
-    )
-    .groupBy(transactions.createdBy, transactions.type, users.name);
-
-  const memberMap = new Map<string, { user_id: string; name: string; expenses: number; income: number; category_breakdown: Array<{ category_id: string | null; name: string; color: string | null; amount: number }> }>();
-
-  for (const row of rows) {
-    const uid = row.createdBy ?? "unknown";
-    if (!memberMap.has(uid)) {
-      memberMap.set(uid, { user_id: uid, name: row.creatorName ?? "Unknown", expenses: 0, income: 0, category_breakdown: [] });
-    }
-    const entry = memberMap.get(uid)!;
-    if (row.type === "expense") entry.expenses += parseFloat(row.total);
-    else entry.income += parseFloat(row.total);
-  }
-
-  const categoryRows = await db
-    .select({
-      createdBy: transactions.createdBy,
       categoryId: transactions.categoryId,
       categoryName: categories.name,
       categoryColor: categories.color,
@@ -314,26 +289,76 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
     })
     .from(transactions)
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
-    .where(
-      and(
-        inArray(transactions.userId, familyMemberIds(householdId)),
-        eq(transactions.type, "expense"),
-        sql`${transactions.date} >= ${start}`,
-        sql`${transactions.date} < ${nextMonth}`
-      )
-    )
-    .groupBy(transactions.createdBy, transactions.categoryId, categories.name, categories.color);
+    .where(and(
+      inArray(transactions.userId, members),
+      eq(transactions.isFixed, false),
+      sql`${transactions.date} >= ${start}`,
+      sql`${transactions.date} < ${nextMonth}`,
+    ))
+    .groupBy(transactions.userId, transactions.type, transactions.categoryId, categories.name, categories.color);
 
-  for (const row of categoryRows) {
-    const uid = row.createdBy ?? "unknown";
-    const entry = memberMap.get(uid);
-    if (!entry) continue;
-    entry.category_breakdown.push({
-      category_id: row.categoryId,
-      name: row.categoryName ?? "Ostatné",
-      color: row.categoryColor,
-      amount: parseFloat(row.total),
-    });
+  // Recurring rows are entered once and count in every month from their own
+  // date on (same rules as the dashboard cards): each series — member + type +
+  // description — via its latest occurrence before the end of this month,
+  // recurring expenses only once their due day has arrived.
+  const fixedRows = await db
+    .select({
+      userId: transactions.userId,
+      type: transactions.type,
+      description: transactions.description,
+      amount: transactions.amount,
+      date: transactions.date,
+      categoryId: transactions.categoryId,
+      categoryName: categories.name,
+      categoryColor: categories.color,
+    })
+    .from(transactions)
+    .leftJoin(categories, eq(transactions.categoryId, categories.id))
+    .where(and(
+      inArray(transactions.userId, members),
+      eq(transactions.isFixed, true),
+      sql`${transactions.date} < ${nextMonth}`,
+    ))
+    .orderBy(transactions.date);
+
+  const latest = new Map<string, (typeof fixedRows)[number]>();
+  for (const row of fixedRows) latest.set(`${row.userId}|${row.type}|${row.description ?? ""}`, row);
+
+  type Member = { user_id: string; name: string; expenses: number; income: number; category_breakdown: Array<{ category_id: string | null; name: string; color: string | null; amount: number }> };
+  const memberMap = new Map<string, Member>();
+  const memberOf = (uid: string): Member => {
+    let m = memberMap.get(uid);
+    if (!m) { m = { user_id: uid, name: "Unknown", expenses: 0, income: 0, category_breakdown: [] }; memberMap.set(uid, m); }
+    return m;
+  };
+  const addExpense = (m: Member, categoryId: string | null, name: string | null, color: string | null, amount: number) => {
+    m.expenses += amount;
+    const existing = m.category_breakdown.find((c) => c.category_id === categoryId);
+    if (existing) existing.amount += amount;
+    else m.category_breakdown.push({ category_id: categoryId, name: name ?? "Ostatné", color, amount });
+  };
+
+  for (const r of oneOff) {
+    const m = memberOf(r.userId);
+    const amount = parseFloat(r.total);
+    if (r.type === "expense") addExpense(m, r.categoryId, r.categoryName, r.categoryColor, amount);
+    else m.income += amount;
+  }
+  for (const r of latest.values()) {
+    const amount = parseFloat(r.amount);
+    const m = memberOf(r.userId);
+    if (r.type === "income") m.income += amount;
+    else if (isFixedDue(fixedDayOfMonth(r.description, r.date), year, monthNum, now)) {
+      addExpense(m, r.categoryId, r.categoryName, r.categoryColor, amount);
+    }
+  }
+
+  if (memberMap.size > 0) {
+    const names = await db
+      .select({ id: users.id, name: users.name })
+      .from(users)
+      .where(inArray(users.id, [...memberMap.keys()]));
+    for (const n of names) memberOf(n.id).name = n.name;
   }
 
   const perMember = Array.from(memberMap.values());

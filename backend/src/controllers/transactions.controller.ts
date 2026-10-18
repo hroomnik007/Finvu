@@ -7,6 +7,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
+import { fixedDayOfMonth, isFixedDue } from "../lib/recurring";
 
 // YYYY-MM-DD that is also a real calendar date (the bare regex let 2026-02-30
 // through to Postgres, which rejects it with a 500).
@@ -351,28 +352,6 @@ export async function getSummary(req: AuthRequest, res: Response): Promise<void>
     balance: totalIncome - totalExpenses,
     byCategory,
   });
-}
-
-// Day of month a fixed expense falls due: the day stored in its JSON
-// description ({ d }), otherwise the day of the row's own date.
-function fixedDayOfMonth(description: string | null, date: string): number {
-  let day = date ? Number(date.slice(8, 10)) : 1;
-  try {
-    const obj = JSON.parse(description ?? "");
-    if (obj && typeof obj.d === "number") day = obj.d;
-  } catch { /* plain text description */ }
-  return day;
-}
-
-// A fixed expense only becomes "spent" once its due day in the given month has
-// arrived — mirrors the frontend's isFixedExpenseDue (useFixedExpenses.ts).
-// Past months always count in full, future months not at all.
-function isFixedDue(dayOfMonth: number, year: number, month: number, today: Date): boolean {
-  const curMonth = today.getMonth() + 1;
-  const curYear = today.getFullYear();
-  if (year !== curYear) return year < curYear;
-  if (month !== curMonth) return month < curMonth;
-  return dayOfMonth <= today.getDate();
 }
 
 // Cumulative balance from startDate through the end of (year, month), built

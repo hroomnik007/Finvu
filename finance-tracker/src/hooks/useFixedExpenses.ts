@@ -46,6 +46,7 @@ function toFixedExpense(t: ApiTransaction): FixedExpense {
     dayOfMonth: parsed.dayOfMonth,
     categoryId: t.categoryId ?? null,
     note: parsed.note,
+    ownerId: t.userId,
     categoryName: t.categoryName,
     categoryColor: t.categoryColor,
     categoryIcon: t.categoryIcon,
