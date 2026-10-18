@@ -19,7 +19,7 @@ export function DailyBudgetCard({ budget, pendingFixed }: Props) {
         .replace('{days}', String(budget.daysLeft))
         .replace('{fixed}', formatAmount(pendingFixed))
   return (
-    <GlassCard radius={18} style={{ padding: '12px 16px' }}>
+    <GlassCard radius={18} style={{ padding: '12px 16px', flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700 }}>
           {t.dashboard.dailyBudgetTitle}

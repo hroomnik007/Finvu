@@ -392,16 +392,20 @@ const upcomingFixed = useMemo(() => {
     ? dailyBudget({ income: heroIncome, spent: heroExpenses, pendingFixed, day: now.getDate(), daysInMonth })
     : null
   const dailyBudgetCard = (
-    <>
-      {budgetToday && <DailyBudgetCard budget={budgetToday} pendingFixed={pendingFixed} />}
+    <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
+      {budgetToday && (
+        <div style={{ flex: '1 1 260px', minWidth: 0, display: 'flex' }}>
+          <DailyBudgetCard budget={budgetToday} pendingFixed={pendingFixed} />
+        </div>
+      )}
       <button
         type="button"
         onClick={() => onNavigate('annual')}
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, padding: '0 20px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, boxShadow: '0 8px 22px rgba(139,92,246,.35)' }}
+        style={{ flex: budgetToday ? '0 0 auto' : '1 1 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, padding: '0 20px', borderRadius: 18, border: 'none', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, boxShadow: '0 8px 22px rgba(139,92,246,.35)', whiteSpace: 'nowrap' }}
       >
         <CalendarRange size={16} /> {t.annual.link}
       </button>
-    </>
+    </div>
   )
 
   const pieChartCard = (
