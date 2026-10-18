@@ -23,6 +23,7 @@ import { updateUserSettings } from '../api/auth'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
 import { useHousehold } from '../hooks/useHousehold'
+import { MemberAvatar } from '../components/MemberAvatar'
 import { useCountUp } from '../hooks/useCountUp'
 import type { Page } from '../App'
 import type { ApiSummary } from '../types'
@@ -117,10 +118,7 @@ export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps)
   // Family view mixes every member's bills: tag them with the owner and don't
   // offer 'show all' (the Výdavky module only lists the user's own).
   const familyView = householdEnabled && dashView === 'family'
-  const ownerName = (ownerId?: string) => {
-    const full = members.find(m => m.id === ownerId)?.name
-    return full ? full.trim().split(/\s+/)[0] : null
-  }
+  const ownerOf = (ownerId?: string) => members.find(m => m.id === ownerId)
   const greeting = getGreeting(displayName, t)
 
   const incomes = useMemo(() =>
@@ -431,8 +429,11 @@ const upcomingFixed = useMemo(() => {
                     {/* One non-wrapping row: the owner tag (family view) must never push the badge text or the card onto extra lines */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                       <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.text}</span>
-                      {familyView && ownerName(fe.ownerId) && (
-                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--aurora-violet)', background: 'rgba(139,92,246,0.15)', padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{ownerName(fe.ownerId)}</span>
+                      {familyView && ownerOf(fe.ownerId) && (
+                        // Avatar instead of a name tag: always fits, the name is in the tooltip
+                        <span title={ownerOf(fe.ownerId)!.name} aria-label={ownerOf(fe.ownerId)!.name} style={{ display: 'flex', flexShrink: 0 }}>
+                          <MemberAvatar userId={ownerOf(fe.ownerId)!.id} userName={ownerOf(fe.ownerId)!.name} size={20} avatarUrl={ownerOf(fe.ownerId)!.avatar_url} />
+                        </span>
                       )}
                     </div>
                   </div>
