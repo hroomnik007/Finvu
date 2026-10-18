@@ -69,6 +69,12 @@ export async function bulkDeleteTransactions(ids: string[]): Promise<{ deleted: 
   return data
 }
 
+/** Indexes of the rows that already exist (same date, type and amount). */
+export async function findDuplicateRows(items: { date: string; type: 'income' | 'expense'; amount: number }[]): Promise<number[]> {
+  const { data } = await apiClient.post('/api/transactions/duplicates', { items })
+  return (data as { duplicates: number[] }).duplicates
+}
+
 export async function updateTransaction(
   id: string,
   payload: Partial<TransactionPayload>

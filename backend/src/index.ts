@@ -10,6 +10,7 @@ import { startWeeklyReportJob, startMonthlyReportJob } from "./jobs/weeklyReport
 import authRouter from "./routes/auth";
 import transactionsRouter from "./routes/transactions";
 import categoriesRouter from "./routes/categories";
+import categoryRulesRouter from "./routes/categoryRules";
 import adminRouter from "./routes/admin";
 import sharedReportsRouter from "./routes/sharedReports";
 import householdsRouter from "./routes/households";
@@ -72,6 +73,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/transactions", transactionsRouter);
 app.use("/api/categories", categoriesRouter);
+app.use("/api/category-rules", categoryRulesRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/reports", sharedReportsRouter);
 app.use("/api/households", authenticateToken, householdsRouter);

@@ -1,6 +1,10 @@
 import { useState, useRef } from 'react'
-import { X, Upload, Check, Landmark, FileText } from 'lucide-react'
-import { createTransactionsBulk } from '../api/transactions'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { X, Upload, Check, Landmark, FileText, Trash2 } from 'lucide-react'
+import { createTransactionsBulk, findDuplicateRows } from '../api/transactions'
+import { getCategoryRules, saveCategoryRule, deleteCategoryRule } from '../api/categoryRules'
+import { useCategories } from '../hooks/useCategories'
+import { matchRule, suggestKeyword } from '../utils/importRules'
 import { useTranslation } from '../i18n'
 import { SettingsDropdown } from './SettingsDropdown'
 import type { ParseResult } from 'papaparse'
@@ -15,6 +19,13 @@ interface ImportRow {
   amount: number
   type: 'income' | 'expense'
   selected: boolean
+  categoryId?: string
+  /** Category came from a saved rule. */
+  auto?: boolean
+  /** Same date, type and amount already exist. */
+  duplicate?: boolean
+  /** Save a rule for this row's keyword on import. */
+  remember?: boolean
 }
 
 interface CsvImportModalProps {
@@ -409,8 +420,26 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
   const [rawCsvRows, setRawCsvRows] = useState<CsvRow[]>([])
   const [customMapping, setCustomMapping] = useState({ date: '', description: '', amount: '' })
   const fileRef = useRef<HTMLInputElement>(null)
+  const qc = useQueryClient()
+  const { categories } = useCategories()
+  const { data: rules = [] } = useQuery({ queryKey: ['categoryRules'], queryFn: getCategoryRules, enabled: open })
 
   if (!open) return null
+
+  // Fills categories from saved rules and flags rows that already exist
+  async function commitRows(list: ImportRow[]) {
+    const validFor = (categoryId: string, type: ImportRow['type']) => categories.some(c => c.id === categoryId && c.type === type)
+    const withRules = list.map(r => {
+      const hit = matchRule(r.description, rules)
+      return hit && validFor(hit.categoryId, r.type) ? { ...r, categoryId: hit.categoryId, auto: true } : r
+    })
+    let duplicates: number[] = []
+    try {
+      const found = await findDuplicateRows(withRules.map(r => ({ date: r.date, type: r.type, amount: r.amount })))
+      if (Array.isArray(found)) duplicates = found
+    } catch { /* the check is only a hint */ }
+    setRows(withRules.map((r, i) => (duplicates.includes(i) ? { ...r, duplicate: true, selected: false } : r)))
+  }
 
   function applyFilter(parsed: ImportRow[]): ImportRow[] {
     return parsed.map(r => ({ ...r, selected: filterType ? r.type === filterType : true }))
@@ -426,7 +455,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
       } else {
         setWarning(null)
       }
-      setRows(applyFilter(parsed))
+      void commitRows(applyFilter(parsed))
     }
   }
 
@@ -533,7 +562,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
       } else {
         setWarning(null)
       }
-      setRows(applyFilter(limited))
+      void commitRows(applyFilter(limited))
       setCsvHeaders([])
     }
   }
@@ -543,7 +572,13 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
     if (selected.length === 0) return
     setImporting(true)
     try {
-      await createTransactionsBulk(selected.map(row => ({ type: row.type, amount: row.amount, description: row.description, date: row.date })))
+      await createTransactionsBulk(selected.map(row => ({ type: row.type, amount: row.amount, description: row.description, date: row.date, categoryId: row.categoryId ?? null })))
+      // Rules the user ticked are remembered for the next import
+      const toRemember = selected.filter(r => r.remember && r.categoryId && suggestKeyword(r.description))
+      if (toRemember.length > 0) {
+        await Promise.allSettled(toRemember.map(r => saveCategoryRule(suggestKeyword(r.description), r.categoryId!)))
+        await qc.invalidateQueries({ queryKey: ['categoryRules'] })
+      }
       setImportedCount(selected.length)
       setRows([])
     } catch {
@@ -641,8 +676,11 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                 <p style={{ fontSize: 12, color: '#FBBF24', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '8px 12px', marginBottom: 12 }}>{warning}</p>
               )}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>{rows.length} {t.csv.records} · <span style={{ color: 'var(--violet)' }}>{selectedCount}</span> {t.csv.selectedCount}</p>
-                <button onClick={() => setRows(r => r.map(x => ({ ...x, selected: !allSelected })))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--violet)', fontSize: 13, fontFamily: 'inherit' }}>
+                <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>{rows.length} {t.csv.records} · <span style={{ color: 'var(--violet)' }}>{selectedCount}</span> {t.csv.selectedCount}
+                  {rows.some(r => r.auto) && ` · ${t.csv.autoCount.replace('{n}', String(rows.filter(r => r.auto).length))}`}
+                  {rows.some(r => r.duplicate) && <span style={{ color: '#FBBF24' }}> · {t.csv.duplicateCount.replace('{n}', String(rows.filter(r => r.duplicate).length))}</span>}
+                </p>
+                <button onClick={() => setRows(r => r.map(x => ({ ...x, selected: !allSelected })))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--violet)', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 12 }}>
                   {allSelected ? t.csv.deselectAll : t.csv.selectAll}
                 </button>
               </div>
@@ -657,6 +695,27 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description || '—'}</p>
                       <p style={{ fontSize: 11, color: 'var(--text3)', margin: '1px 0 0' }}>{row.date}</p>
+                      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
+                        <select
+                          value={row.categoryId ?? ''}
+                          onChange={e => {
+                            const categoryId = e.target.value || undefined
+                            setRows(r => r.map((x, j) => (j === i ? { ...x, categoryId, auto: false, remember: !!categoryId && !!suggestKeyword(x.description) } : x)))
+                          }}
+                          style={{ maxWidth: 180, fontSize: 12, padding: '4px 8px', borderRadius: 8, background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)', fontFamily: 'inherit' }}
+                        >
+                          <option value="">{t.csv.noCategory}</option>
+                          {categories.filter(c => c.type === row.type && c.id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        {row.auto && <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--violet)' }}>{t.csv.byRule}</span>}
+                        {row.duplicate && <span style={{ fontSize: 10.5, fontWeight: 700, color: '#FBBF24' }}>{t.csv.possibleDuplicate}</span>}
+                        {row.categoryId && !row.auto && suggestKeyword(row.description) && (
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text3)', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={!!row.remember} onChange={e => setRows(r => r.map((x, j) => (j === i ? { ...x, remember: e.target.checked } : x)))} />
+                            {t.csv.rememberRule.replace('{keyword}', suggestKeyword(row.description))}
+                          </label>
+                        )}
+                      </div>
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: row.type === 'income' ? '#34D399' : '#F87171', flexShrink: 0 }}>
                       {row.type === 'income' ? '+' : '-'}{row.amount.toFixed(2)} €
@@ -668,6 +727,29 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
             </div>
           )}
         </div>
+
+        {rules.length > 0 && (
+          <details style={{ padding: '0 24px 14px', flexShrink: 0 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--text3)' }}>{t.csv.rulesTitle.replace('{n}', String(rules.length))}</summary>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8, maxHeight: 140, overflowY: 'auto' }}>
+              {rules.map(rule => (
+                <div key={rule.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text2)' }}>
+                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    „{rule.keyword}“ → {categories.find(c => c.id === rule.categoryId)?.name ?? '—'}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={t.common.delete}
+                    onClick={async () => { await deleteCategoryRule(rule.id); await qc.invalidateQueries({ queryKey: ['categoryRules'] }) }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', display: 'flex' }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         {/* Footer */}
         {rows.length > 0 && importedCount === null && (
