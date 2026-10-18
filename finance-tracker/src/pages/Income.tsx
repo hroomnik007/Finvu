@@ -95,7 +95,7 @@ function FormBody({ form, setForm, t }: FormBodyProps) {
 
 
 export function IncomePage({ month, year }: IncomePageProps) {
-  const { incomes, addIncome, updateIncome, deleteIncome } = useIncomes(month, year)
+  const { incomes, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
   const { formatAmount, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -105,6 +105,13 @@ export function IncomePage({ month, year }: IncomePageProps) {
   const [csvOpen, setCsvOpen] = useState(false)
   const [yearlyIncome, setYearlyIncome] = useState(0)
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
+  // Editing a recurring income: a changed amount is a price change from `priceFrom`
+  // (YYYY-MM) unless ticked as a correction of a typo
+  const nowYM = todayISO().substring(0, 7)
+  const [priceFrom, setPriceFrom] = useState(nowYM)
+  const [isCorrection, setIsCorrection] = useState(false)
+  const [endOpen, setEndOpen] = useState(false)
+  const [endMonth, setEndMonth] = useState(nowYM)
 
   useEffect(() => {
     const months = Array.from({ length: 12 }, (_, i) =>
@@ -118,9 +125,10 @@ export function IncomePage({ month, year }: IncomePageProps) {
       .catch(() => {})
   }, [year])
 
-  const openAdd = () => { setEditing(null); setForm(makeEmpty()); setSheetOpen(true) }
+  const openAdd = () => { setEditing(null); setIsCorrection(false); setEndOpen(false); setForm(makeEmpty()); setSheetOpen(true) }
   const openEdit = (income: Income) => {
     setEditing(income)
+    setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
     setForm({ amount: String(income.amount), label: income.label, date: income.date, recurring: income.recurring })
     setSheetOpen(true)
   }
@@ -129,7 +137,9 @@ export function IncomePage({ month, year }: IncomePageProps) {
     const amount = parseFloat(form.amount.replace(',', '.'))
     if (!form.label.trim() || isNaN(amount) || amount <= 0) return
     if (editing?.id) {
-      await updateIncome(editing.id, { amount, label: form.label, date: form.date, recurring: form.recurring })
+      const priceChange = editing.recurring && form.recurring && !isCorrection && amount !== editing.amount
+      await updateIncome(editing.id, { amount: priceChange ? undefined : amount, label: form.label, date: form.date, recurring: form.recurring })
+      if (priceChange) await changeIncomePrice(editing.id, amount, priceFrom)
     } else {
       await addIncome({ amount, label: form.label, date: form.date, recurring: form.recurring })
     }
@@ -337,6 +347,60 @@ export function IncomePage({ month, year }: IncomePageProps) {
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
         <FormBody form={form} setForm={setForm} t={t} />
+        {editing?.recurring && (() => {
+          const newAmount = parseFloat(form.amount.replace(',', '.'))
+          const priceChanged = Number.isFinite(newAmount) && newAmount > 0 && newAmount !== editing.amount
+          const box: React.CSSProperties = { background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }
+          const small: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, lineHeight: 1.5 }
+          const monthInput: React.CSSProperties = { background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 10, padding: '6px 10px', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13 }
+          const endedLabel = editing.endedOn ? `${editing.endedOn.slice(5, 7)}/${editing.endedOn.slice(0, 4)}` : ''
+          return (
+            <>
+              {priceChanged && (
+                <div style={box}>
+                  {isCorrection ? (
+                    <p style={small}>{t.expenses.fixed.correctionHint}</p>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ ...small, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.priceFrom}</span>
+                        <input type="month" value={priceFrom} onChange={e => e.target.value && setPriceFrom(e.target.value)} style={monthInput} />
+                      </div>
+                      <p style={{ ...small, marginTop: 6 }}>{t.expenses.fixed.priceFromHint.replace('{amount}', formatAmount(editing.amount))}</p>
+                    </>
+                  )}
+                  <label style={{ ...small, display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={isCorrection} onChange={e => setIsCorrection(e.target.checked)} />
+                    {t.expenses.fixed.correctionLabel}
+                  </label>
+                </div>
+              )}
+              {editing.endedOn ? (
+                <div style={box}>
+                  <p style={small}>{t.expenses.fixed.endedBadge.replace('{month}', endedLabel)}</p>
+                  <button type="button" onClick={async () => { await endIncome(editing.id!, null); setSheetOpen(false) }} style={{ marginTop: 8, padding: '7px 14px', borderRadius: 10, border: '1px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600 }}>
+                    {t.expenses.fixed.restore}
+                  </button>
+                </div>
+              ) : endOpen ? (
+                <div style={box}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ ...small, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.endLastMonth}</span>
+                    <input type="month" value={endMonth} onChange={e => e.target.value && setEndMonth(e.target.value)} style={monthInput} />
+                  </div>
+                  <p style={{ ...small, marginTop: 6 }}>{t.expenses.fixed.endHint}</p>
+                  <button type="button" onClick={async () => { await endIncome(editing.id!, endMonth); setSheetOpen(false) }} style={{ marginTop: 8, padding: '7px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#FBBF24,#f59e0b)', color: '#fff', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 700 }}>
+                    {t.expenses.fixed.endConfirm}
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setEndOpen(true)} style={{ alignSelf: 'flex-start', padding: '8px 12px', borderRadius: 12, background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', border: '1px solid var(--aurora-gline)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600 }}>
+                  {t.expenses.fixed.endTitle}
+                </button>
+              )}
+            </>
+          )
+        })()}
       </CompactModal>
 
       <ConfirmDialog
