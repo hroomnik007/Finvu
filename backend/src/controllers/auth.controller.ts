@@ -73,7 +73,7 @@ const loginSchema = z.object({
 
 export function userPublic(u: {
   id: string; email: string; name: string; avatarUrl?: string | null; role?: string;
-  weeklyEmailEnabled?: boolean; monthlyEmailEnabled?: boolean; onboardingComplete?: boolean;
+  weeklyEmailEnabled?: boolean; monthlyEmailEnabled?: boolean; monthlyEmailScope?: string; monthlyEmailHour?: number; onboardingComplete?: boolean;
   currentStreak?: number; longestStreak?: number; badges?: string[];
   defaultPage?: string | null; currencyFormat?: string | null;
   householdId?: number | null; householdEnabled?: boolean | null;
@@ -90,6 +90,8 @@ export function userPublic(u: {
     id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl ?? null,
     role: u.role ?? 'user', weeklyEmailEnabled: u.weeklyEmailEnabled ?? false,
     monthlyEmailEnabled: u.monthlyEmailEnabled ?? false,
+    monthlyEmailScope: u.monthlyEmailScope ?? 'personal',
+    monthlyEmailHour: u.monthlyEmailHour ?? 9,
     onboardingComplete: u.onboardingComplete ?? false,
     currentStreak: u.currentStreak ?? 0, longestStreak: u.longestStreak ?? 0,
     badges: u.badges ?? [],
@@ -462,7 +464,8 @@ export async function me(req: AuthRequest, res: Response): Promise<void> {
     .select({
       id: users.id, email: users.email, name: users.name, avatarUrl: users.avatarUrl,
       role: users.role, weeklyEmailEnabled: users.weeklyEmailEnabled,
-      monthlyEmailEnabled: users.monthlyEmailEnabled, onboardingComplete: users.onboardingComplete,
+      monthlyEmailEnabled: users.monthlyEmailEnabled, monthlyEmailScope: users.monthlyEmailScope, monthlyEmailHour: users.monthlyEmailHour,
+      onboardingComplete: users.onboardingComplete,
       currentStreak: users.currentStreak, longestStreak: users.longestStreak, badges: users.badges,
       defaultPage: users.defaultPage, currencyFormat: users.currencyFormat,
       householdId: users.householdId, householdEnabled: users.householdEnabled,
@@ -736,9 +739,11 @@ export async function updateWeeklyEmail(req: AuthRequest, res: Response): Promis
 
 export async function updateUserSettings(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId!;
-  const { onboardingComplete, monthlyEmailEnabled, defaultPage, currencyFormat, theme, savingsEnabled, trackingStartDate, onboardingBannerDismissed, language, autoLockMinutes } = req.body as {
+  const { onboardingComplete, monthlyEmailEnabled, monthlyEmailScope, monthlyEmailHour, defaultPage, currencyFormat, theme, savingsEnabled, trackingStartDate, onboardingBannerDismissed, language, autoLockMinutes } = req.body as {
     onboardingComplete?: boolean;
     monthlyEmailEnabled?: boolean;
+    monthlyEmailScope?: string;
+    monthlyEmailHour?: number;
     defaultPage?: string;
     currencyFormat?: string;
     theme?: string;
@@ -756,6 +761,8 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
   const update: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof onboardingComplete === 'boolean') update.onboardingComplete = onboardingComplete;
   if (typeof monthlyEmailEnabled === 'boolean') update.monthlyEmailEnabled = monthlyEmailEnabled;
+  if (monthlyEmailScope === 'personal' || monthlyEmailScope === 'family') update.monthlyEmailScope = monthlyEmailScope;
+  if (typeof monthlyEmailHour === 'number' && Number.isInteger(monthlyEmailHour) && monthlyEmailHour >= 0 && monthlyEmailHour <= 23) update.monthlyEmailHour = monthlyEmailHour;
   if (typeof defaultPage === 'string' && VALID_PAGES.includes(defaultPage)) update.defaultPage = defaultPage;
   if (typeof currencyFormat === 'string' && VALID_FORMATS.includes(currencyFormat)) update.currencyFormat = currencyFormat;
   if (typeof theme === 'string' && VALID_THEMES.includes(theme)) update.theme = theme;
@@ -854,7 +861,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
       DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: newUser.id, isDefault: true }))
     );
 
-    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false, pinFailedAttempts: 0, pinLockedUntil: null };
+    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false, pinFailedAttempts: 0, pinLockedUntil: null };
   } else if (!user.googleId) {
     // Google just proved control of this mailbox. If the account was registered
     // with a password but never verified, whoever registered it may not be the

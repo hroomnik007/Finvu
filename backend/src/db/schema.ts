@@ -30,6 +30,10 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 20 }).default("user").notNull(),
   weeklyEmailEnabled: boolean("weekly_email_enabled").default(false).notNull(),
   monthlyEmailEnabled: boolean("monthly_email_enabled").default(false).notNull(),
+  // 'personal' | 'family' content, send hour (Europe/Bratislava), last month sent ("YYYY-MM")
+  monthlyEmailScope: varchar("monthly_email_scope", { length: 10 }).default("personal").notNull(),
+  monthlyEmailHour: integer("monthly_email_hour").default(9).notNull(),
+  monthlyEmailLastSent: varchar("monthly_email_last_sent", { length: 7 }),
   onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
   currentStreak: integer("current_streak").default(0).notNull(),
   longestStreak: integer("longest_streak").default(0).notNull(),

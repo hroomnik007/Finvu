@@ -104,6 +104,8 @@ export interface AuthUser {
   role?: string
   weeklyEmailEnabled?: boolean
   monthlyEmailEnabled?: boolean
+  monthlyEmailScope?: 'personal' | 'family'
+  monthlyEmailHour?: number
   onboardingComplete?: boolean
   currentStreak?: number
   longestStreak?: number
