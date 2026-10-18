@@ -7,7 +7,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { generateInviteCode } from "../utils/inviteCode";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
-import { syncSharedToNewMember, unshareAllFor } from "../lib/sharedCategories";
+import { recalcSharedForHousehold, syncSharedToNewMember, unshareAllFor } from "../lib/sharedCategories";
 import { fixedDayOfMonth, isFixedDue } from "../lib/recurring";
 import { DEMO_EMAIL } from "../lib/resetDemo";
 
@@ -469,6 +469,7 @@ export async function leaveHousehold(req: AuthRequest, res: Response): Promise<v
     .set({ householdId: null, householdEnabled: false })
     .where(eq(users.id, userId));
   await unshareAllFor(userId);
+  await recalcSharedForHousehold(householdId);
 
   const remainingMembers = await db
     .select({ userId: householdMembers.userId, joinedAt: householdMembers.joinedAt })
@@ -499,6 +500,10 @@ export async function toggleHousehold(req: AuthRequest, res: Response): Promise<
   }
 
   await db.update(users).set({ householdEnabled: enabled }).where(eq(users.id, userId));
+
+  // Whose fixed expenses and limits count towards shared categories just changed
+  const [u] = await db.select({ householdId: users.householdId }).from(users).where(eq(users.id, userId)).limit(1);
+  if (u?.householdId) await recalcSharedForHousehold(u.householdId).catch(err => console.error('shared limit recalc failed:', err));
 
   res.json({ household_enabled: enabled });
 }
@@ -573,6 +578,7 @@ export async function removeMember(req: AuthRequest, res: Response): Promise<voi
     .set({ householdId: null, householdEnabled: false })
     .where(and(eq(users.id, memberId), eq(users.householdId, householdId)));
   await unshareAllFor(memberId);
+  await recalcSharedForHousehold(householdId);
 
   // The removed member knows the current invite code and could simply rejoin with
   // it, so removing someone retires the code in the same step.

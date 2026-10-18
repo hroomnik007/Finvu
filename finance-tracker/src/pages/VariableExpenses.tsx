@@ -387,7 +387,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                       const name = e.note || cat?.name || t.expenses.variable.defaultExpense
                       const subtitle = e.note ? `${cat?.name ?? '—'} · ${formatDate(e.date)}` : formatDate(e.date)
                       return (
-                        <GlassCard key={e.id} radius={18} onClick={() => openEdit(e)} style={{ cursor: 'pointer' }}>
+                        <GlassCard key={e.id} radius={18} onClick={() => rowClick(e)} style={{ cursor: 'pointer', outline: selectedIds.has(e.id!) ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{ width: 38, height: 38, borderRadius: 13, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
@@ -396,10 +396,10 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                               <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
                               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => ev.stopPropagation()}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
                               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>-{formatAmount(e.amount)}</span>
-                              <button onClick={() => openEdit(e)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
-                              <button onClick={() => setConfirmId(e.id!)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
+                              {!selectMode && <button onClick={() => openEdit(e)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
+                              {!selectMode && <button onClick={() => setConfirmId(e.id!)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
                             </div>
                           </div>
                         </GlassCard>
