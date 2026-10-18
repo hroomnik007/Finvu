@@ -58,6 +58,17 @@ export async function createTransactionsBulk(
   return data
 }
 
+export async function bulkSetTransactionCategory(ids: string[], categoryId: string | null): Promise<{ updated: number }> {
+  const { data } = await apiClient.patch('/api/transactions/bulk', { ids, categoryId })
+  return data
+}
+
+export async function bulkDeleteTransactions(ids: string[]): Promise<{ deleted: number }> {
+  const { data } = await apiClient.post('/api/transactions/bulk-delete', { ids })
+  announceNotificationsRefresh()
+  return data
+}
+
 export async function updateTransaction(
   id: string,
   payload: Partial<TransactionPayload>

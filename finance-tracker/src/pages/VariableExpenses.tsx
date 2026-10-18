@@ -4,6 +4,9 @@ import { Edit2, Trash2, Plus, Receipt, X, ArrowDown, Tag } from 'lucide-react'
 
 import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { BulkBar } from '../components/BulkBar'
+import { bulkSetTransactionCategory, bulkDeleteTransactions } from '../api/transactions'
+import { useQueryClient } from '@tanstack/react-query'
 import { DateInput } from '../components/DateInput'
 import { CsvImportModal } from '../components/CsvImportModal'
 import { GlassCard } from '../components/GlassCard'
@@ -94,6 +97,55 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const [csvOpen, setCsvOpen] = useState(false)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
+
+  // Bulk edit: in selection mode a tap on a row toggles it instead of opening the editor
+  const qc = useQueryClient()
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkCatOpen, setBulkCatOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+
+  const exitSelectMode = () => { setSelectMode(false); setSelectedIds(new Set()); setOpenSwipeId(null) }
+  const rowClick = (e: VariableExpense) => {
+    if (!selectMode) { openEdit(e); return }
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(e.id!)) next.delete(e.id!); else next.add(e.id!)
+      return next
+    })
+  }
+  const refreshAfterBulk = () => Promise.all([
+    qc.invalidateQueries({ queryKey: ['variableExpenses'] }),
+    qc.invalidateQueries({ queryKey: ['summaryCards'] }),
+    qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+  ])
+  const applyBulkCategory = async (categoryId: string) => {
+    setBulkBusy(true)
+    try {
+      await bulkSetTransactionCategory([...selectedIds], categoryId)
+      await refreshAfterBulk()
+      setBulkCatOpen(false)
+      exitSelectMode()
+    } catch {
+      showToast?.(t.expenses.variable.bulkError)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+  const deleteSelected = async () => {
+    setBulkBusy(true)
+    try {
+      await bulkDeleteTransactions([...selectedIds])
+      await refreshAfterBulk()
+      setBulkDeleteOpen(false)
+      exitSelectMode()
+    } catch {
+      showToast?.(t.expenses.variable.bulkError)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
 
   const categoriesMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories])
   const getCategoryById = useCallback((id: string) => categoriesMap.get(id) ?? null, [categoriesMap])
@@ -231,6 +283,14 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
             </div>
           </HeroCard>
 
+          {!selectMode && filteredSorted.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setSelectMode(true)} style={{ padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif", background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', border: '1px solid var(--aurora-gline)' }}>
+                {t.expenses.variable.selectMode}
+              </button>
+            </div>
+          )}
+
           {/* Category filter pills */}
           {categoriesWithExpenses.length > 0 && (
             <div style={{ minWidth: 0 }}>
@@ -279,7 +339,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                         const subtitle = e.note ? `${cat?.name ?? '—'} · ${formatDate(e.date)}` : formatDate(e.date)
                         return (
                           <SwipeableRow key={e.id} onDelete={() => setConfirmId(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
-                            <GlassCard radius={18} onClick={() => openEdit(e)} style={{ cursor: 'pointer' }}>
+                            <GlassCard radius={18} onClick={() => rowClick(e)} style={{ cursor: 'pointer', outline: selectedIds.has(e.id!) ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <div style={{ width: 38, height: 38, borderRadius: 13, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                   {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
@@ -394,7 +454,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
       </div>
 
       {/* FAB — mobile only */}
-      {!sheetOpen && confirmId === null && (
+      {!sheetOpen && confirmId === null && !selectMode && (
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
@@ -494,6 +554,55 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
           />
         </div>
       </CompactModal>
+
+      {selectMode && (
+        <BulkBar
+          count={selectedIds.size}
+          total={filteredSorted.length}
+          hint={t.expenses.variable.selectHint}
+          countLabel={t.expenses.categories.selectedCount}
+          selectAllLabel={t.common.selectAll}
+          cancelLabel={t.common.cancel}
+          onCancel={exitSelectMode}
+          onSelectAll={() => setSelectedIds(new Set(filteredSorted.map(e => e.id!)))}
+        >
+          <button onClick={() => setBulkCatOpen(true)} disabled={selectedIds.size === 0} style={{ padding: '8px 16px', borderRadius: 12, border: 'none', cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer', opacity: selectedIds.size === 0 ? 0.5 : 1, fontWeight: 700, fontSize: 13, color: 'white', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', fontFamily: "'Outfit', sans-serif" }}>
+            {t.expenses.variable.bulkChangeCategory}
+          </button>
+          <button onClick={() => setBulkDeleteOpen(true)} disabled={selectedIds.size === 0} aria-label={t.expenses.categories.bulkDelete} style={{ width: 36, height: 36, borderRadius: 12, border: '1px solid rgba(251,113,133,0.3)', background: 'rgba(251,113,133,0.1)', color: 'var(--aurora-rose)', cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer', opacity: selectedIds.size === 0 ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Trash2 size={15} />
+          </button>
+        </BulkBar>
+      )}
+
+      <CompactModal
+        open={bulkCatOpen}
+        onClose={() => setBulkCatOpen(false)}
+        icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
+        title={t.expenses.variable.bulkCategoryTitle.replace('{n}', String(selectedIds.size))}
+        accent="#8B5CF6" accent2="#EC4899"
+        onSubmit={() => setBulkCatOpen(false)}
+        submitDisabled
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {categories.filter(c => c.type === 'expense' && c.id).map(c => {
+            const Icon = CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag
+            return (
+              <button key={c.id} type="button" disabled={bulkBusy} onClick={() => void applyBulkCategory(c.id!)} style={pillStyle(false)}>
+                <Icon size={14} color="currentColor" strokeWidth={1.8} />
+                <span>{c.name}</span>
+              </button>
+            )
+          })}
+        </div>
+      </CompactModal>
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        message={t.expenses.variable.bulkDeleteConfirm.replace('{n}', String(selectedIds.size))}
+        onConfirm={() => void deleteSelected()}
+        onCancel={() => setBulkDeleteOpen(false)}
+      />
 
       <ConfirmDialog
         open={confirmId !== null}
