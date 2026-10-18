@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, X, Tag, Target } from 'lucide-react'
+import { CalendarClock, CalendarRange, X, Tag, Target } from 'lucide-react'
 import { ExpenseHeatmap } from '../components/ExpenseHeatmap'
 import { CategoryDonutCard } from '../components/CategoryDonutCard'
 import { ForecastCard } from '../components/ForecastCard'
@@ -397,9 +397,9 @@ const upcomingFixed = useMemo(() => {
       <button
         type="button"
         onClick={() => onNavigate('annual')}
-        style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer', color: 'var(--aurora-violet)', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600 }}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, padding: '0 20px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, boxShadow: '0 8px 22px rgba(139,92,246,.35)' }}
       >
-        {t.annual.link}
+        <CalendarRange size={16} /> {t.annual.link}
       </button>
     </>
   )
