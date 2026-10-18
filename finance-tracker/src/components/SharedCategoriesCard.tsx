@@ -1,4 +1,4 @@
-import { Tag } from 'lucide-react'
+import { Tag, X } from 'lucide-react'
 import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useFormatters } from '../hooks/useFormatters'
@@ -85,7 +85,16 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
                   <Icon size={15} color={x.color} strokeWidth={1.8} />
                 </span>
                 <span style={{ flex: 1, minWidth: 0, fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.name}</span>
-                {x.limit > 0 && <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: bar, flexShrink: 0 }}>{Math.round(pct)}%</span>}
+                {x.limit > 0 && <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: bar, flexShrink: 0 }}>{pct > 999 ? '>999%' : `${Math.round(pct)}%`}</span>}
+                <button
+                  type="button"
+                  onClick={() => onUnshare(x.id)}
+                  title={ht.sharedStop}
+                  aria-label={`${ht.sharedStop}: ${x.name}`}
+                  style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-faint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
+                  <X size={12} />
+                </button>
               </div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: '10px 0 6px' }}>
                 {formatAmount(x.spent)}
@@ -96,9 +105,10 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
                   <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: bar, borderRadius: 3 }} />
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 8 }}>
-                <span style={{ ...small, minWidth: 0 }}>{x.perMember.map(pm => `${pm.name} ${formatAmount(pm.amount)}`).join(' · ') || '—'}</span>
-                <button type="button" onClick={() => onUnshare(x.id)} style={{ ...small, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>{ht.sharedStop}</button>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px' }}>
+                {x.perMember.length === 0
+                  ? <span style={small}>—</span>
+                  : x.perMember.map(pm => <span key={pm.name} style={{ ...small, whiteSpace: 'nowrap' }}>{pm.name} <b style={{ color: 'var(--aurora-lo)', fontWeight: 600 }}>{formatAmount(pm.amount)}</b></span>)}
               </div>
             </div>
           )
