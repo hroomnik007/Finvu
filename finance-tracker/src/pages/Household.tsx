@@ -563,6 +563,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
       <ConfirmDialog
         open={shareConfirmId !== null}
         message={t.expenses.categories.shareConfirm}
+        neutral
         onConfirm={() => { const id = shareConfirmId; setShareConfirmId(null); if (id) void toggleShare(id, true) }}
         onCancel={() => setShareConfirmId(null)}
       />

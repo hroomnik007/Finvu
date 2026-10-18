@@ -789,6 +789,7 @@ export function CategoriesPage() {
       <ConfirmDialog
         open={shareConfirm !== null}
         message={t.expenses.categories.shareConfirm}
+        neutral
         onConfirm={() => {
           const which = shareConfirm
           setShareConfirm(null)
