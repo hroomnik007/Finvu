@@ -49,6 +49,15 @@ export async function createTransaction(
   return data
 }
 
+export async function createTransactionsBulk(
+  items: Omit<TransactionPayload, 'isFixed'>[]
+): Promise<{ created: number }> {
+  const { data } = await apiClient.post('/api/transactions/bulk', { items })
+  announceAchievementUnlocks(data.newlyUnlockedAchievements)
+  announceNotificationsRefresh()
+  return data
+}
+
 export async function updateTransaction(
   id: string,
   payload: Partial<TransactionPayload>

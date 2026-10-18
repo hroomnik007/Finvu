@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { X, Upload, Check, Landmark, FileText } from 'lucide-react'
-import { createTransaction } from '../api/transactions'
+import { createTransactionsBulk } from '../api/transactions'
 import { useTranslation } from '../i18n'
 import { SettingsDropdown } from './SettingsDropdown'
 import type { ParseResult } from 'papaparse'
@@ -542,12 +542,8 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
     const selected = rows.filter(r => r.selected)
     if (selected.length === 0) return
     setImporting(true)
-    const BATCH_SIZE = 20
     try {
-      for (let i = 0; i < selected.length; i += BATCH_SIZE) {
-        const batch = selected.slice(i, i + BATCH_SIZE)
-        await Promise.all(batch.map(row => createTransaction({ type: row.type, amount: row.amount, description: row.description, date: row.date, isFixed: false })))
-      }
+      await createTransactionsBulk(selected.map(row => ({ type: row.type, amount: row.amount, description: row.description, date: row.date })))
       setImportedCount(selected.length)
       setRows([])
     } catch {

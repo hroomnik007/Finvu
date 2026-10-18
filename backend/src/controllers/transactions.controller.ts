@@ -222,6 +222,58 @@ export async function createTransaction(req: AuthRequest, res: Response): Promis
   res.status(201).json({ data: normalizeAmount(withCategory), newBadges: [], newlyUnlockedAchievements });
 }
 
+const bulkSchema = z.object({
+  items: z.array(createSchema.omit({ isFixed: true })).min(1).max(500),
+});
+
+// CSV import: one insert and one streak/achievement pass instead of a request
+// (each with its own evaluation) per row. Only one-off rows — fixed expenses
+// keep going through createTransaction so the auto-limit stays in sync.
+export async function createTransactionsBulk(req: AuthRequest, res: Response): Promise<void> {
+  const body = bulkSchema.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    return;
+  }
+
+  const categoryIds = [...new Set(body.data.items.map((i) => i.categoryId).filter((id): id is string => !!id))];
+  if (categoryIds.length > 0) {
+    const owned = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(inArray(categories.id, categoryIds), eq(categories.userId, req.userId!)));
+    if (owned.length !== categoryIds.length) {
+      res.status(400).json({ error: "Invalid category" });
+      return;
+    }
+  }
+
+  const userCtx = await resolveUserHousehold(req.userId!);
+  const householdId = userCtx?.householdEnabled && userCtx?.householdId ? userCtx.householdId : null;
+
+  const rows = await db
+    .insert(transactions)
+    .values(body.data.items.map(({ amount, categoryId, ...rest }) => ({
+      ...rest,
+      amount: String(amount),
+      categoryId: categoryId ?? null,
+      isFixed: false,
+      userId: req.userId!,
+      createdBy: req.userId!,
+      householdId,
+    })))
+    .returning({ createdAt: transactions.createdAt });
+
+  let newlyUnlockedAchievements: string[] = [];
+  try {
+    await updateStreakAndBadges(req.userId!, rows[0].createdAt.toISOString().slice(0, 10));
+    ({ newlyUnlocked: newlyUnlockedAchievements } = await evaluateAchievements(req.userId!));
+  } catch (err) {
+    console.error('streak/achievement update failed:', err);
+  }
+  res.status(201).json({ created: rows.length, newlyUnlockedAchievements });
+}
+
 export async function updateTransaction(req: AuthRequest, res: Response): Promise<void> {
   const id = req.params["id"] as string;
 

@@ -4,6 +4,7 @@ import { uuidParam } from "../middleware/validateParams";
 import {
   listTransactions,
   createTransaction,
+  createTransactionsBulk,
   updateTransaction,
   deleteTransaction,
   getSummary,
@@ -20,6 +21,7 @@ router.get("/summary",          getSummary);
 router.get("/balance-at-month", getBalanceAtMonth);
 router.get("/summary-cards",    getSummaryCards);
 router.get("/",        listTransactions);
+router.post("/bulk",   createTransactionsBulk);
 router.post("/",       createTransaction);
 router.put("/:id",     updateTransaction);
 router.delete("/:id",  deleteTransaction);
