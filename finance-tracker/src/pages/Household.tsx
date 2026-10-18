@@ -277,12 +277,44 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
 
       {/* ── Výdavky podľa kategórie (agregované naprieč členmi) ── */}
       {/* Same width as the Dashboard card — stretched over the whole page the legend spread out into rows of 6 */}
-      <div style={{ width: '100%', maxWidth: 640 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[640px_minmax(0,1fr)]" style={{ gap: 16, width: '100%', alignItems: 'stretch' }}>
         <CategoryDonutCard
           data={householdPieData}
           title={t.dashboard.expensesByCategory}
           total={stats?.total_expenses ?? 0}
         />
+
+        {/* Latest activity fills the space beside the donut on wide screens; the full feed stays below */}
+        {activityFeed.length > 0 && (
+          <div className="hidden lg:block">
+            <GlassCard radius={20} style={{ height: '100%', boxSizing: 'border-box' }}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{ht.activityLabel}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {activityFeed.slice(0, 6).map((a, i) => {
+                  const member = householdData?.members.find(m => m.id === a.created_by)
+                  const name = a.created_by_name ?? member?.name ?? '?'
+                  const isIncome = a.type === 'income'
+                  return (
+                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <MemberAvatar userId={a.created_by ?? 'unknown'} userName={name} size={26} avatarUrl={member?.avatar_url ?? null} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: 600 }}>{name}</span>
+                          <span style={{ color: 'var(--aurora-faint)' }}> {isIncome ? ht.addedIncome : ht.addedExpense} </span>
+                          <span style={{ fontWeight: 500 }}>{parseDescription(a.description, 1).label || '—'}</span>
+                        </p>
+                        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>{timeAgo(a.created_at, ht)}</p>
+                      </div>
+                      <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', flexShrink: 0 }}>
+                        {isIncome ? '+' : '−'}{formatAmount(a.amount)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </GlassCard>
+          </div>
+        )}
       </div>
 
       {/* ── ČLENOVIA section header ── */}
