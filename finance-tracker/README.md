@@ -62,7 +62,7 @@ Demo účet je predvyplnený realistickými dátami: príjmy, výdavky, sporenie
 - **Docker** + **Docker Compose** (backend + PostgreSQL)
 - **GitHub Actions** — automatický CI/CD deploy na každý push na `main`
 - **Hetzner VPS** (Debian, CX23) — `api.pedani.eu`
-- **GitHub Pages** — frontend `finvu.pedani.eu`
+- **nginx** — frontend `finvu.pedani.eu` (statický build na Hetzner VPS)
 
 ---
 
@@ -89,21 +89,21 @@ cd backend
 cp .env.example .env          # nastaviť DATABASE_URL, JWT_SECRET, atď.
 docker compose up -d postgres # spustiť iba databázu
 npm install
-npm run migrate               # spustiť migrácie
+npm run db:setup              # prázdna databáza: pôvodná schéma + všetky migrácie
 npm run dev                   # → http://localhost:3001
 ```
 
 ### Databázové migrácie
 
 ```bash
-# Lokálne
-npm run migrate
+# Lokálne (existujúca databáza)
+npm run db:migrate
 
 # Produkcia (v Docker kontajneri)
 docker exec finance-tracker-repo-backend-1 node dist/scripts/migrate.js
 ```
 
-Migrácie sú číslované SQL súbory v `backend/migrations/` a spúšťajú sa automaticky pri deployi.
+Migrácie sú číslované SQL súbory v `backend/migrations/` a spúšťajú sa automaticky pri deployi. `backend/drizzle/` je zmrazená pôvodná schéma, nové zmeny patria len do `backend/migrations/`. Podrobnosti: [DEPLOYMENT.md](../DEPLOYMENT.md).
 
 ---
 
@@ -111,12 +111,12 @@ Migrácie sú číslované SQL súbory v `backend/migrations/` a spúšťajú sa
 
 Každý push na vetvu `main` spustí GitHub Actions workflow, ktorý:
 
-1. Zbuildí frontend (`npm run build`)
-2. Nasadí statické súbory na GitHub Pages (`finvu.pedani.eu`)
-3. Zbuildí backend Docker image a nasadí ho na Hetzner VPS
+1. Spustí lint, typecheck, testy, `npm audit` a overenie schémy na prázdnej databáze
+2. Zbuildí frontend na serveri a nasadí statické súbory (`finvu.pedani.eu`)
+3. Spustí migrácie a vymení backend Docker kontajner (čaká na healthcheck)
 
 ```bash
-# Manuálny deploy frontendu
+# Manuálny deploy (záloha, keď nejde GitHub Actions)
 ./deploy.sh frontend
 
 # Reštart backendu na serveri
