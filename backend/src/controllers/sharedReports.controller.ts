@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { db } from "../db";
 import { sharedReports, transactions, users } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { evaluateAchievements } from "../services/achievements.service";
+import { familyMemberIds } from "../lib/household";
 
 export async function createSharedReport(req: AuthRequest, res: Response): Promise<void> {
   const { data, expiresInHours = 24 * 7 } = req.body as { data?: string; expiresInHours?: number };
@@ -62,11 +63,8 @@ export async function getTotalBalance(req: AuthRequest, res: Response): Promise<
 
   const baseFilter =
     userRow?.householdEnabled && userRow?.householdId
-      ? or(
-          eq(transactions.householdId, userRow.householdId),
-          and(eq(transactions.userId, userId), isNull(transactions.householdId))
-        )
-      : and(eq(transactions.userId, userId), isNull(transactions.householdId));
+      ? inArray(transactions.userId, familyMemberIds(userRow.householdId))
+      : eq(transactions.userId, userId);
 
   const rows = await db
     .select({
