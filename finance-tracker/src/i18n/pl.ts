@@ -789,6 +789,7 @@ export const pl: Translations = {
     biometrySetLabel: '✓ Zarejestrowano',
     biometryLoading: 'Rejestruję...',
     biometryDesc: 'Odcisk palca lub Face ID',
+    passkeyPinLabel: 'Aktualny PIN',
     setupBtn: 'Ustaw →',
     skip: 'Pomiń',
     next: 'Dalej',

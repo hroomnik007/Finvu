@@ -789,6 +789,7 @@ export const hu: Translations = {
     biometrySetLabel: '✓ Regisztrálva',
     biometryLoading: 'Regisztrálom...',
     biometryDesc: 'Ujjlenyomat vagy Face ID',
+    passkeyPinLabel: 'Jelenlegi PIN',
     setupBtn: 'Beállítás →',
     skip: 'Kihagyás',
     next: 'Tovább',

@@ -166,8 +166,10 @@ export async function deletePinDevice(id: string): Promise<void> {
   await apiClient.delete(`/api/auth/pin-devices/${id}`)
 }
 
-export async function webauthnRegisterOptions(): Promise<PublicKeyCredentialCreationOptionsJSON> {
-  const { data } = await apiClient.get('/api/auth/webauthn/register-options')
+export async function webauthnRegisterOptions(
+  creds: { currentPassword?: string; currentPin?: string } = {},
+): Promise<PublicKeyCredentialCreationOptionsJSON> {
+  const { data } = await apiClient.post('/api/auth/webauthn/register-options', creds)
   return data
 }
 

@@ -789,6 +789,7 @@ export const cs: Translations = {
     biometrySetLabel: '✓ Registrováno',
     biometryLoading: 'Registruji...',
     biometryDesc: 'Otisk prstu nebo Face ID',
+    passkeyPinLabel: 'Aktuální PIN',
     setupBtn: 'Nastavit →',
     skip: 'Přeskočit',
     next: 'Dále',

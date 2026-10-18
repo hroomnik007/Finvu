@@ -15,6 +15,8 @@ import { users, webauthnCredentials, refreshTokens, userSessions } from "../db/s
 import { AuthRequest } from "../middleware/authenticate";
 import { randomUUID } from "crypto";
 import { env } from "../config/env";
+import { verifyReauth } from "../lib/reauth";
+import { DEMO_EMAIL } from "../lib/resetDemo";
 import {
   signAccessToken,
   signRefreshToken,
@@ -85,11 +87,25 @@ function userPublic(u: typeof users.$inferSelect) {
   };
 }
 
-// GET /api/auth/webauthn/register-options
+// POST /api/auth/webauthn/register-options  { currentPassword? | currentPin? }
+// A passkey is a full-strength login credential, so — like setting a PIN — it
+// needs the current password / PIN on top of the access token, otherwise a
+// stolen token could plant a durable backdoor. (POST so the secret never
+// ends up in a URL or access log.)
 export async function webauthnRegisterOptions(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId!;
+  if (req.userEmail?.toLowerCase() === DEMO_EMAIL) {
+    res.status(403).json({ error: "Táto akcia nie je v demo účte povolená.", code: "DEMO_RESTRICTED" });
+    return;
+  }
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  const creds = (req.body ?? {}) as { currentPassword?: unknown; currentPin?: unknown };
+  if (!(await verifyReauth(user, creds))) {
+    res.status(401).json({ error: "Nesprávne overenie totožnosti." });
+    return;
+  }
 
   const existingCreds = await db
     .select({ credentialId: webauthnCredentials.credentialId })
