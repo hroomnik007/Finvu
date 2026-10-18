@@ -10,6 +10,8 @@ export interface Category {
   /** Added to the fixed-expense total when autoLimit is on. */
   limitReserve?: number
   hasFixedExpenses?: boolean
+  /** Same-named category of every sharing household member with one common limit. */
+  shared?: boolean
   type: 'income' | 'expense'
 }
 
@@ -137,6 +139,7 @@ export interface ApiCategory {
   autoLimit?: boolean
   limitReserve?: number
   hasFixedExpenses?: boolean
+  shared?: boolean
 }
 
 export interface ApiTransaction {

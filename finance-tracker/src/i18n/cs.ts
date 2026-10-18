@@ -263,6 +263,8 @@ export const cs: Translations = {
       autoLimit: 'Automatický limit',
       autoLimitComputed: 'Automaticky vypočítáno: {amount} €',
       autoLimitDesc: 'Limit se vypočítá automaticky ze součtu fixních výdajů',
+      sharedLabel: 'Společná kategorie',
+      sharedDesc: 'Stejná kategorie a společný limit pro všechny členy domácnosti (průměr jejich limitů). Limit se porovnává s výdaji celé rodiny.',
       limitReserveLabel: 'Rezerva na variabilní výdaje (€) · nepovinné',
       totalLimit: 'Celkový limit',
       remaining: 'Zbývá',
@@ -572,6 +574,8 @@ export const cs: Translations = {
     updateBtn: 'Aktualizovat',
   },
   household: {
+    sharedCategoriesTitle: 'Společné kategorie',
+    sharedCategoriesDesc: 'Označte kategorie, které budou společné pro celou domácnost. Každý člen je dostane s jedním společným limitem (průměr dosavadních limitů).',
     title: 'Domácnost',
     subtitle: 'Společné finance rodiny',
     membersTitle: 'Členové',

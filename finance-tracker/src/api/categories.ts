@@ -42,3 +42,7 @@ export async function deleteAllCategories(): Promise<void> {
 export async function reorderCategories(items: { id: string; order: number }[]): Promise<void> {
   await apiClient.patch('/api/categories/reorder', { items })
 }
+
+export async function shareCategories(ids: string[], shared: boolean): Promise<void> {
+  await apiClient.post('/api/categories/share', { ids, shared })
+}

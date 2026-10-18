@@ -25,12 +25,13 @@ import { HeroCard } from '../components/HeroCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useCategories } from '../hooks/useCategories'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
-import { useFixedExpenses } from '../hooks/useFixedExpenses'
+import { useFixedExpenses, isFixedExpenseDue } from '../hooks/useFixedExpenses'
 import { useFormatters } from '../hooks/useFormatters'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
-import { reorderCategories as reorderCategoriesApi } from '../api/categories'
+import { reorderCategories as reorderCategoriesApi, shareCategories } from '../api/categories'
+import { useAuth } from '../context/AuthContext'
 import type { Category } from '../types'
 
 const PRESET_COLORS = [
@@ -87,7 +88,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
           {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={20} color={cat.color} strokeWidth={1.8} /> })()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
           {cat.budgetLimit != null
             ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>Limit: {formatAmount(cat.budgetLimit)}</div>
             : cat.autoLimit
@@ -163,7 +164,7 @@ function SortableListCard(props: CardProps) {
         {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={16} color={cat.color} strokeWidth={1.8} /> })()}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</div>
+        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
         {cat.budgetLimit != null && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}</div>}
       </div>
       {cat.budgetLimit != null && status && (
@@ -227,7 +228,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
               {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={16} color={cat.color} strokeWidth={1.8} /> })()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
               {cat.budgetLimit != null
                 ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}</div>
                 : cat.autoLimit
@@ -272,7 +273,30 @@ export function CategoriesPage() {
   const { variableExpenses } = useVariableExpenses(now.getMonth() + 1, now.getFullYear())
   const { fixedExpenses } = useFixedExpenses()
 
-  const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month: now.getMonth() + 1, year: now.getFullYear() })
+  const { user } = useAuth()
+  const sharingOn = !!user?.household_enabled
+  const { variableExpenses: familyVariable } = useVariableExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
+  const { fixedExpenses: familyFixed } = useFixedExpenses(undefined, undefined, 'family')
+
+  const personalStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month: now.getMonth() + 1, year: now.getFullYear() })
+  // A shared category's limit is common, so it is measured against what the whole family spent in it
+  const budgetStatuses = useMemo(() => {
+    if (!sharingOn) return personalStatuses
+    const key = (n?: string | null) => (n ?? '').trim().toLowerCase()
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
+    const sharedNames = new Map(categories.filter(c => c.shared).map(c => [c.id!, key(c.name)]))
+    return personalStatuses.map(s => {
+      const name = sharedNames.get(s.categoryId)
+      if (!name) return s
+      const spent =
+        familyVariable.filter(e => key(e.categoryName) === name).reduce((sum, e) => sum + e.amount, 0) +
+        familyFixed.filter(f => key(f.categoryName) === name && isFixedExpenseDue(f.dayOfMonth, month, year, new Date())).reduce((sum, f) => sum + f.amount, 0)
+      const percentage = (spent / s.limit) * 100
+      return { ...s, spent, percentage, isWarning: percentage >= 70 && percentage < 90, isOver: percentage > 100 }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personalStatuses, sharingOn, categories, familyVariable, familyFixed])
 
   // Single most urgent over/near-budget category gets a tinted card — everything else stays neutral
   const worstBudgetStatus = useMemo(() =>
@@ -343,9 +367,10 @@ export function CategoriesPage() {
   const [catType, setCatType] = useState<'income' | 'expense'>('expense')
   const [autoLimit, setAutoLimit] = useState(true)
   const [limitReserve, setLimitReserve] = useState('')
+  const [sharedFlag, setSharedFlag] = useState(false)
 
   function openAdd() {
-    setEditing(null); setName(''); setColor(PRESET_COLORS[6]); setIcon('🛒'); setBudgetLimit(''); setCatType('expense'); setAutoLimit(false); setLimitReserve('')
+    setEditing(null); setName(''); setColor(PRESET_COLORS[6]); setIcon('🛒'); setBudgetLimit(''); setCatType('expense'); setAutoLimit(false); setLimitReserve(''); setSharedFlag(false)
     setSheetOpen(true)
   }
 
@@ -354,6 +379,7 @@ export function CategoriesPage() {
     setBudgetLimit(cat.budgetLimit != null ? String(cat.budgetLimit) : ''); setCatType(cat.type)
     setAutoLimit(cat.hasFixedExpenses ? (cat.autoLimit ?? true) : false)
     setLimitReserve(cat.limitReserve ? String(cat.limitReserve).replace('.', ',') : '')
+    setSharedFlag(cat.shared ?? false)
     setSheetOpen(true)
   }
 
@@ -381,8 +407,10 @@ export function CategoriesPage() {
     return Number.isFinite(v) && v > 0 ? v : 0
   }
 
-  async function doSave(effectiveAutoLimit = autoLimit) {
+  async function doSave(requestedAutoLimit = autoLimit) {
     if (!name.trim()) return
+    // Shared categories have one common manual limit
+    const effectiveAutoLimit = sharedFlag ? false : requestedAutoLimit
     if (editing?.id != null) {
       const limit = effectiveAutoLimit ? undefined : (budgetLimit ? parseFloat(budgetLimit.replace(',', '.')) : undefined)
       await updateCategory(editing.id, {
@@ -391,6 +419,14 @@ export function CategoriesPage() {
         // With auto limit the reserve for variable spending is added on top of the fixed total
         ...(effectiveAutoLimit ? { limitReserve: parseReserve(limitReserve) } : { budgetLimit: limit && limit > 0 ? limit : undefined }),
       })
+      if (sharedFlag !== (editing.shared ?? false)) {
+        try {
+          await shareCategories([editing.id], sharedFlag)
+        } catch (err: unknown) {
+          alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t.expenses.categories.deleteError)
+        }
+        await reload()
+      }
     } else {
       const limit = effectiveAutoLimit ? undefined : (budgetLimit ? parseFloat(budgetLimit.replace(',', '.')) : undefined)
       await addCategory({
@@ -589,6 +625,7 @@ export function CategoriesPage() {
           placeholder={t.expenses.categories.namePlaceholder}
           value={name}
           onChange={e => setName(e.target.value)}
+          disabled={editing?.shared === true}
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
         />
 
@@ -654,7 +691,7 @@ export function CategoriesPage() {
         </div>
 
         <div>
-          {editing?.hasFixedExpenses && (
+          {editing?.hasFixedExpenses && !sharedFlag && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ fontSize: 11, color: autoLimit ? 'var(--aurora-violet)' : 'var(--aurora-lo)', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
                 {t.expenses.categories.autoLimit}
@@ -677,7 +714,7 @@ export function CategoriesPage() {
               </button>
             </div>
           )}
-          {editing?.hasFixedExpenses && autoLimit ? (
+          {editing?.hasFixedExpenses && autoLimit && !sharedFlag ? (
             <>
             <div style={{
               padding: '10px 14px', borderRadius: 12,
@@ -724,6 +761,35 @@ export function CategoriesPage() {
             />
           )}
         </div>
+
+        {sharingOn && editing && catType === 'expense' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 11, color: sharedFlag ? 'var(--aurora-violet)' : 'var(--aurora-lo)', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
+                👥 {t.expenses.categories.sharedLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSharedFlag(v => !v)}
+                style={{
+                  width: 38, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+                  background: sharedFlag ? 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))' : 'var(--aurora-glass)',
+                  position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                }}
+                aria-label={t.expenses.categories.sharedLabel}
+              >
+                <span style={{
+                  position: 'absolute', top: 3, left: sharedFlag ? 19 : 3,
+                  width: 16, height: 16, borderRadius: '50%', background: 'white',
+                  transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </button>
+            </div>
+            <p style={{ fontSize: 11.5, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", lineHeight: 1.4, margin: '6px 0 0' }}>
+              {t.expenses.categories.sharedDesc}
+            </p>
+          </div>
+        )}
       </CompactModal>
 
       {/* Auto-limit overwrite warning */}

@@ -261,6 +261,8 @@ export const sk = {
       autoLimit: 'Automatický limit',
       autoLimitComputed: 'Automaticky vypočítané: {amount} €',
       autoLimitDesc: 'Limit sa vypočíta automaticky zo súčtu fixných výdavkov',
+      sharedLabel: 'Spoločná kategória',
+      sharedDesc: 'Rovnaká kategória a spoločný limit pre všetkých členov domácnosti (priemer ich limitov). Limit sa porovnáva s výdavkami celej rodiny.',
       limitReserveLabel: 'Rezerva na variabilné výdavky (€) · nepovinné',
       totalLimit: 'Spolu limit',
       remaining: 'Zostáva',
@@ -570,6 +572,8 @@ export const sk = {
     updateBtn: 'Aktualizovať',
   },
   household: {
+    sharedCategoriesTitle: 'Spoločné kategórie',
+    sharedCategoriesDesc: 'Označte kategórie, ktoré budú spoločné pre celú domácnosť. Každý člen ich dostane s jedným spoločným limitom (priemer doterajších limitov).',
     title: 'Domácnosť',
     subtitle: 'Spoločné financie rodiny',
     membersTitle: 'Členovia',

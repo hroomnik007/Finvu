@@ -263,6 +263,8 @@ export const hu: Translations = {
       autoLimit: 'Automatikus korlát',
       autoLimitComputed: 'Automatikusan számított: {amount} €',
       autoLimitDesc: 'A korlátot automatikusan számítja ki a fix kiadások összegéből',
+      sharedLabel: 'Közös kategória',
+      sharedDesc: 'Ugyanaz a kategória és egy közös korlát a háztartás minden tagjának (a korlátaik átlaga). A korlátot az egész család kiadásaival vetjük össze.',
       limitReserveLabel: 'Tartalék a változó kiadásokra (€) · opcionális',
       totalLimit: 'Teljes korlát',
       remaining: 'Maradék',
@@ -572,6 +574,8 @@ export const hu: Translations = {
     updateBtn: 'Frissítés',
   },
   household: {
+    sharedCategoriesTitle: 'Közös kategóriák',
+    sharedCategoriesDesc: 'Jelölje meg a háztartás közös kategóriáit. Minden tag egy közös korláttal kapja meg őket (a jelenlegi korlátok átlaga).',
     title: 'Háztartás',
     subtitle: 'Közös családi pénzügyek',
     membersTitle: 'Tagok',

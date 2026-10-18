@@ -13,6 +13,7 @@ import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
 import { getMyHousehold, getMonthlyStats, getActivity, leaveHousehold, regenerateInviteCode, removeHouseholdMember } from '../api/households'
 import { getSummaryCards } from '../api/transactions'
+import { shareCategories } from '../api/categories'
 import type { HouseholdData, MonthlyStats, ActivityItem } from '../api/households'
 import { parseDescription } from '../hooks/useFixedExpenses'
 
@@ -48,7 +49,7 @@ interface HouseholdPageProps {
 export function HouseholdPage({ month, year }: HouseholdPageProps) {
   const { user, refreshUser } = useAuth()
   const { formatAmount } = useFormatters()
-  const { categories } = useCategories()
+  const { categories, reload: reloadCategories } = useCategories()
   const { t } = useTranslation()
   const { household: ht } = t
 
@@ -477,6 +478,31 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
               {activityExpanded ? ht.showLess : ht.showMore}
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── Shared categories ── */}
+      {householdData && householdData.members.length > 1 && (
+        <div style={{ marginTop: 24 }}>
+          <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 4px' }}>👥 {ht.sharedCategoriesTitle}</h3>
+          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-faint)', margin: '0 0 12px', lineHeight: 1.5 }}>{ht.sharedCategoriesDesc}</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {categories.filter(c => c.type === 'expense' && c.id).map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={async () => { await shareCategories([c.id!], !c.shared); await reloadCategories() }}
+                style={{
+                  padding: '7px 14px', borderRadius: 99, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
+                  background: c.shared ? 'rgba(139,92,246,0.18)' : 'var(--aurora-glass)',
+                  color: c.shared ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+                  border: c.shared ? '1px solid rgba(139,92,246,0.45)' : '1px solid var(--aurora-gline)',
+                }}
+              >
+                {c.shared ? '✓ ' : ''}{c.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

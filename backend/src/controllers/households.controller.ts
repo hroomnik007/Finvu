@@ -7,6 +7,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { generateInviteCode } from "../utils/inviteCode";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
+import { unshareAllFor } from "../lib/sharedCategories";
 import { fixedDayOfMonth, isFixedDue } from "../lib/recurring";
 import { DEMO_EMAIL } from "../lib/resetDemo";
 
@@ -461,6 +462,7 @@ export async function leaveHousehold(req: AuthRequest, res: Response): Promise<v
     .update(users)
     .set({ householdId: null, householdEnabled: false })
     .where(eq(users.id, userId));
+  await unshareAllFor(userId);
 
   const remainingMembers = await db
     .select({ userId: householdMembers.userId, joinedAt: householdMembers.joinedAt })
@@ -564,6 +566,7 @@ export async function removeMember(req: AuthRequest, res: Response): Promise<voi
     .update(users)
     .set({ householdId: null, householdEnabled: false })
     .where(and(eq(users.id, memberId), eq(users.householdId, householdId)));
+  await unshareAllFor(memberId);
 
   // The removed member knows the current invite code and could simply rejoin with
   // it, so removing someone retires the code in the same step.
