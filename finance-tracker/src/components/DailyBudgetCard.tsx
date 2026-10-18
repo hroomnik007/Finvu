@@ -15,7 +15,7 @@ export function DailyBudgetCard({ budget, pendingFixed }: Props) {
   const detail = budget.over
     ? t.dashboard.dailyBudgetOver.replace('{amount}', formatAmount(-budget.left))
     : (pendingFixed > 0 ? t.dashboard.dailyBudgetDetail : t.dashboard.dailyBudgetDetailNoFixed)
-        .replace('{left}', formatAmount(budget.left))
+        .replace('{perDay}', formatAmount(budget.perDay))
         .replace('{days}', String(budget.daysLeft))
         .replace('{fixed}', formatAmount(pendingFixed))
   return (
@@ -25,7 +25,7 @@ export function DailyBudgetCard({ budget, pendingFixed }: Props) {
           {t.dashboard.dailyBudgetTitle}
         </span>
         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 800, color: accent }}>
-          {formatAmount(budget.perDay)} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)' }}>{t.dashboard.dailyBudgetPerDay}</span>
+          {formatAmount(Math.max(0, budget.left))}
         </span>
       </div>
       <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '4px 0 0', lineHeight: 1.45 }}>{detail}</p>
