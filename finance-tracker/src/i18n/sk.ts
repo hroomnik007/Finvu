@@ -611,6 +611,12 @@ export const sk = {
     showMore: 'Zobraziť viac →',
     showLess: 'Zobraziť menej ↑',
     leaveError: 'Chyba pri opúšťaní domácnosti',
+    removeMember: 'Odstrániť z domácnosti',
+    confirmRemoveMember: 'Naozaj odstrániť?',
+    removeMemberError: 'Chyba pri odstraňovaní člena',
+    regenerateCode: 'Vygenerovať nový kód',
+    confirmRegenerateCode: 'Starý kód prestane platiť. Pokračovať?',
+    regenerateCodeError: 'Chyba pri generovaní kódu',
   },
   savings: {
     title: 'Sporenie',

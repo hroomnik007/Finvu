@@ -64,6 +64,16 @@ export async function leaveHousehold(): Promise<{ success: boolean }> {
   return data as { success: boolean }
 }
 
+export async function regenerateInviteCode(householdId: number): Promise<{ invite_code: string }> {
+  const { data } = await apiClient.post(`/api/households/${householdId}/invite-code`)
+  return data as { invite_code: string }
+}
+
+export async function removeHouseholdMember(householdId: number, memberId: string): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`/api/households/${householdId}/members/${memberId}`)
+  return data as { success: boolean }
+}
+
 export async function toggleHousehold(enabled: boolean): Promise<{ household_enabled: boolean }> {
   const { data } = await apiClient.patch('/api/households/toggle', { enabled })
   return data as { household_enabled: boolean }

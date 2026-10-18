@@ -613,6 +613,12 @@ export const cs: Translations = {
     showMore: 'Zobrazit více →',
     showLess: 'Zobrazit méně ↑',
     leaveError: 'Chyba při opouštění domácnosti',
+    removeMember: 'Odebrat z domácnosti',
+    confirmRemoveMember: 'Opravdu odebrat?',
+    removeMemberError: 'Chyba při odebírání člena',
+    regenerateCode: 'Vygenerovat nový kód',
+    confirmRegenerateCode: 'Starý kód přestane platit. Pokračovat?',
+    regenerateCodeError: 'Chyba při generování kódu',
   },
   savings: {
     title: 'Spoření',

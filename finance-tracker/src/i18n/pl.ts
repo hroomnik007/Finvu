@@ -613,6 +613,12 @@ export const pl: Translations = {
     showMore: 'Pokaż więcej →',
     showLess: 'Pokaż mniej ↑',
     leaveError: 'Błąd podczas opuszczania gospodarstwa',
+    removeMember: 'Usuń z gospodarstwa',
+    confirmRemoveMember: 'Na pewno usunąć?',
+    removeMemberError: 'Błąd podczas usuwania członka',
+    regenerateCode: 'Wygeneruj nowy kod',
+    confirmRegenerateCode: 'Stary kod przestanie działać. Kontynuować?',
+    regenerateCodeError: 'Błąd podczas generowania kodu',
   },
   savings: {
     title: 'Oszczędności',

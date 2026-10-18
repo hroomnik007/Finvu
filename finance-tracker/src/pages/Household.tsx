@@ -11,7 +11,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useCategories } from '../hooks/useCategories'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
-import { getMyHousehold, getMonthlyStats, getActivity, leaveHousehold } from '../api/households'
+import { getMyHousehold, getMonthlyStats, getActivity, leaveHousehold, regenerateInviteCode, removeHouseholdMember } from '../api/households'
 import { getSummaryCards } from '../api/transactions'
 import type { HouseholdData, MonthlyStats, ActivityItem } from '../api/households'
 import { parseDescription } from '../hooks/useFixedExpenses'
@@ -62,6 +62,8 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
   const [leaveLoading, setLeaveLoading] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [activityExpanded, setActivityExpanded] = useState(false)
+  const [removePendingId, setRemovePendingId] = useState<string | null>(null)
+  const [regeneratePending, setRegeneratePending] = useState(false)
 
   const householdEnabled = user?.household_enabled ?? false
   const householdId = user?.household_id ?? null
@@ -78,6 +80,33 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
       alert(msg ?? ht.leaveError)
     } finally {
       setLeaveLoading(false)
+    }
+  }
+
+  // Owner-only management: removing a member and retiring the invite code
+  const isOwner = householdData?.members.find(m => m.id === user?.id)?.is_owner ?? false
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!householdId) return
+    try {
+      await removeHouseholdMember(householdId, memberId)
+      setRemovePendingId(null)
+      await load()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      alert(msg ?? ht.removeMemberError)
+    }
+  }
+
+  const handleRegenerateCode = async () => {
+    if (!householdId) return
+    try {
+      const { invite_code } = await regenerateInviteCode(householdId)
+      setHouseholdData(prev => prev ? { ...prev, invite_code } : prev)
+      setRegeneratePending(false)
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      alert(msg ?? ht.regenerateCodeError)
     }
   }
 
@@ -327,6 +356,24 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
                       <span style={{ width: 4, height: 4, borderRadius: '50%', background: memberColor, display: 'inline-block' }} />
                     </div>
                   </div>
+                  {isOwner && m.id !== user?.id && (
+                    removePendingId === m.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>{ht.confirmRemoveMember}</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(251,113,133,0.4)', background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>{ht.confirmBtn}</button>
+                          <button onClick={() => setRemovePendingId(null)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>✕</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setRemovePendingId(m.id)}
+                        title={ht.removeMember}
+                        aria-label={ht.removeMember}
+                        style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-faint)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
+                      >{ht.removeMember}</button>
+                    )
+                  )}
                 </div>
 
                 {/* 3-col mini stats */}
@@ -458,6 +505,22 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
           >
             {copied ? <><Check size={16} /> {ht.copied}</> : <><Copy size={16} /> {ht.copyCodeBtn}</>}
           </button>
+          {isOwner && (
+            regeneratePending ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', alignItems: 'center' }}>
+                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textAlign: 'center' }}>{ht.confirmRegenerateCode}</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={handleRegenerateCode} style={{ fontSize: 13, fontWeight: 600, padding: '8px 18px', borderRadius: 10, border: '1px solid rgba(251,113,133,0.4)', background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>{ht.confirmBtn}</button>
+                  <button onClick={() => setRegeneratePending(false)} style={{ fontSize: 13, padding: '8px 18px', borderRadius: 10, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>✕</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setRegeneratePending(true)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--aurora-faint)', textDecoration: 'underline', fontSize: 13, cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
+              >{ht.regenerateCode}</button>
+            )
+          )}
         </div>
       </BottomSheet>
     </div>
