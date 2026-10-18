@@ -67,6 +67,7 @@ async function assertMember(householdId: number, userId: string, res: Response):
 }
 
 export async function createHousehold(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Validation error", details: body.error.errors });
@@ -98,6 +99,7 @@ export async function createHousehold(req: AuthRequest, res: Response): Promise<
 }
 
 export async function joinHousehold(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const body = joinSchema.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Validation error", details: body.error.errors });
@@ -429,6 +431,7 @@ export async function getActivity(req: AuthRequest, res: Response): Promise<void
 }
 
 export async function leaveHousehold(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
 
   const [user] = await db
