@@ -387,16 +387,26 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 
   // Two requests presenting the same cookie at (almost) the same time — two tabs,
   // a PWA next to a browser, a reload during rotation — are normal, not theft.
-  // Within the grace window the loser only gets a fresh access token; the browser
-  // already holds (or is about to receive) the rotated cookie from the winner.
-  const REUSE_GRACE_MS = 30_000;
-  const recentlyRotated = !!matchedRow.revokedAt && Date.now() - matchedRow.revokedAt.getTime() < REUSE_GRACE_MS;
+  // The loser of that race gets ONE extra access token inside a short window (the
+  // browser already holds, or is about to receive, the rotated cookie from the
+  // winner). The allowance is single-use and claimed atomically, so a stolen
+  // old token can not be replayed for fresh access tokens.
+  const REUSE_GRACE_MS = 10_000;
+  let graceGranted = false;
+  if (matchedRow.revokedAt && Date.now() - matchedRow.revokedAt.getTime() < REUSE_GRACE_MS) {
+    const claimed = await db
+      .update(refreshTokens)
+      .set({ graceUsedAt: new Date() })
+      .where(and(eq(refreshTokens.id, matchedRow.id), isNull(refreshTokens.graceUsedAt)))
+      .returning({ id: refreshTokens.id });
+    graceGranted = claimed.length > 0;
+  }
 
-  if (matchedRow.revokedAt && !recentlyRotated) {
-    // This token was rotated away long ago — someone is replaying an old
-    // refresh token, which means it was likely stolen. Kill every active
-    // refresh token for the user so both the attacker and the legitimate
-    // user are forced to log in again.
+  if (matchedRow.revokedAt && !graceGranted) {
+    // This token was already rotated away (and its one grace use, if any, is
+    // spent) — someone is replaying an old refresh token, which means it was
+    // likely stolen. Kill every active refresh token for the user so both the
+    // attacker and the legitimate user are forced to log in again.
     await db.delete(refreshTokens).where(eq(refreshTokens.userId, payload.userId));
     res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_OPTIONS.path });
     res.status(401).json({ error: "Refresh token reuse detected — all sessions revoked" });
