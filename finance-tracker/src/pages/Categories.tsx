@@ -63,7 +63,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
-  const barColor = cat.autoLimit ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+  const barColor = cat.autoLimit && !cat.limitReserve ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
 
   return (
     <div
@@ -132,7 +132,7 @@ function SortableListCard(props: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
-  const barColor = cat.autoLimit ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+  const barColor = cat.autoLimit && !cat.limitReserve ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
 
   return (
     <div
@@ -192,7 +192,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
-  const barColor = cat.autoLimit ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+  const barColor = cat.autoLimit && !cat.limitReserve ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
 
   const outerTransform = [
     CSS.Transform.toString(transform),
@@ -342,9 +342,10 @@ export function CategoriesPage() {
   const [budgetLimit, setBudgetLimit] = useState('')
   const [catType, setCatType] = useState<'income' | 'expense'>('expense')
   const [autoLimit, setAutoLimit] = useState(true)
+  const [limitReserve, setLimitReserve] = useState('')
 
   function openAdd() {
-    setEditing(null); setName(''); setColor(PRESET_COLORS[6]); setIcon('🛒'); setBudgetLimit(''); setCatType('expense'); setAutoLimit(false)
+    setEditing(null); setName(''); setColor(PRESET_COLORS[6]); setIcon('🛒'); setBudgetLimit(''); setCatType('expense'); setAutoLimit(false); setLimitReserve('')
     setSheetOpen(true)
   }
 
@@ -352,6 +353,7 @@ export function CategoriesPage() {
     setEditing(cat); setName(cat.name); setColor(cat.color); setIcon(cat.icon)
     setBudgetLimit(cat.budgetLimit != null ? String(cat.budgetLimit) : ''); setCatType(cat.type)
     setAutoLimit(cat.hasFixedExpenses ? (cat.autoLimit ?? true) : false)
+    setLimitReserve(cat.limitReserve ? String(cat.limitReserve).replace('.', ',') : '')
     setSheetOpen(true)
   }
 
@@ -374,6 +376,11 @@ export function CategoriesPage() {
     }
   }
 
+  function parseReserve(raw: string): number {
+    const v = parseFloat(raw.replace(',', '.'))
+    return Number.isFinite(v) && v > 0 ? v : 0
+  }
+
   async function doSave(effectiveAutoLimit = autoLimit) {
     if (!name.trim()) return
     if (editing?.id != null) {
@@ -381,7 +388,8 @@ export function CategoriesPage() {
       await updateCategory(editing.id, {
         name: name.trim(), color, icon,
         autoLimit: effectiveAutoLimit,
-        ...(effectiveAutoLimit ? {} : { budgetLimit: limit && limit > 0 ? limit : undefined }),
+        // With auto limit the reserve for variable spending is added on top of the fixed total
+        ...(effectiveAutoLimit ? { limitReserve: parseReserve(limitReserve) } : { budgetLimit: limit && limit > 0 ? limit : undefined }),
       })
     } else {
       const limit = effectiveAutoLimit ? undefined : (budgetLimit ? parseFloat(budgetLimit.replace(',', '.')) : undefined)
@@ -670,6 +678,7 @@ export function CategoriesPage() {
             </div>
           )}
           {editing?.hasFixedExpenses && autoLimit ? (
+            <>
             <div style={{
               padding: '10px 14px', borderRadius: 12,
               background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
@@ -679,6 +688,23 @@ export function CategoriesPage() {
                 ? t.expenses.categories.autoLimitComputed.replace('{amount}', String(editing.budgetLimit))
                 : t.expenses.categories.autoLimitDesc}
             </div>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder={t.expenses.categories.limitReserveLabel}
+              value={limitReserve}
+              onChange={e => {
+                const raw = e.target.value.replace(/[^0-9,]/g, '')
+                if ((raw.match(/,/g) || []).length > 1) return
+                setLimitReserve(raw)
+              }}
+              onKeyDown={e => {
+                const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
+                if (!allowed.includes(e.key)) e.preventDefault()
+              }}
+              style={{ width: '100%', marginTop: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+            />
+            </>
           ) : (
             <input
               type="text"

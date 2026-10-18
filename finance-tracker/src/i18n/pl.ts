@@ -263,6 +263,7 @@ export const pl: Translations = {
       autoLimit: 'Automatyczny limit',
       autoLimitComputed: 'Automatycznie obliczone: {amount} €',
       autoLimitDesc: 'Limit obliczany automatycznie z sumy stałych wydatków',
+      limitReserveLabel: 'Rezerwa na wydatki zmienne (€) · opcjonalnie',
       totalLimit: 'Łączny limit',
       remaining: 'Pozostało',
       nearLimit: 'Przy limicie',

@@ -263,6 +263,7 @@ export const en: Translations = {
       autoLimit: 'Auto limit',
       autoLimitComputed: 'Auto-calculated: {amount} €',
       autoLimitDesc: 'Limit is auto-calculated from fixed expenses total',
+      limitReserveLabel: 'Reserve for variable expenses (€) · optional',
       totalLimit: 'Total limit',
       remaining: 'Remaining',
       nearLimit: 'Near limit',

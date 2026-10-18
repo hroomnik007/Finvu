@@ -263,6 +263,7 @@ export const cs: Translations = {
       autoLimit: 'Automatický limit',
       autoLimitComputed: 'Automaticky vypočítáno: {amount} €',
       autoLimitDesc: 'Limit se vypočítá automaticky ze součtu fixních výdajů',
+      limitReserveLabel: 'Rezerva na variabilní výdaje (€) · nepovinné',
       totalLimit: 'Celkový limit',
       remaining: 'Zbývá',
       nearLimit: 'U limitu',

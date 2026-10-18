@@ -261,6 +261,7 @@ export const sk = {
       autoLimit: 'Automatický limit',
       autoLimitComputed: 'Automaticky vypočítané: {amount} €',
       autoLimitDesc: 'Limit sa vypočíta automaticky zo súčtu fixných výdavkov',
+      limitReserveLabel: 'Rezerva na variabilné výdavky (€) · nepovinné',
       totalLimit: 'Spolu limit',
       remaining: 'Zostáva',
       nearLimit: 'Pri limite',

@@ -11,12 +11,13 @@ function normalizeCategory(row: CategoryRow) {
     ...row,
     budgetLimit: row.budgetLimit != null ? Number(row.budgetLimit) : null,
     autoLimit: row.autoLimit,
+    limitReserve: Number(row.limitReserve ?? 0),
   };
 }
 
 export async function recalculateCategoryLimit(categoryId: string, userId: string): Promise<void> {
   const [cat] = await db
-    .select({ autoLimit: categories.autoLimit })
+    .select({ autoLimit: categories.autoLimit, limitReserve: categories.limitReserve })
     .from(categories)
     .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)))
     .limit(1);
@@ -33,8 +34,10 @@ export async function recalculateCategoryLimit(categoryId: string, userId: strin
       eq(transactions.type, "expense")
     ));
 
-  const newLimit = parseFloat(total ?? "0");
-  if (newLimit > 0) {
+  const fixedTotal = parseFloat(total ?? "0");
+  if (fixedTotal > 0) {
+    // Fixed expenses plus the user's reserve for variable spending in the category.
+    const newLimit = Math.round((fixedTotal + parseFloat(cat.limitReserve ?? "0")) * 100) / 100;
     await db
       .update(categories)
       .set({ budgetLimit: String(newLimit) })
@@ -55,6 +58,7 @@ const createSchema = z.object({
   icon: z.string().max(50).optional(),
   budgetLimit: z.number().positive().nullable().optional(),
   autoLimit: z.boolean().optional(),
+  limitReserve: z.number().min(0).max(9_999_999_999.99).optional(),
 });
 
 const updateSchema = z.object({
@@ -63,6 +67,7 @@ const updateSchema = z.object({
   icon: z.string().max(50).optional(),
   budgetLimit: z.number().positive().nullable().optional(),
   autoLimit: z.boolean().optional(),
+  limitReserve: z.number().min(0).max(9_999_999_999.99).optional(),
 });
 
 export async function listCategories(req: AuthRequest, res: Response): Promise<void> {
@@ -101,7 +106,7 @@ export async function createCategory(req: AuthRequest, res: Response): Promise<v
     return;
   }
 
-  const { budgetLimit: bl, autoLimit, ...rest } = body.data
+  const { budgetLimit: bl, autoLimit, limitReserve, ...rest } = body.data
   const [row] = await db
     .insert(categories)
     .values({
@@ -109,6 +114,7 @@ export async function createCategory(req: AuthRequest, res: Response): Promise<v
       userId: req.userId!,
       budgetLimit: bl != null ? String(bl) : null,
       autoLimit: autoLimit ?? false,
+      limitReserve: String(limitReserve ?? 0),
     })
     .returning();
 
@@ -144,10 +150,11 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
     return;
   }
 
-  const { budgetLimit: bl, autoLimit, ...fields } = body.data
+  const { budgetLimit: bl, autoLimit, limitReserve, ...fields } = body.data
   const setData: Record<string, unknown> = { ...fields };
   if (body.data.budgetLimit !== undefined) setData.budgetLimit = bl != null ? String(bl) : null;
   if (autoLimit !== undefined) setData.autoLimit = autoLimit;
+  if (limitReserve !== undefined) setData.limitReserve = String(limitReserve);
 
   const [updated] = await db
     .update(categories)
@@ -155,8 +162,9 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
     .where(and(eq(categories.id, id), eq(categories.userId, req.userId!)))
     .returning();
 
-  // When auto_limit is being enabled, immediately recalculate from existing fixed expenses
-  if (autoLimit === true) {
+  // When auto_limit is being enabled — or its reserve changed on a category that
+  // already uses it — immediately recalculate from existing fixed expenses
+  if (autoLimit === true || (limitReserve !== undefined && updated?.autoLimit)) {
     await recalculateCategoryLimit(id, req.userId!);
     const [refreshed] = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
     const [hasFixed] = await db
