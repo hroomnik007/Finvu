@@ -3,7 +3,8 @@ import { Eye, EyeOff, ArrowRight, X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
-import { getAuthMethods, getPinDeviceStatus, resendVerification } from '../api/auth'
+import { getAuthMethods, getPinDeviceStatus, resendVerification, webauthnAuthenticateOptions, webauthnAuthenticateVerify } from '../api/auth'
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
 import { PinKeypad } from '../components/PinKeypad'
@@ -15,7 +16,7 @@ interface LoginPageProps {
 
 export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: LoginPageProps) {
   const { t } = useTranslation()
-  const { login, loginDemo, loginWithGoogle, loginWithPin } = useAuth()
+  const { login, loginDemo, loginWithGoogle, loginWithPin, loginWithToken } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,7 +37,8 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   // pin-device-status endpoint / PIN device-binding architecture).
   const [pinDeviceRegistered, setPinDeviceRegistered] = useState<boolean | null>(null)
 
-  const [authMethods, setAuthMethods] = useState({ pin: false, google: false, password: false })
+  const [authMethods, setAuthMethods] = useState({ pin: false, google: false, password: false, passkey: false })
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const lastPinTapRef = useRef(0)
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
 
   useEffect(() => {
     if (!email.includes('@')) {
-      setAuthMethods({ pin: false, google: false, password: false })
+      setAuthMethods({ pin: false, google: false, password: false, passkey: false })
       return
     }
     const timer = setTimeout(async () => {
@@ -55,7 +57,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         const methods = await getAuthMethods(email)
         setAuthMethods(methods)
       } catch {
-        setAuthMethods({ pin: false, google: false, password: false })
+        setAuthMethods({ pin: false, google: false, password: false, passkey: false })
       }
     }, 500)
     return () => clearTimeout(timer)
@@ -94,6 +96,28 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       setNeedsVerification(data?.code === 'EMAIL_NOT_VERIFIED')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Passkey sign-in: with an e-mail the server restricts the prompt to that
+  // user's credentials, without one the browser offers its discoverable passkeys.
+  const handlePasskeyLogin = async () => {
+    setError(null)
+    setNeedsVerification(false)
+    setPasskeyLoading(true)
+    try {
+      const { startAuthentication } = await import('@simplewebauthn/browser')
+      const options = await webauthnAuthenticateOptions(email.includes('@') ? email : undefined) as { _challengeKey: string }
+      const assertion = await startAuthentication({ optionsJSON: options as unknown as PublicKeyCredentialRequestOptionsJSON })
+      const { user: me, accessToken, sessionId } = await webauthnAuthenticateVerify({ ...assertion, _challengeKey: options._challengeKey })
+      loginWithToken(me, accessToken, sessionId)
+    } catch (err: unknown) {
+      // The user dismissing the browser prompt is not an error worth showing
+      if ((err as { name?: string })?.name === 'NotAllowedError') return
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      setError(msg ?? t.auth.passkeyFailed)
+    } finally {
+      setPasskeyLoading(false)
     }
   }
 
@@ -355,6 +379,18 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
                 Google
               </>
             )}
+          </button>
+        )}
+
+        {typeof window !== 'undefined' && 'PublicKeyCredential' in window && (!email || authMethods.passkey) && (
+          <button
+            type="button"
+            onClick={handlePasskeyLogin}
+            disabled={passkeyLoading}
+            style={{ ...altPillStyle, width: '100%', marginTop: 10, opacity: passkeyLoading ? 0.6 : 1 }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 016-6h2"/><circle cx="18" cy="15" r="2.5"/><path d="M18 17.5V22l-2 -1.5"/></svg>
+            {passkeyLoading ? t.auth.loggingIn : t.auth.loginWithPasskey}
           </button>
         )}
 

@@ -183,7 +183,24 @@ export async function webauthnAuthenticateOptions(email?: string): Promise<objec
   return data
 }
 
-export async function webauthnAuthenticateVerify(body: object): Promise<{ user: import('../types').AuthUser; accessToken: string }> {
+export interface PasskeyInfo {
+  id: string
+  name: string
+  deviceType: string | null
+  backedUp: boolean
+  createdAt: string
+}
+
+export async function getPasskeys(): Promise<PasskeyInfo[]> {
+  const { data } = await apiClient.get('/api/auth/webauthn/credentials')
+  return (data as { data: PasskeyInfo[] }).data
+}
+
+export async function deletePasskey(id: string): Promise<void> {
+  await apiClient.delete(`/api/auth/webauthn/credentials/${id}`)
+}
+
+export async function webauthnAuthenticateVerify(body: object): Promise<{ user: import('../types').AuthUser; accessToken: string; sessionId?: string }> {
   const { data } = await apiClient.post('/api/auth/webauthn/authenticate-verify', body)
   return data
 }
@@ -192,7 +209,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   await apiClient.patch('/api/auth/password', { currentPassword, newPassword })
 }
 
-export async function getAuthMethods(email: string): Promise<{ pin: boolean; google: boolean; password: boolean }> {
+export async function getAuthMethods(email: string): Promise<{ pin: boolean; google: boolean; password: boolean; passkey: boolean }> {
   const { data } = await apiClient.get("/api/auth/methods", { params: { email } })
   return data
 }

@@ -33,7 +33,7 @@ interface AuthContextValue {
   loginDemo: () => Promise<void>
   loginWithGoogle: (accessToken: string) => Promise<void>
   loginWithPin: (email: string, pin: string) => Promise<void>
-  loginWithToken: (user: AuthUser, accessToken: string) => void
+  loginWithToken: (user: AuthUser, accessToken: string, sessionId?: string) => void
   register: (email: string, password: string, name: string, gdprConsent: boolean) => Promise<void>
   loginAsGuest: () => void
   logout: () => Promise<void>
@@ -202,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
   }, [])
 
-  const loginWithToken = useCallback((me: AuthUser, accessToken: string) => {
+  const loginWithToken = useCallback((me: AuthUser, accessToken: string, sessionId?: string) => {
     setAccessToken(accessToken)
     setUser(me)
     setIsGuest(false)
@@ -212,6 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem('just_logged_in', 'true')
       // A full authentication just happened in this tab — PIN quick-unlock isn't needed.
       sessionStorage.setItem('pin_verified_session', 'true')
+      if (sessionId) localStorage.setItem('finvu_session_id', sessionId)
       if (me.language) applyLanguageSetting(me.language)
     } catch { /* ignore */ }
   }, [])
