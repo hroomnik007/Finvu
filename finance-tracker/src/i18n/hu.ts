@@ -264,6 +264,7 @@ export const hu: Translations = {
       autoLimitComputed: 'Automatikusan számított: {amount} €',
       autoLimitDesc: 'A korlátot automatikusan számítja ki a fix kiadások összegéből',
       sharedLabel: 'Közös kategória',
+      limitBreakdown: 'fix {fixed} + változó {reserve}',
       selectMode: 'Kijelölés',
       selectDone: 'Kész',
       selectedCount: 'Kijelölve: {n}',

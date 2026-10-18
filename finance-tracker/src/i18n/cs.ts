@@ -264,6 +264,7 @@ export const cs: Translations = {
       autoLimitComputed: 'Automaticky vypočítáno: {amount} €',
       autoLimitDesc: 'Limit se vypočítá automaticky ze součtu fixních výdajů',
       sharedLabel: 'Společná kategorie',
+      limitBreakdown: 'fixní {fixed} + variabilní {reserve}',
       selectMode: 'Vybrat',
       selectDone: 'Hotovo',
       selectedCount: 'Vybráno: {n}',

@@ -54,6 +54,13 @@ const PRESET_ICONS = [
   '☕', '🎬', '🛻', '🏥', '🎓', '🌿', '🧴', '💰',
 ]
 
+// "fixné X + variabilné Y" for auto-limit categories that reserve room for variable spending
+function limitBreakdown(cat: Category, formatAmount: (n: number) => string, t: ReturnType<typeof useTranslation>['t']): string {
+  if (!cat.autoLimit || !cat.limitReserve || cat.budgetLimit == null) return ''
+  const fixed = Math.max(0, cat.budgetLimit - cat.limitReserve)
+  return ` · ${t.expenses.categories.limitBreakdown.replace('{fixed}', formatAmount(fixed)).replace('{reserve}', formatAmount(cat.limitReserve))}`
+}
+
 type BudgetStatus = { categoryId: string; spent: number; percentage: number; limit: number }
 
 interface CardProps {
@@ -100,7 +107,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
           {cat.budgetLimit != null
-            ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>Limit: {formatAmount(cat.budgetLimit)}</div>
+            ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>
             : cat.autoLimit
               ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet)', marginTop: 2 }}>⚡ {t.expenses.categories.autoLimit}</div>
               : <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{t.expenses.categories.noLimit}</div>
@@ -139,7 +146,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
 }
 
 function SortableListCard(props: CardProps) {
-  const { cat, status, formatAmount, onEdit, onDelete, severity, selected } = props
+  const { cat, status, formatAmount, t, onEdit, onDelete, severity, selected } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
@@ -176,7 +183,7 @@ function SortableListCard(props: CardProps) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
-        {cat.budgetLimit != null && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}</div>}
+        {cat.budgetLimit != null && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>}
       </div>
       {cat.budgetLimit != null && status && (
         <div style={{ width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -242,7 +249,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
               {cat.budgetLimit != null
-                ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}</div>
+                ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>
                 : cat.autoLimit
                   ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-violet)', marginTop: 1 }}>⚡ {t.expenses.categories.autoLimit}</div>
                   : null

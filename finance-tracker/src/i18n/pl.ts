@@ -264,6 +264,7 @@ export const pl: Translations = {
       autoLimitComputed: 'Automatycznie obliczone: {amount} €',
       autoLimitDesc: 'Limit obliczany automatycznie z sumy stałych wydatków',
       sharedLabel: 'Wspólna kategoria',
+      limitBreakdown: 'stałe {fixed} + zmienne {reserve}',
       selectMode: 'Wybierz',
       selectDone: 'Gotowe',
       selectedCount: 'Wybrano: {n}',

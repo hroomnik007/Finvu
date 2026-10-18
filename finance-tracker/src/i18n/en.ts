@@ -264,6 +264,7 @@ export const en: Translations = {
       autoLimitComputed: 'Auto-calculated: {amount} €',
       autoLimitDesc: 'Limit is auto-calculated from fixed expenses total',
       sharedLabel: 'Shared category',
+      limitBreakdown: 'fixed {fixed} + variable {reserve}',
       selectMode: 'Select',
       selectDone: 'Done',
       selectedCount: 'Selected: {n}',

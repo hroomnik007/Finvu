@@ -262,6 +262,7 @@ export const sk = {
       autoLimitComputed: 'Automaticky vypočítané: {amount} €',
       autoLimitDesc: 'Limit sa vypočíta automaticky zo súčtu fixných výdavkov',
       sharedLabel: 'Spoločná kategória',
+      limitBreakdown: 'fixné {fixed} + variabilné {reserve}',
       selectMode: 'Vybrať',
       selectDone: 'Hotovo',
       selectedCount: 'Vybraných: {n}',
