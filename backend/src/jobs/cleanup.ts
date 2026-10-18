@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { and, isNotNull, lt, notExists, eq, gt, or } from "drizzle-orm";
+import { and, isNotNull, lt, notExists, eq, gt } from "drizzle-orm";
 import { db } from "../db";
 import { refreshTokens, passwordResetTokens, pinDeviceTokens, sharedReports, userSessions, users } from "../db/schema";
 import { cleanupCutoffs } from "../lib/cleanupCutoffs";
@@ -10,9 +10,11 @@ export async function runCleanup(now: Date = new Date()): Promise<Record<string,
   const cut = cleanupCutoffs(now);
   const removed: Record<string, number> = {};
 
+  // Only expired rows: a revoked token must stay until it would have expired anyway,
+  // otherwise presenting it again would no longer be recognised as reuse of a stolen token.
   const refresh = await db
     .delete(refreshTokens)
-    .where(or(lt(refreshTokens.expiresAt, cut.tokens), and(isNotNull(refreshTokens.revokedAt), lt(refreshTokens.revokedAt, cut.revokedTokens))))
+    .where(lt(refreshTokens.expiresAt, cut.tokens))
     .returning({ id: refreshTokens.id });
   removed.refreshTokens = refresh.length;
 
