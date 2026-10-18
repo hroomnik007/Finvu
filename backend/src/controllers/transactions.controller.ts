@@ -7,7 +7,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
-import { fixedDayOfMonth, isFixedDue } from "../lib/recurring";
+import { fixedDayOfMonth, isFixedDue, cumulativeBalanceFromRows } from "../lib/recurring";
 
 // YYYY-MM-DD that is also a real calendar date (the bare regex let 2026-02-30
 // through to Postgres, which rejects it with a 500).
@@ -426,43 +426,7 @@ async function cumulativeBalance(
     .where(and(baseFilter, eq(transactions.isFixed, true), lt(transactions.date, end)))
     .orderBy(transactions.date);
 
-  const today = new Date();
-  // Amount, direction and due day are parsed once per row when it becomes the
-  // latest of its series — the month loop below then only does arithmetic.
-  const latest = new Map<string, { isIncome: boolean; amount: number; dueDay: number }>();
-  let next = 0;
-  let balance = 0;
-
-  for (let idx = firstMonth; idx <= target; idx++) {
-    const y = Math.floor(idx / 12);
-    const m = (idx % 12) + 1;
-    const ym = `${y}-${String(m).padStart(2, "0")}`;
-    const monthEnd = monthRange(ym).end;
-
-    // Rows are date-ascending, so the last one seen per series is its latest.
-    while (next < fixedRows.length && fixedRows[next].date < monthEnd) {
-      const row = fixedRows[next++];
-      latest.set(`${row.userId}|${row.type}|${row.description ?? ""}`, {
-        isIncome: row.type === "income",
-        amount: parseFloat(row.amount),
-        dueDay: fixedDayOfMonth(row.description, row.date),
-      });
-    }
-
-    const flat = oneOffByMonth.get(ym);
-    let income = flat?.income ?? 0;
-    let expense = flat?.expense ?? 0;
-    for (const row of latest.values()) {
-      if (row.isIncome) {
-        income += row.amount;
-      } else if (isFixedDue(row.dueDay, y, m, today)) {
-        expense += row.amount;
-      }
-    }
-    balance += income - expense;
-  }
-
-  return Math.round(balance * 100) / 100;
+  return cumulativeBalanceFromRows(oneOffByMonth, fixedRows, firstMonth, target, new Date());
 }
 
 export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promise<void> {

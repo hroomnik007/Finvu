@@ -53,3 +53,55 @@ export function recurringTotalsForMonth(
   }
   return { income, expense };
 }
+
+// First day of the month after (year, month), as YYYY-MM-DD — rows dated before it
+// belong to that month or earlier.
+function nextMonthStart(year: number, month: number): string {
+  return month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+}
+
+// Cumulative balance over the month indexes [firstIdx, targetIdx] (index = year * 12
+// + month - 1), built month by month with the SAME rules as the monthly cards:
+// one-off rows count in the month they are dated (`oneOffByMonth`, key "YYYY-MM"),
+// while a recurring row is entered once and counts in every month from its own
+// date on — each series via its latest occurrence, recurring expenses only once
+// their due day has arrived. `fixedRows` must be ascending by date.
+export function cumulativeBalanceFromRows(
+  oneOffByMonth: Map<string, { income: number; expense: number }>,
+  fixedRows: FixedRow[],
+  firstIdx: number,
+  targetIdx: number,
+  today: Date,
+): number {
+  // Amount, direction and due day are parsed once per row when it becomes the
+  // latest of its series — the month loop below then only does arithmetic.
+  const latest = new Map<string, { isIncome: boolean; amount: number; dueDay: number }>();
+  let next = 0;
+  let balance = 0;
+
+  for (let idx = firstIdx; idx <= targetIdx; idx++) {
+    const y = Math.floor(idx / 12);
+    const m = (idx % 12) + 1;
+    const monthEnd = nextMonthStart(y, m);
+
+    while (next < fixedRows.length && fixedRows[next].date < monthEnd) {
+      const row = fixedRows[next++];
+      latest.set(`${row.userId ?? ""}|${row.type}|${row.description ?? ""}`, {
+        isIncome: row.type === "income",
+        amount: parseFloat(row.amount),
+        dueDay: fixedDayOfMonth(row.description, row.date),
+      });
+    }
+
+    const flat = oneOffByMonth.get(`${y}-${String(m).padStart(2, "0")}`);
+    let income = flat?.income ?? 0;
+    let expense = flat?.expense ?? 0;
+    for (const row of latest.values()) {
+      if (row.isIncome) income += row.amount;
+      else if (isFixedDue(row.dueDay, y, m, today)) expense += row.amount;
+    }
+    balance += income - expense;
+  }
+
+  return Math.round(balance * 100) / 100;
+}

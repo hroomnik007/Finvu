@@ -44,12 +44,18 @@ jobs:
       - name: Frontend — typecheck
         working-directory: finance-tracker
         run: npx tsc -b --noEmit
+      - name: Frontend — tests
+        working-directory: finance-tracker
+        run: npm test
       - name: Backend — install
         working-directory: backend
         run: npm ci
       - name: Backend — typecheck
         working-directory: backend
-        run: npx tsc --noEmit
+        run: npm run typecheck
+      - name: Backend — tests
+        working-directory: backend
+        run: npm test
   deploy-frontend:
     needs: [detect-changes, lint]
     if: needs.lint.result == 'success' && needs.detect-changes.outputs.changed_frontend == 'true'
