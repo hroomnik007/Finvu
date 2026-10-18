@@ -285,7 +285,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
   )
 }
 
-export function CategoriesPage() {
+export function CategoriesPage({ showToast }: { showToast: (msg: string) => void }) {
   const { categories, addCategory, updateCategory, deleteCategory, reload } = useCategories()
   const { formatAmount } = useFormatters()
   const { t } = useTranslation()
@@ -441,6 +441,7 @@ export function CategoriesPage() {
     setBulkBusy(false)
     setBulkOpen(false)
     if (failed > 0) alert(t.expenses.categories.bulkPartialError.replace('{n}', String(failed)))
+    else showToast(t.expenses.categories.bulkDone.replace('{n}', String(ids.length)))
     exitSelectMode()
   }
 
@@ -454,6 +455,7 @@ export function CategoriesPage() {
     setBulkBusy(false)
     setBulkDeleteOpen(false)
     if (blocked > 0) alert(t.expenses.categories.bulkDeleteBlocked.replace('{n}', String(blocked)))
+    if (selectedIds.size - blocked > 0) showToast(t.expenses.categories.bulkDeleted.replace('{n}', String(selectedIds.size - blocked)))
     exitSelectMode()
   }
 

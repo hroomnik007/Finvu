@@ -44,9 +44,10 @@ function dayLabel(iso: string, ht: { today: string; timeYesterday: string; timeD
 interface HouseholdPageProps {
   month: number
   year: number
+  showToast?: (msg: string) => void
 }
 
-export function HouseholdPage({ month, year }: HouseholdPageProps) {
+export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   const { user, refreshUser } = useAuth()
   const { formatAmount } = useFormatters()
   const { categories, reload: reloadCategories } = useCategories()
@@ -61,7 +62,11 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
   const [copied, setCopied] = useState(false)
   const [shareConfirmId, setShareConfirmId] = useState<string | null>(null)
   const toggleShare = async (id: string, shared: boolean) => {
-    try { await shareCategories([id], shared) } catch { /* the list below reflects the real state */ }
+    try {
+      await shareCategories([id], shared)
+      const name = categories.find(c => c.id === id)?.name ?? ''
+      showToast?.((shared ? ht.sharedOnToast : ht.sharedOffToast).replace('{name}', name))
+    } catch { /* the list below reflects the real state */ }
     await reloadCategories()
   }
   const [leavePending, setLeavePending] = useState(false)

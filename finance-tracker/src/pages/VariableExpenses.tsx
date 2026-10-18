@@ -123,10 +123,11 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const applyBulkCategory = async (categoryId: string) => {
     setBulkBusy(true)
     try {
-      await bulkSetTransactionCategory([...selectedIds], categoryId)
+      const { updated } = await bulkSetTransactionCategory([...selectedIds], categoryId)
       await refreshAfterBulk()
       setBulkCatOpen(false)
       exitSelectMode()
+      showToast(t.expenses.variable.bulkCategoryDone.replace('{n}', String(updated)))
     } catch {
       showToast?.(t.expenses.variable.bulkError)
     } finally {
@@ -136,10 +137,11 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const deleteSelected = async () => {
     setBulkBusy(true)
     try {
-      await bulkDeleteTransactions([...selectedIds])
+      const { deleted } = await bulkDeleteTransactions([...selectedIds])
       await refreshAfterBulk()
       setBulkDeleteOpen(false)
       exitSelectMode()
+      showToast(t.expenses.variable.bulkDeleteDone.replace('{n}', String(deleted)))
     } catch {
       showToast?.(t.expenses.variable.bulkError)
     } finally {

@@ -521,12 +521,12 @@ function App() {
           {page === 'fixed-expenses' && (
             <FixedExpensesPage month={month} year={year} />
           )}
-          {page === 'categories' && <CategoriesPage />}
+          {page === 'categories' && <CategoriesPage showToast={showToast} />}
           {(page === 'settings' || page === 'household') && (
             <div style={{ flex: 1, overflowY: 'auto' }}>
               <div style={{ padding: '20px', minHeight: '100%' }}>
                 {page === 'settings' && <SettingsPage />}
-                {page === 'household' && <HouseholdPage month={month} year={year} />}
+                {page === 'household' && <HouseholdPage month={month} year={year} showToast={showToast} />}
               </div>
             </div>
           )}
