@@ -44,9 +44,10 @@ function dayLabel(iso: string, ht: { today: string; timeYesterday: string; timeD
 interface HouseholdPageProps {
   month: number
   year: number
+  showToast?: (msg: string) => void
 }
 
-export function HouseholdPage({ month, year }: HouseholdPageProps) {
+export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   const { user, refreshUser } = useAuth()
   const { formatAmount } = useFormatters()
   const { categories, reload: reloadCategories } = useCategories()
@@ -60,9 +61,12 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [shareConfirmId, setShareConfirmId] = useState<string | null>(null)
-  const [editSharing, setEditSharing] = useState(false)
   const toggleShare = async (id: string, shared: boolean) => {
-    try { await shareCategories([id], shared) } catch { /* the list below reflects the real state */ }
+    try {
+      await shareCategories([id], shared)
+      const name = categories.find(c => c.id === id)?.name ?? ''
+      showToast?.((shared ? ht.sharedOnToast : ht.sharedOffToast).replace('{name}', name))
+    } catch { /* the list below reflects the real state */ }
     await reloadCategories()
   }
   const [leavePending, setLeavePending] = useState(false)
@@ -306,13 +310,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
             </div>
           )}
 
-          {sharedCategoryRows.length > 0 && (
-            <button type="button" onClick={() => setEditSharing(v => !v)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600, color: 'var(--aurora-violet)' }}>
-              {editSharing ? ht.sharedEditDone : ht.sharedEdit}
-            </button>
-          )}
-
-          <div style={{ display: sharedCategoryRows.length === 0 || editSharing ? 'flex' : 'none', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {categories.filter(c => c.type === 'expense' && c.id).map(c => (
               <button
                 key={c.id}
