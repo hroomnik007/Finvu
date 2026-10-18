@@ -68,10 +68,10 @@ async function issueTokens(res: Response, userId: string, email: string): Promis
   const accessToken = signAccessToken({ userId, email });
   const refreshToken = signRefreshToken({ userId, email });
   const tokenHash = await hashToken(refreshToken);
-  await db.insert(refreshTokens).values({ userId, tokenHash, expiresAt: refreshTokenExpiry() });
+  const [session] = await db.insert(userSessions).values({ userId, deviceName: 'Passkey', browser: 'WebAuthn' }).returning({ id: userSessions.id })
+  await db.insert(refreshTokens).values({ userId, tokenHash, expiresAt: refreshTokenExpiry(), sessionId: session?.id });
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
   res.cookie(REFRESH_COOKIE, refreshToken, REFRESH_COOKIE_OPTIONS);
-  const [session] = await db.insert(userSessions).values({ userId, deviceName: 'Passkey', browser: 'WebAuthn' }).returning({ id: userSessions.id })
   return { accessToken, sessionId: session?.id ?? randomUUID() };
 }
 

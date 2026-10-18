@@ -160,10 +160,27 @@ export async function listTransactions(req: AuthRequest, res: Response): Promise
   res.json({ data: rows.map(normalizeAmount), total: Number(total) });
 }
 
+// A category id from the request must belong to the caller — otherwise another
+// user's category (ids are visible in household stats) could be attached, and
+// its name/colour/icon would leak back through the join.
+async function ownsCategory(categoryId: string | null | undefined, userId: string): Promise<boolean> {
+  if (!categoryId) return true;
+  const [row] = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)))
+    .limit(1);
+  return !!row;
+}
+
 export async function createTransaction(req: AuthRequest, res: Response): Promise<void> {
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Validation error", details: body.error.errors });
+    return;
+  }
+  if (!(await ownsCategory(body.data.categoryId, req.userId!))) {
+    res.status(400).json({ error: "Invalid category" });
     return;
   }
 
@@ -226,6 +243,10 @@ export async function updateTransaction(req: AuthRequest, res: Response): Promis
   const body = updateSchema.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Validation error", details: body.error.errors });
+    return;
+  }
+  if (!(await ownsCategory(body.data.categoryId, req.userId!))) {
+    res.status(400).json({ error: "Invalid category" });
     return;
   }
 

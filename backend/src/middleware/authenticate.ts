@@ -9,31 +9,47 @@ export interface AuthRequest extends Request {
   userEmail?: string;
 }
 
-export function authenticateToken(
+export async function authenticateToken(
   req: AuthRequest,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     res.status(401).json({ error: "Missing or invalid authorization header" });
     return;
   }
 
-  const token = header.slice(7);
+  let payload: ReturnType<typeof verifyAccessToken>;
   try {
-    const payload = verifyAccessToken(token);
-    req.userId = payload.userId;
-    req.userEmail = payload.email;
-    // Fire-and-forget — skip for session-check so it can read the unmodified timestamp
-    if (!req.originalUrl.endsWith("/session-check")) {
-      db.update(users)
-        .set({ lastActiveAt: new Date() })
-        .where(eq(users.id, payload.userId))
-        .catch(() => {});
-    }
-    next();
+    payload = verifyAccessToken(header.slice(7));
   } catch {
     res.status(401).json({ error: "Invalid or expired access token" });
+    return;
   }
+
+  // A valid signature is not enough: the account must still exist and be active,
+  // otherwise a deactivated/deleted user keeps working until the token expires.
+  // One round trip does both — the activity stamp and the status check (the
+  // session-check endpoint must read the unmodified timestamp, so it only reads).
+  const [account] = req.originalUrl.endsWith("/session-check")
+    ? await db.select({ isDeactivated: users.isDeactivated }).from(users).where(eq(users.id, payload.userId)).limit(1)
+    : await db
+        .update(users)
+        .set({ lastActiveAt: new Date() })
+        .where(eq(users.id, payload.userId))
+        .returning({ isDeactivated: users.isDeactivated });
+
+  if (!account) {
+    res.status(401).json({ error: "Invalid or expired access token" });
+    return;
+  }
+  if (account.isDeactivated) {
+    res.status(401).json({ error: "Účet je deaktivovaný.", code: "ACCOUNT_DEACTIVATED" });
+    return;
+  }
+
+  req.userId = payload.userId;
+  req.userEmail = payload.email;
+  next();
 }
