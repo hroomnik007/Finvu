@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/authenticate";
+import { uuidParam } from "../middleware/validateParams";
 import {
   listCategories,
   createCategory,
@@ -12,6 +13,7 @@ import {
 const router = Router();
 
 router.use(authenticateToken);
+router.param("id", uuidParam);
 
 router.get("/",          listCategories);
 router.post("/",         createCategory);

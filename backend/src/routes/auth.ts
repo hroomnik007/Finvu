@@ -6,7 +6,7 @@ import {
   updateAvatar, demoLogin, adminLogin, updateWeeklyEmail, googleAuth, updateUserSettings,
   pinLogin, updatePin, removePin, changePassword, getAuthMethods, sessionCheck, pingSession,
   getSessions, deleteSession, deactivateAccount,
-  pinDeviceStatus, getPinDevices, deletePinDevice,
+  pinDeviceStatus, getPinDevices, deletePinDevice, resendVerification,
 } from "../controllers/auth.controller";
 import {
   webauthnRegisterOptions, webauthnRegisterVerify,
@@ -70,6 +70,35 @@ const generalLimiter = rateLimit({
   message: { error: "Príliš veľa pokusov. Skúste neskôr." },
 })
 
+// Re-authentication endpoints (current password / current PIN are checked in
+// the handler) — without a cap a stolen access token could be used to guess
+// either one, a 4-digit PIN in particular.
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Príliš veľa pokusov. Skúste neskôr." },
+});
+
+// /methods has its own budget: it shares nothing with verify/forgot/reset, so
+// exhausting one cannot lock out the others.
+const methodsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Príliš veľa pokusov. Skúste neskôr." },
+});
+
+const webauthnVerifyLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Príliš veľa pokusov. Skúste za 10 minút." },
+});
+
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -100,7 +129,7 @@ const pingLimiter = rateLimit({
 
 const router = Router();
 
-router.get("/methods",          generalLimiter,       getAuthMethods);
+router.get("/methods",          methodsLimiter,       getAuthMethods);
 router.get("/session-check",    sessionCheckLimiter,  authenticateToken, sessionCheck);
 router.get("/ping",             pingLimiter,          authenticateToken, pingSession);
 router.post("/register",        registerLimiter, register);
@@ -109,9 +138,10 @@ router.post("/refresh",         refreshLimiter,  refresh);
 router.post("/logout",          logout);
 router.get("/me",               authenticateToken, me);
 router.get("/verify-email",     generalLimiter, verifyEmail);
+router.post("/resend-verification", registerLimiter, resendVerification);
 router.post("/forgot-password", generalLimiter, forgotPassword);
 router.post("/reset-password",  generalLimiter, resetPassword);
-router.delete("/account",       authenticateToken, deleteAccount);
+router.delete("/account",       sensitiveLimiter, authenticateToken, deleteAccount);
 router.patch("/avatar",         authenticateToken, updateAvatar);
 router.patch("/weekly-email",   authenticateToken, updateWeeklyEmail);
 router.patch("/settings",       authenticateToken, updateUserSettings);
@@ -120,21 +150,21 @@ router.post("/admin-login",     loginLimiter, adminLogin);
 router.post("/google",          loginLimiter, googleAuth);
 router.post("/pin-login",       pinLoginLimiter, pinLogin);
 router.get("/pin-device-status", pinDeviceStatusLimiter, pinDeviceStatus);
-router.patch("/pin",            authenticateToken, updatePin);
-router.delete("/pin",           authenticateToken, removePin);
+router.patch("/pin",            sensitiveLimiter, authenticateToken, updatePin);
+router.delete("/pin",           sensitiveLimiter, authenticateToken, removePin);
 router.get("/pin-devices",      authenticateToken, getPinDevices);
 router.delete("/pin-devices/:id", authenticateToken, deletePinDevice);
-router.patch("/password",       authenticateToken, changePassword);
+router.patch("/password",       sensitiveLimiter, authenticateToken, changePassword);
 
 // Sessions
 router.get("/sessions",                       authenticateToken, getSessions);
 router.delete("/sessions/:id",                authenticateToken, deleteSession);
-router.post("/deactivate",                    authenticateToken, deactivateAccount);
+router.post("/deactivate",                    sensitiveLimiter, authenticateToken, deactivateAccount);
 
 // WebAuthn
 router.get("/webauthn/register-options",      authenticateToken, webauthnRegisterOptions);
 router.post("/webauthn/register-verify",      authenticateToken, webauthnRegisterVerify);
 router.get("/webauthn/authenticate-options",  webauthnOptionsLimiter, webauthnAuthenticateOptions);
-router.post("/webauthn/authenticate-verify",  webauthnAuthenticateVerify);
+router.post("/webauthn/authenticate-verify",  webauthnVerifyLimiter, webauthnAuthenticateVerify);
 
 export default router;

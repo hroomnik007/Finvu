@@ -35,8 +35,20 @@ async function run() {
     }
     const sql = readFileSync(join(migrationsDir, file), "utf-8");
     console.log(`[migrate] Applying: ${file}`);
-    await pool.query(sql);
-    await pool.query("INSERT INTO _migrations (name) VALUES ($1)", [file]);
+    // One transaction per file: a failure part-way leaves nothing half-applied
+    // and the file is not recorded, so the next run retries it cleanly.
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(sql);
+      await client.query("INSERT INTO _migrations (name) VALUES ($1)", [file]);
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
     console.log(`[migrate] Done: ${file}`);
   }
 

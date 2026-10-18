@@ -63,6 +63,9 @@ export const refreshTokens = pgTable("refresh_tokens", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   revokedAt: timestamp("revoked_at"),
+  // Set when a just-rotated token was legitimately presented once more inside the
+  // grace window; any further use of the same token counts as replay.
+  graceUsedAt: timestamp("grace_used_at"),
 }, (t) => [index("refresh_tokens_user_id_idx").on(t.userId)]);
 
 export const households = pgTable("households", {

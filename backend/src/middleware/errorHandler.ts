@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 
 export function errorHandler(
   err: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void {
@@ -12,11 +12,15 @@ export function errorHandler(
     return;
   }
 
-  if (err instanceof Error) {
-    const status = (err as Error & { status?: number }).status ?? 500;
-    res.status(status).json({ error: err.message });
+  const status = err instanceof Error ? (err as Error & { status?: number }).status ?? 500 : 500;
+
+  if (status >= 500) {
+    // Log the real cause, but never hand it to the client: Drizzle/pg messages
+    // contain the SQL text and sometimes parameter values.
+    console.error(`[error] ${req.method} ${req.originalUrl}:`, err);
+    res.status(status).json({ error: "Internal server error" });
     return;
   }
 
-  res.status(500).json({ error: "Internal server error" });
+  res.status(status).json({ error: err instanceof Error ? err.message : "Request failed" });
 }
