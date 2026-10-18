@@ -599,8 +599,6 @@ export const pl: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Wspólne kategorie',
-    sharedEdit: 'Edytuj wybór',
-    sharedEditDone: 'Gotowe',
     sharedCategoriesDesc: 'Zaznacz kategorie wspólne dla całego gospodarstwa. Limit liczy się automatycznie: przy wydatkach stałych jako ich suma dla wszystkich członków, w przeciwnym razie jako najwyższy limit ustawiony przez członka.',
     title: 'Gospodarstwo',
     subtitle: 'Wspólne finanse rodziny',

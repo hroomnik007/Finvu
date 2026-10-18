@@ -60,7 +60,6 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [shareConfirmId, setShareConfirmId] = useState<string | null>(null)
-  const [editSharing, setEditSharing] = useState(false)
   const toggleShare = async (id: string, shared: boolean) => {
     try { await shareCategories([id], shared) } catch { /* the list below reflects the real state */ }
     await reloadCategories()
@@ -306,13 +305,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
             </div>
           )}
 
-          {sharedCategoryRows.length > 0 && (
-            <button type="button" onClick={() => setEditSharing(v => !v)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600, color: 'var(--aurora-violet)' }}>
-              {editSharing ? ht.sharedEditDone : ht.sharedEdit}
-            </button>
-          )}
-
-          <div style={{ display: sharedCategoryRows.length === 0 || editSharing ? 'flex' : 'none', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {categories.filter(c => c.type === 'expense' && c.id).map(c => (
               <button
                 key={c.id}

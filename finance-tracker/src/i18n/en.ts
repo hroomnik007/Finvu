@@ -599,8 +599,6 @@ export const en: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Shared categories',
-    sharedEdit: 'Edit selection',
-    sharedEditDone: 'Done',
     sharedCategoriesDesc: 'Pick the categories the whole household shares. The limit is calculated automatically: with fixed expenses it is their total across all members, otherwise the highest limit a member set.',
     title: 'Household',
     subtitle: 'Family shared finances',

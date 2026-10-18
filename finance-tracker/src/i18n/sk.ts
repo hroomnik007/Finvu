@@ -597,8 +597,6 @@ export const sk = {
   },
   household: {
     sharedCategoriesTitle: 'Spoločné kategórie',
-    sharedEdit: 'Upraviť výber',
-    sharedEditDone: 'Hotovo',
     sharedCategoriesDesc: 'Označte kategórie, ktoré budú spoločné pre celú domácnosť. Limit sa počíta automaticky: pri fixných výdavkoch ako ich súčet za všetkých členov, inak je to najvyšší limit, aký člen nastavil.',
     title: 'Domácnosť',
     subtitle: 'Spoločné financie rodiny',

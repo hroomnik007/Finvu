@@ -599,8 +599,6 @@ export const hu: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Közös kategóriák',
-    sharedEdit: 'Kiválasztás szerkesztése',
-    sharedEditDone: 'Kész',
     sharedCategoriesDesc: 'Jelölje meg a háztartás közös kategóriáit. A korlát automatikusan számítódik: fix kiadásoknál az összes tag fix kiadásainak összege, egyébként a legmagasabb korlát, amelyet egy tag beállított.',
     title: 'Háztartás',
     subtitle: 'Közös családi pénzügyek',

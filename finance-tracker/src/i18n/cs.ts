@@ -599,8 +599,6 @@ export const cs: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Společné kategorie',
-    sharedEdit: 'Upravit výběr',
-    sharedEditDone: 'Hotovo',
     sharedCategoriesDesc: 'Označte kategorie, které budou společné pro celou domácnost. Limit se počítá automaticky: u fixních výdajů jako jejich součet za všechny členy, jinak jako nejvyšší limit, který člen nastavil.',
     title: 'Domácnost',
     subtitle: 'Společné finance rodiny',
