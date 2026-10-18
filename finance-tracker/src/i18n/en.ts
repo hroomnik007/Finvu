@@ -270,6 +270,7 @@ export const en: Translations = {
       autoLimitComputed: 'Auto-calculated: {amount} €',
       autoLimitDesc: 'Limit is auto-calculated from fixed expenses total',
       sharedLabel: 'Shared category',
+      shareConfirm: 'The category will be added for every household member and their limits for it will be replaced by the average. Continue?',
       limitBreakdown: 'fixed {fixed} + variable {reserve}',
       selectMode: 'Select',
       selectHint: 'Select categories',

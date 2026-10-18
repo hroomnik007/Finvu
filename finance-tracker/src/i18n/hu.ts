@@ -270,6 +270,7 @@ export const hu: Translations = {
       autoLimitComputed: 'Automatikusan számított: {amount} €',
       autoLimitDesc: 'A korlátot automatikusan számítja ki a fix kiadások összegéből',
       sharedLabel: 'Közös kategória',
+      shareConfirm: 'A kategória minden háztartástag számára létrejön, és a hozzá tartozó korlátaik az átlaggal lesznek felülírva. Folytatja?',
       limitBreakdown: 'fix {fixed} + változó {reserve}',
       selectMode: 'Kijelölés',
       selectHint: 'Válasszon kategóriákat',

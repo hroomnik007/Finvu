@@ -398,6 +398,7 @@ export function CategoriesPage() {
   const [bulkShared, setBulkShared] = useState<'keep' | 'share' | 'unshare'>('keep')
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkBusy, setBulkBusy] = useState(false)
+  const [shareConfirm, setShareConfirm] = useState<null | 'single' | 'bulk'>(null)
 
   function cardClick(cat: Category) {
     if (!selectMode) { openEdit(cat); return }
@@ -413,6 +414,11 @@ export function CategoriesPage() {
   function openBulk() {
     setBulkLimit(''); setBulkColor(null); setBulkShared('keep')
     setBulkOpen(true)
+  }
+
+  function requestApplyBulk() {
+    if (bulkShared === 'share') setShareConfirm('bulk')
+    else void applyBulk()
   }
 
   async function applyBulk() {
@@ -469,6 +475,11 @@ export function CategoriesPage() {
 
   async function handleSave() {
     if (!name.trim()) return
+    // Sharing rewrites the other members' limits, so ask before it happens
+    if (editing?.id != null && sharedFlag && !editing.shared) {
+      setShareConfirm('single')
+      return
+    }
 
     if (editing?.id != null) {
       const wasManual = editing.autoLimit === false
@@ -729,7 +740,7 @@ export function CategoriesPage() {
         icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
         title={t.expenses.categories.bulkEditTitle.replace('{n}', String(selectedIds.size))}
         accent="#8B5CF6" accent2="#EC4899"
-        onSubmit={applyBulk}
+        onSubmit={requestApplyBulk}
         submitDisabled={bulkBusy || (!bulkLimit && !bulkColor && bulkShared === 'keep')}
       >
         <p style={{ fontSize: 12, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", margin: 0, lineHeight: 1.4 }}>{t.expenses.categories.bulkHint}</p>
@@ -774,6 +785,18 @@ export function CategoriesPage() {
           </div>
         )}
       </CompactModal>
+
+      <ConfirmDialog
+        open={shareConfirm !== null}
+        message={t.expenses.categories.shareConfirm}
+        onConfirm={() => {
+          const which = shareConfirm
+          setShareConfirm(null)
+          if (which === 'single') void doSave()
+          else if (which === 'bulk') void applyBulk()
+        }}
+        onCancel={() => setShareConfirm(null)}
+      />
 
       <ConfirmDialog
         open={bulkDeleteOpen}

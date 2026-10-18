@@ -7,7 +7,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { generateInviteCode } from "../utils/inviteCode";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
-import { unshareAllFor } from "../lib/sharedCategories";
+import { syncSharedToNewMember, unshareAllFor } from "../lib/sharedCategories";
 import { fixedDayOfMonth, isFixedDue } from "../lib/recurring";
 import { DEMO_EMAIL } from "../lib/resetDemo";
 
@@ -152,6 +152,12 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
     .update(users)
     .set({ householdId: household.id, householdEnabled: true })
     .where(eq(users.id, userId));
+
+  try {
+    await syncSharedToNewMember(userId, household.id);
+  } catch (err) {
+    console.error('shared categories sync failed:', err);
+  }
 
   const members = await db
     .select({ userId: householdMembers.userId })

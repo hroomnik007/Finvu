@@ -92,3 +92,46 @@ export async function propagateSharedLimit(userId: string, name: string, budgetL
 export async function unshareAllFor(userId: string): Promise<void> {
   await db.update(categories).set({ shared: false }).where(eq(categories.userId, userId));
 }
+
+// A member who joins later gets the household's shared categories: ones they
+// already have (same name) become shared at the current common limit, missing
+// ones are created. Existing members' limits are left untouched.
+export async function syncSharedToNewMember(userId: string, householdId: number): Promise<void> {
+  const memberIds = (await familyMemberIds(householdId)).map((r) => r.id).filter((id) => id !== userId);
+  if (memberIds.length === 0) return;
+
+  const shared = await db
+    .select()
+    .from(categories)
+    .where(and(inArray(categories.userId, memberIds), eq(categories.type, "expense"), eq(categories.shared, true)));
+
+  const byName = new Map<string, (typeof shared)[number]>();
+  for (const c of shared) {
+    const key = c.name.trim().toLowerCase();
+    if (!byName.has(key)) byName.set(key, c);
+  }
+
+  for (const [, src] of byName) {
+    const mine = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.userId, userId), eq(categories.type, "expense"), sameName(src.name)));
+    if (mine.length > 0) {
+      await db
+        .update(categories)
+        .set({ shared: true, autoLimit: false, budgetLimit: src.budgetLimit })
+        .where(inArray(categories.id, mine.map((m) => m.id)));
+    } else {
+      await db.insert(categories).values({
+        userId,
+        name: src.name,
+        type: "expense",
+        color: src.color,
+        icon: src.icon,
+        budgetLimit: src.budgetLimit,
+        autoLimit: false,
+        shared: true,
+      });
+    }
+  }
+}

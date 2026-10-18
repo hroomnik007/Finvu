@@ -270,6 +270,7 @@ export const pl: Translations = {
       autoLimitComputed: 'Automatycznie obliczone: {amount} €',
       autoLimitDesc: 'Limit obliczany automatycznie z sumy stałych wydatków',
       sharedLabel: 'Wspólna kategoria',
+      shareConfirm: 'Kategoria zostanie dodana wszystkim członkom gospodarstwa, a ich limity dla niej zostaną zastąpione średnią. Kontynuować?',
       limitBreakdown: 'stałe {fixed} + zmienne {reserve}',
       selectMode: 'Wybierz',
       selectHint: 'Wybierz kategorie',
