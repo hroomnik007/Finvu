@@ -502,6 +502,8 @@ export const pl: Translations = {
     resetLinkSent: 'Jeśli e-mail istnieje, link do resetowania hasła został wysłany.',
     passwordResetSuccess: 'Hasło zmienione pomyślnie. Możesz się teraz zalogować.',
     notVerified: 'Przed zalogowaniem zweryfikuj swój e-mail.',
+    resendVerification: 'Wyślij ponownie e-mail weryfikacyjny',
+    resendVerificationSent: 'Jeśli konto czeka na weryfikację, wysłaliśmy nowy link.',
     passwordMin8: 'Hasło musi mieć co najmniej 8 znaków',
     resetPasswordDesc: 'Podaj nowe hasło do swojego konta.',
     resetSuccessMsg: 'Hasło zostało pomyślnie zmienione.',

@@ -84,10 +84,12 @@ export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps)
   const [trackingDate, setTrackingDate] = useState(() => new Date().toISOString().split('T')[0])
   const [trackingSaving, setTrackingSaving] = useState(false)
 
-  const { incomes: allIncomes } = useIncomes(month, year)
-  const { fixedExpenses: allMonthFixedExpenses } = useFixedExpenses(month, year)
-  const { fixedExpenses: allFixedExpenses } = useFixedExpenses()
-  const { variableExpenses: allVariableExpenses } = useVariableExpenses(month, year)
+  // Family view lists every sharing member's rows; the server falls back to the
+  // caller's own rows when they have no household / sharing is off.
+  const { incomes: allIncomes } = useIncomes(month, year, dashView)
+  const { fixedExpenses: allMonthFixedExpenses } = useFixedExpenses(month, year, dashView)
+  const { fixedExpenses: allFixedExpenses } = useFixedExpenses(undefined, undefined, dashView)
+  const { variableExpenses: allVariableExpenses } = useVariableExpenses(month, year, dashView)
   const { categories } = useCategories()
   // A fixed expense only counts once its due day in the viewed month has
   // actually passed — see isFixedExpenseDue.
@@ -130,18 +132,31 @@ export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps)
   const totalExpenses = totalFixed + totalVariable
   const balance = totalIncome - totalExpenses
 
-  const pieData = useMemo(() =>
-    categories
-      .map(cat => ({
-        name: cat.name,
-        icon: cat.icon,
-        value:
-          variableExpenses.filter(e => e.categoryId === cat.id).reduce((s, e) => s + e.amount, 0) +
-          fixedExpenses.filter(f => f.categoryId === cat.id).reduce((s, f) => s + f.amount, 0),
-        color: cat.color,
-      }))
-      .filter(d => d.value > 0)
-  , [categories, variableExpenses, fixedExpenses])
+  // Grouped by category NAME: in the family view the rows include other members'
+  // expenses, whose category ids belong to their own categories. Our own
+  // category supplies the colour/icon when the name matches, otherwise the data
+  // the API returned for the row is used.
+  const pieData = useMemo(() => {
+    const ownByName = new Map(categories.map(c => [c.name.trim().toLowerCase(), c]))
+    const groups = new Map<string, { name: string; icon: string | null | undefined; color: string; value: number }>()
+    const add = (row: { categoryName?: string | null; categoryIcon?: string | null; categoryColor?: string | null; amount: number }) => {
+      const label = (row.categoryName ?? '').trim()
+      if (!label) return
+      const key = label.toLowerCase()
+      const own = ownByName.get(key)
+      const group = groups.get(key) ?? {
+        name: own?.name ?? label,
+        icon: own?.icon ?? row.categoryIcon,
+        color: own?.color ?? row.categoryColor ?? '#6B7280',
+        value: 0,
+      }
+      group.value += row.amount
+      groups.set(key, group)
+    }
+    variableExpenses.forEach(add)
+    fixedExpenses.forEach(add)
+    return [...groups.values()].filter(d => d.value > 0)
+  }, [categories, variableExpenses, fixedExpenses])
 
   const { data: chartData = [] } = useQuery({
     queryKey: ['dashboardChart', month, year, user?.tracking_start_date ?? null, user?.createdAt ?? null, dashView],

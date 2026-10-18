@@ -500,6 +500,8 @@ export const sk = {
     resetLinkSent: 'Ak email existuje, bol odoslaný odkaz na obnovenie hesla.',
     passwordResetSuccess: 'Heslo bolo úspešne zmenené. Môžete sa prihlásiť.',
     notVerified: 'Prosím overte svoj email pred prihlásením.',
+    resendVerification: 'Poslať overovací email znova',
+    resendVerificationSent: 'Ak účet čaká na overenie, poslali sme nový overovací odkaz.',
     passwordMin8: 'Heslo musí mať aspoň 8 znakov',
     resetPasswordDesc: 'Zadaj nové heslo pre svoj účet.',
     resetSuccessMsg: 'Heslo bolo úspešne zmenené.',

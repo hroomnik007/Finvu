@@ -36,6 +36,7 @@ const listQuerySchema = z.object({
   isFixed: z.enum(["true", "false"]).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional().default(50),
   offset: z.coerce.number().int().min(0).optional().default(0),
+  scope: z.enum(["personal", "family"]).optional().default("personal"),
 });
 
 const scopeSchema = z.enum(["personal", "family"]).optional().default("personal");
@@ -83,12 +84,12 @@ async function getFamilyStartDate(householdId: number): Promise<string> {
 }
 
 function buildFilters(
-  userId: string,
+  owner: SQL,
   month?: string,
   type?: string,
   isFixed?: string
 ) {
-  const filters = [eq(transactions.userId, userId)];
+  const filters: SQL[] = [owner];
   if (month) {
     const { start, end } = monthRange(month);
     filters.push(gte(transactions.date, start));
@@ -110,8 +111,19 @@ export async function listTransactions(req: AuthRequest, res: Response): Promise
     return;
   }
 
-  const { month, type, isFixed, limit, offset } = query.data;
-  const filters = buildFilters(req.userId!, month, type, isFixed);
+  const { month, type, isFixed, limit, offset, scope } = query.data;
+
+  // Family scope lists every sharing member's rows (read-only context for the
+  // dashboard); it silently falls back to the caller's own rows when they are
+  // not in a household or have sharing switched off.
+  let owner: SQL = eq(transactions.userId, req.userId!);
+  if (scope === "family") {
+    const ctx = await resolveUserHousehold(req.userId!);
+    if (ctx?.householdEnabled && ctx.householdId) {
+      owner = inArray(transactions.userId, familyMemberIds(ctx.householdId));
+    }
+  }
+  const filters = buildFilters(owner, month, type, isFixed);
 
   const [rows, [{ total }]] = await Promise.all([
     db

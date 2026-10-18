@@ -9,6 +9,8 @@ export interface TransactionParams {
   isFixed?: boolean
   limit?: number
   offset?: number
+  /** 'family' also returns the other sharing household members' rows. */
+  scope?: 'personal' | 'family'
 }
 
 export interface TransactionPayload {
@@ -29,6 +31,7 @@ export async function getTransactions(
   if (params.isFixed !== undefined) query.isFixed = String(params.isFixed)
   if (params.limit !== undefined) query.limit = String(params.limit)
   if (params.offset !== undefined) query.offset = String(params.offset)
+  if (params.scope === 'family') query.scope = 'family'
 
   const { data } = await apiClient.get('/api/transactions', { params: query })
   return data

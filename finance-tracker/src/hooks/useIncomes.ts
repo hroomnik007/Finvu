@@ -22,23 +22,30 @@ function toIncome(t: ApiTransaction): Income {
   }
 }
 
-export function incomeQueryKey(month: number | undefined, year: number | undefined, trackingStart: string | null | undefined) {
+export type DataScope = 'personal' | 'family'
+
+// The scope is part of the key only for the family view, so existing
+// personal-scope keys (prefetch, invalidation by ['incomes'] prefix) are unchanged.
+export function incomeQueryKey(month: number | undefined, year: number | undefined, trackingStart: string | null | undefined, scope: DataScope = 'personal') {
   const monthStr = month !== undefined && year !== undefined
     ? `${year}-${String(month).padStart(2, '0')}`
     : null
-  return ['incomes', monthStr, trackingStart ?? null] as const
+  return scope === 'family'
+    ? ['incomes', monthStr, trackingStart ?? null, 'family'] as const
+    : ['incomes', monthStr, trackingStart ?? null] as const
 }
 
 export async function fetchIncomes(
   month: number | undefined,
   year: number | undefined,
   trackingStart: string | null | undefined,
+  scope: DataScope = 'personal',
 ): Promise<Income[]> {
   try {
     const monthStr = month !== undefined && year !== undefined
       ? `${year}-${String(month).padStart(2, '0')}`
       : undefined
-    const { data } = await getTransactions({ type: 'income', month: monthStr, limit: 200 })
+    const { data } = await getTransactions({ type: 'income', month: monthStr, limit: 200, scope })
 
     if (monthStr) {
       const trackingYM = trackingStart ? trackingStart.substring(0, 7) : null
@@ -50,7 +57,7 @@ export async function fetchIncomes(
       // filters by creation date, not recurrence — adding it would hide older
       // recurring incomes. Client-side filter on line below enforces t.date <= monthStr.
       // TODO: paginate if a user accumulates >200 recurring income records.
-      const { data: recurring } = await getTransactions({ type: 'income', isFixed: true, limit: 200 })
+      const { data: recurring } = await getTransactions({ type: 'income', isFixed: true, limit: 200, scope })
       if (recurring.length === 200) {
         console.warn('useIncomes: recurring income limit reached, some records may be missing')
       }
@@ -74,14 +81,14 @@ export async function fetchIncomes(
   }
 }
 
-export function useIncomes(month?: number, year?: number) {
+export function useIncomes(month?: number, year?: number, scope: DataScope = 'personal') {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const qKey = incomeQueryKey(month, year, user?.tracking_start_date)
+  const qKey = incomeQueryKey(month, year, user?.tracking_start_date, scope)
 
   const { data: incomes = [] } = useQuery({
     queryKey: qKey,
-    queryFn: () => fetchIncomes(month, year, user?.tracking_start_date),
+    queryFn: () => fetchIncomes(month, year, user?.tracking_start_date, scope),
     enabled: !!user,
   })
 

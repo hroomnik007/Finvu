@@ -502,6 +502,8 @@ export const cs: Translations = {
     resetLinkSent: 'Pokud e-mail existuje, byl odeslán odkaz pro reset hesla.',
     passwordResetSuccess: 'Heslo úspěšně změněno. Nyní se můžete přihlásit.',
     notVerified: 'Před přihlášením ověřte svůj e-mail.',
+    resendVerification: 'Znovu odeslat ověřovací e-mail',
+    resendVerificationSent: 'Pokud účet čeká na ověření, poslali jsme nový odkaz.',
     passwordMin8: 'Heslo musí mít alespoň 8 znaků',
     resetPasswordDesc: 'Zadejte nové heslo pro svůj účet.',
     resetSuccessMsg: 'Heslo bylo úspěšně změněno.',
