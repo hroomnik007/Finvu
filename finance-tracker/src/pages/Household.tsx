@@ -6,6 +6,8 @@ import { BottomSheet } from '../components/BottomSheet'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
+import { SharedCategoriesCard } from '../components/SharedCategoriesCard'
+import type { SharedCategoryTile } from '../components/SharedCategoriesCard'
 import { useAuth } from '../context/AuthContext'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCategories } from '../hooks/useCategories'
@@ -174,23 +176,26 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   const memberCount = householdData?.members.length ?? 0
   const animatedBalance = useCountUp(balance, 800)
 
-  // Výdavky podľa kategórie — agregované naprieč VŠETKÝMI členmi domácnosti pre
-  // zvolený mesiac (rovnaký zdroj ako Hero agregácia: stats.per_member).
-  // Own shared categories with the family's spend (paired by name, like the donut) split per member
-  const sharedCategoryRows = useMemo(() => {
-    if (!stats) return []
+  // Every own expense category with the family's spend (paired by name, like the
+  // household stats) split per member; shared ones first, most used first
+  const categoryTiles = useMemo<SharedCategoryTile[]>(() => {
     const key = (n: string) => n.trim().toLowerCase()
-    return categories
-      .filter(c => c.shared && c.type === 'expense')
+    const tiles = categories
+      .filter(c => c.type === 'expense' && c.id)
       .map(c => {
-        const perMember = stats.per_member
+        const perMember = (stats?.per_member ?? [])
           .map(m => ({
             name: m.name,
-            amount: m.category_breakdown.filter(b => key(b.name ?? '') === key(c.name)).reduce((s, b) => s + b.amount, 0),
+            amount: m.category_breakdown.filter(b => key(b.name ?? '') === key(c.name)).reduce((sum, b) => sum + b.amount, 0),
           }))
           .filter(pm => pm.amount > 0)
-        return { name: c.name, limit: c.budgetLimit ?? 0, spent: perMember.reduce((s, pm) => s + pm.amount, 0), perMember }
+        return {
+          id: c.id!, name: c.name, icon: c.icon, color: c.color, shared: !!c.shared,
+          limit: c.budgetLimit ?? 0, spent: perMember.reduce((sum, pm) => sum + pm.amount, 0), perMember,
+        }
       })
+    const used = (x: SharedCategoryTile) => (x.limit > 0 ? x.spent / x.limit : 0)
+    return tiles.sort((x, y) => Number(y.shared) - Number(x.shared) || (x.shared ? used(y) - used(x) : x.name.localeCompare(y.name)))
   }, [stats, categories])
 
   if (!householdEnabled) {
@@ -278,57 +283,13 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
         </div>
       </HeroCard>
 
-      {/* ── Shared categories: family spend vs. the common limit, split by member; chips mark/unmark them ── */}
+      {/* ── Shared categories: family spend vs. the common limit, tiles to mark/unmark them ── */}
       {householdData && householdData.members.length > 1 && (
-        <div style={{ width: '100%', maxWidth: 720 }}>
-        <GlassCard radius={20}>
-          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 4px' }}>👥 {ht.sharedCategoriesTitle}</p>
-          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-faint)', margin: '0 0 14px', lineHeight: 1.5 }}>{ht.sharedCategoriesDesc}</p>
-
-          {sharedCategoryRows.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
-              {sharedCategoryRows.map(r => {
-                const pct = r.limit > 0 ? Math.min((r.spent / r.limit) * 100, 100) : 0
-                const color = r.limit > 0 && r.spent >= r.limit ? 'var(--aurora-rose)' : r.limit > 0 && r.spent >= r.limit * 0.7 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
-                return (
-                  <div key={r.name}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontFamily: "'Manrope', sans-serif", fontSize: 13 }}>
-                      <span style={{ fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
-                      <span style={{ color: 'var(--aurora-faint)', flexShrink: 0 }}>{formatAmount(r.spent)}{r.limit > 0 ? ` / ${formatAmount(r.limit)}` : ''}</span>
-                    </div>
-                    {r.limit > 0 && (
-                      <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', margin: '6px 0' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3 }} />
-                      </div>
-                    )}
-                    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>
-                      {r.perMember.map(pm => `${pm.name} ${formatAmount(pm.amount)}`).join(' · ')}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {categories.filter(c => c.type === 'expense' && c.id).map(c => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => (c.shared ? void toggleShare(c.id!, false) : setShareConfirmId(c.id!))}
-                style={{
-                  padding: '7px 14px', borderRadius: 99, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
-                  background: c.shared ? 'rgba(139,92,246,0.18)' : 'var(--aurora-glass)',
-                  color: c.shared ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
-                  border: c.shared ? '1px solid rgba(139,92,246,0.45)' : '1px solid var(--aurora-gline)',
-                }}
-              >
-                {c.shared ? '✓ ' : ''}{c.name}
-              </button>
-            ))}
-          </div>
-        </GlassCard>
-        </div>
+        <SharedCategoriesCard
+          tiles={categoryTiles}
+          onShare={id => setShareConfirmId(id)}
+          onUnshare={id => void toggleShare(id, false)}
+        />
       )}
 
       {/* ── ČLENOVIA section header ── */}
