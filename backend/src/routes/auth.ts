@@ -11,6 +11,7 @@ import {
 import {
   webauthnRegisterOptions, webauthnRegisterVerify,
   webauthnAuthenticateOptions, webauthnAuthenticateVerify,
+  listPasskeys, deletePasskey,
 } from "../controllers/webauthn.controller";
 import { authenticateToken } from "../middleware/authenticate";
 
@@ -166,5 +167,7 @@ router.post("/webauthn/register-options",     sensitiveLimiter, authenticateToke
 router.post("/webauthn/register-verify",      authenticateToken, webauthnRegisterVerify);
 router.get("/webauthn/authenticate-options",  webauthnOptionsLimiter, webauthnAuthenticateOptions);
 router.post("/webauthn/authenticate-verify",  webauthnVerifyLimiter, webauthnAuthenticateVerify);
+router.get("/webauthn/credentials",           authenticateToken, listPasskeys);
+router.delete("/webauthn/credentials/:id",    authenticateToken, deletePasskey);
 
 export default router;

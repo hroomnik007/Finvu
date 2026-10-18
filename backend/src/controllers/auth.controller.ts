@@ -71,7 +71,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-function userPublic(u: {
+export function userPublic(u: {
   id: string; email: string; name: string; avatarUrl?: string | null; role?: string;
   weeklyEmailEnabled?: boolean; monthlyEmailEnabled?: boolean; onboardingComplete?: boolean;
   currentStreak?: number; longestStreak?: number; badges?: string[];
@@ -256,7 +256,7 @@ async function createSession(userId: string, req: Request): Promise<string> {
   return session.id
 }
 
-async function issueTokens(res: Response, userId: string, email: string, req?: Request): Promise<{ accessToken: string; sessionId: string }> {
+export async function issueTokens(res: Response, userId: string, email: string, req?: Request): Promise<{ accessToken: string; sessionId: string }> {
   const accessToken = signAccessToken({ userId, email });
   const refreshToken = signRefreshToken({ userId, email });
   const tokenHash = await hashToken(refreshToken);
@@ -1206,12 +1206,14 @@ export async function getAuthMethods(req: Request, res: Response): Promise<void>
   }
   const [user] = await db.select().from(users).where(byEmail(email)).limit(1)
   if (!user) {
-    res.json({ pin: false, google: false, password: false })
+    res.json({ pin: false, google: false, password: false, passkey: false })
     return
   }
+  const [passkey] = await db.select({ id: webauthnCredentials.id }).from(webauthnCredentials).where(eq(webauthnCredentials.userId, user.id)).limit(1)
   res.json({
     pin: !!user.pinHash,
     google: !!user.googleId,
     password: !!user.passwordHash,
+    passkey: !!passkey,
   })
 }

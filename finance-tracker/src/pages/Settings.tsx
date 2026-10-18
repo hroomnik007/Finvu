@@ -11,6 +11,7 @@ import { getNotificationsEnabled, setNotificationsEnabled } from '../hooks/useFi
 import { updateWeeklyEmail, updateUserSettings, changePassword, getSessions, deleteSessionById, deactivateAccount as apiDeactivateAccount, getPinDevices, deletePinDevice } from '../api/auth'
 import type { PinDevice } from '../api/auth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { PasskeySection } from '../components/PasskeySection'
 import { parseUserAgent } from '../utils/parseUserAgent'
 import { getTransactions, deleteTransaction } from '../api/transactions'
 import type { TransactionParams } from '../api/transactions'
@@ -1680,6 +1681,8 @@ export function SettingsPage() {
                 )}
               </>
             )}
+
+            <PasskeySection />
           </div>
         </div>
       )}

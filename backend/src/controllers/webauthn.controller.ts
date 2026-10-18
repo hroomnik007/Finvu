@@ -9,22 +9,15 @@ import type {
   RegistrationResponseJSON,
   AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
-import { users, webauthnCredentials, refreshTokens, userSessions } from "../db/schema";
+import { users, webauthnCredentials } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { randomUUID } from "crypto";
 import { env } from "../config/env";
 import { verifyReauth } from "../lib/reauth";
 import { DEMO_EMAIL } from "../lib/resetDemo";
-import {
-  signAccessToken,
-  signRefreshToken,
-  hashToken,
-  refreshTokenExpiry,
-  REFRESH_COOKIE,
-  REFRESH_COOKIE_OPTIONS,
-} from "../lib/tokens";
+import { issueTokens, userPublic } from "./auth.controller";
 
 const RP_NAME = "Finvu";
 const RP_ID = env.WEBAUTHN_RP_ID ?? new URL(env.APP_URL).hostname;
@@ -63,29 +56,6 @@ const sweepInterval = setInterval(() => {
   }
 }, 60 * 1000);
 sweepInterval.unref();
-
-async function issueTokens(res: Response, userId: string, email: string): Promise<{ accessToken: string; sessionId: string }> {
-  const accessToken = signAccessToken({ userId, email });
-  const refreshToken = signRefreshToken({ userId, email });
-  const tokenHash = await hashToken(refreshToken);
-  const [session] = await db.insert(userSessions).values({ userId, deviceName: 'Passkey', browser: 'WebAuthn' }).returning({ id: userSessions.id })
-  await db.insert(refreshTokens).values({ userId, tokenHash, expiresAt: refreshTokenExpiry(), sessionId: session?.id });
-  await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
-  res.cookie(REFRESH_COOKIE, refreshToken, REFRESH_COOKIE_OPTIONS);
-  return { accessToken, sessionId: session?.id ?? randomUUID() };
-}
-
-function userPublic(u: typeof users.$inferSelect) {
-  return {
-    id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl ?? null,
-    role: u.role ?? 'user', weeklyEmailEnabled: u.weeklyEmailEnabled ?? false,
-    monthlyEmailEnabled: u.monthlyEmailEnabled ?? false,
-    onboardingComplete: u.onboardingComplete ?? false,
-    currentStreak: u.currentStreak ?? 0, longestStreak: u.longestStreak ?? 0,
-    badges: u.badges ?? [],
-    has_pin: !!u.pinHash,
-  };
-}
 
 // POST /api/auth/webauthn/register-options  { currentPassword? | currentPin? }
 // A passkey is a full-strength login credential, so — like setting a PIN — it
@@ -248,6 +218,38 @@ export async function webauthnAuthenticateVerify(req: any, res: Response): Promi
     return;
   }
 
-  const { accessToken, sessionId } = await issueTokens(res, user.id, user.email);
+  // Same token/session issuing and user payload as every other sign-in method
+  const { accessToken, sessionId } = await issueTokens(res, user.id, user.email, req);
   res.json({ user: userPublic(user), accessToken, sessionId });
+}
+
+// GET /api/auth/webauthn/credentials — the caller's registered passkeys
+export async function listPasskeys(req: AuthRequest, res: Response): Promise<void> {
+  const rows = await db
+    .select({
+      id: webauthnCredentials.id,
+      name: webauthnCredentials.name,
+      deviceType: webauthnCredentials.deviceType,
+      backedUp: webauthnCredentials.backedUp,
+      createdAt: webauthnCredentials.createdAt,
+    })
+    .from(webauthnCredentials)
+    .where(eq(webauthnCredentials.userId, req.userId!))
+    .orderBy(webauthnCredentials.createdAt);
+  res.json({ data: rows });
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// DELETE /api/auth/webauthn/credentials/:id — scoped to the caller, so one user
+// can never remove another user's passkey by guessing ids.
+export async function deletePasskey(req: AuthRequest, res: Response): Promise<void> {
+  const id = req.params["id"] as string;
+  if (!UUID_RE.test(id)) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  const removed = await db
+    .delete(webauthnCredentials)
+    .where(and(eq(webauthnCredentials.id, id), eq(webauthnCredentials.userId, req.userId!)))
+    .returning({ id: webauthnCredentials.id });
+  if (removed.length === 0) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  res.json({ success: true });
 }
