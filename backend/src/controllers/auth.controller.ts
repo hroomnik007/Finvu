@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { lookupLocation } from "../lib/geoip";
+import { localDateISO } from "../lib/localDate";
 import { isIP } from "net";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
@@ -775,7 +776,7 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
     } else {
       const [row] = await db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId)).limit(1);
       const floor = row?.createdAt.toISOString().slice(0, 10) ?? trackingStartDate;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateISO();
       const clamped = trackingStartDate < floor ? floor : (trackingStartDate > today ? today : trackingStartDate);
       update.trackingStartDate = clamped;
     }

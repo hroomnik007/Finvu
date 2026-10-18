@@ -30,6 +30,7 @@ import { useCountUp } from '../hooks/useCountUp'
 import type { Page } from '../App'
 import type { ApiSummary } from '../types'
 import type { Translations } from '../i18n/sk'
+import { todayISO } from '../utils/format'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -85,7 +86,7 @@ interface DashboardProps {
 export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps) {
   const [showTrackingModal, setShowTrackingModal] = useState(false)
   const [streakModalOpen, setStreakModalOpen] = useState(false)
-  const [trackingDate, setTrackingDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [trackingDate, setTrackingDate] = useState(() => todayISO())
   const [trackingSaving, setTrackingSaving] = useState(false)
 
   // Family view lists every sharing member's rows; the server falls back to the

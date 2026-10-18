@@ -4,6 +4,7 @@ import { getTransactions, createTransaction, updateTransaction, deleteTransactio
 import { useAuth } from '../context/AuthContext'
 import type { FixedExpense, ApiTransaction } from '../types'
 import type { DataScope } from './useIncomes'
+import { todayISO } from '../utils/format'
 
 export function parseDescription(desc: string | null, fallbackDay: number): { label: string; note: string; dayOfMonth: number } {
   if (!desc) return { label: '', note: '', dayOfMonth: fallbackDay }
@@ -150,7 +151,7 @@ export function useFixedExpenses(month?: number, year?: number, scope: DataScope
   ]), [qc])
 
   const addFixedExpense = useCallback(async (expense: Omit<FixedExpense, 'id'>): Promise<void> => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayISO()
     await createTransaction({
       type: 'expense',
       amount: expense.amount,

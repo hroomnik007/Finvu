@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { updateUserSettings } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n'
+import { toLocalISO } from '../utils/format'
 
 interface Props {
   onDone: () => void
@@ -13,7 +14,7 @@ export function TrackingDateOnboarding({ onDone }: Props) {
   const [date, setDate] = useState(() => {
     const d = new Date()
     d.setDate(1)
-    return d.toISOString().split('T')[0]
+    return toLocalISO(d)
   })
   const [saving, setSaving] = useState(false)
 

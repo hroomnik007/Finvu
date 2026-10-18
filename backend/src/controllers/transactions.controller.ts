@@ -8,6 +8,7 @@ import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
 import { escapeLike } from "../lib/search";
+import { localDateISO } from "../lib/localDate";
 import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows } from "../lib/recurring";
 
 // YYYY-MM-DD that is also a real calendar date (the bare regex let 2026-02-30
@@ -87,7 +88,7 @@ async function getFamilyStartDate(householdId: number): Promise<string> {
     .where(and(eq(householdMembers.householdId, householdId), eq(users.householdId, householdId)));
 
   const dates = rows.map((r) => r.trackingStartDate ?? r.createdAt.toISOString().split("T")[0]);
-  if (dates.length === 0) return new Date().toISOString().split("T")[0];
+  if (dates.length === 0) return localDateISO();
   return dates.reduce((min, d) => (d < min ? d : min));
 }
 
