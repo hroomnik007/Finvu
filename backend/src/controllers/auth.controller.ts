@@ -775,7 +775,7 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
       update.trackingStartDate = null;
     } else {
       const [row] = await db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId)).limit(1);
-      const floor = row?.createdAt.toISOString().slice(0, 10) ?? trackingStartDate;
+      const floor = row ? localDateISO(row.createdAt) : trackingStartDate;
       const today = localDateISO();
       const clamped = trackingStartDate < floor ? floor : (trackingStartDate > today ? today : trackingStartDate);
       update.trackingStartDate = clamped;

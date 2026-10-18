@@ -9,6 +9,7 @@ import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
 import { escapeLike } from "../lib/search";
 import { localDateISO } from "../lib/localDate";
+import { nextStreak } from "../lib/streak";
 import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows } from "../lib/recurring";
 
 // YYYY-MM-DD that is also a real calendar date (the bare regex let 2026-02-30
@@ -87,7 +88,7 @@ async function getFamilyStartDate(householdId: number): Promise<string> {
     .innerJoin(users, eq(householdMembers.userId, users.id))
     .where(and(eq(householdMembers.householdId, householdId), eq(users.householdId, householdId)));
 
-  const dates = rows.map((r) => r.trackingStartDate ?? r.createdAt.toISOString().split("T")[0]);
+  const dates = rows.map((r) => r.trackingStartDate ?? localDateISO(r.createdAt));
   if (dates.length === 0) return localDateISO();
   return dates.reduce((min, d) => (d < min ? d : min));
 }
@@ -234,7 +235,7 @@ export async function createTransaction(req: AuthRequest, res: Response): Promis
     // legitimately be backdated for a real receipt — but was also a way to
     // fabricate an instant streak/veteran badge with zero real usage; see
     // security audit run-1).
-    const todayServer = row.createdAt.toISOString().slice(0, 10);
+    const todayServer = localDateISO(row.createdAt);
     await updateStreakAndBadges(req.userId!, todayServer);
     ({ newlyUnlocked: newlyUnlockedAchievements } = await evaluateAchievements(req.userId!));
   } catch (err) {
@@ -290,7 +291,7 @@ export async function createTransactionsBulk(req: AuthRequest, res: Response): P
 
   let newlyUnlockedAchievements: string[] = [];
   try {
-    await updateStreakAndBadges(req.userId!, rows[0].createdAt.toISOString().slice(0, 10));
+    await updateStreakAndBadges(req.userId!, localDateISO(rows[0].createdAt));
     ({ newlyUnlocked: newlyUnlockedAchievements } = await evaluateAchievements(req.userId!));
   } catch (err) {
     console.error('streak/achievement update failed:', err);
@@ -735,7 +736,7 @@ export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promis
 
   const startDate = isFamily
     ? await getFamilyStartDate(userRow.householdId!)
-    : userRow.trackingStartDate ?? userRow.createdAt.toISOString().split("T")[0];
+    : userRow.trackingStartDate ?? localDateISO(userRow.createdAt);
 
   res.json({ balance: await cumulativeBalance(baseFilter, startDate, year, month) });
 }
@@ -772,7 +773,7 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
 
   const startDate = isFamily
     ? await getFamilyStartDate(userRow.householdId!)
-    : userRow.trackingStartDate ?? userRow.createdAt.toISOString().split("T")[0];
+    : userRow.trackingStartDate ?? localDateISO(userRow.createdAt);
 
   // Balance: cumulative from tracking start to end of requested month, built
   // month by month with the same recurring-item rules as the figures below.
@@ -910,17 +911,7 @@ async function updateStreakAndBadges(userId: string, txDate: string): Promise<st
   if (!user) return [];
 
   const today = txDate;
-  const last = user.lastActivityDate;
-  let streak = user.currentStreak ?? 0;
-
-  if (!last) {
-    streak = 1;
-  } else if (last === today) {
-    // same day — no change
-  } else {
-    const dayDiff = Math.round((new Date(today).getTime() - new Date(last).getTime()) / 86400000);
-    streak = dayDiff === 1 ? streak + 1 : 1;
-  }
+  const streak = nextStreak(user.currentStreak ?? 0, user.lastActivityDate, today);
 
   const longest = Math.max(user.longestStreak ?? 0, streak);
 

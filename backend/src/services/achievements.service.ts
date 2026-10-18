@@ -1,5 +1,6 @@
 import { and, count, eq, lt, sql } from "drizzle-orm";
 import { db } from "../db";
+import { localDateISO } from "../lib/localDate";
 import {
   users,
   transactions,
@@ -135,7 +136,7 @@ export async function evaluateAchievements(userId: string): Promise<EvaluateAchi
     });
   const memberCount = Number(memberCountRows[0]?.memberCount ?? 0);
 
-  const startRef = user.trackingStartDate ?? user.createdAt.toISOString().split("T")[0];
+  const startRef = user.trackingStartDate ?? localDateISO(user.createdAt);
   const daysActive = Math.floor((Date.now() - new Date(startRef).getTime()) / 86400000);
 
   const qualifies: Record<AchievementKey, boolean> = {
