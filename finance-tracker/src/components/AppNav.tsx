@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import {
   LayoutDashboard, TrendingUp, CreditCard, Settings,
-  Receipt, Lock, Tag, ChevronLeft, ChevronRight, ChevronDown, PiggyBank,
+  Receipt, Lock, Tag, Search, ChevronLeft, ChevronRight, ChevronDown, PiggyBank,
 } from 'lucide-react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
@@ -18,7 +18,7 @@ interface AppNavProps {
   onMobileClose?: () => void
 }
 
-const EXPENSE_CHILDREN: Page[] = ['variable-expenses', 'fixed-expenses', 'categories']
+const EXPENSE_CHILDREN: Page[] = ['variable-expenses', 'fixed-expenses', 'categories', 'search']
 
 export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onMobileClose }: AppNavProps) {
   const { t } = useTranslation()
@@ -217,6 +217,12 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
                     icon={<Tag size={15} strokeWidth={1.5} />}
                     label={t.nav.categories}
                   />
+                  <SubNavItem
+                    active={current === 'search'}
+                    onClick={() => handleChange('search')}
+                    icon={<Search size={15} strokeWidth={1.5} />}
+                    label={t.nav.search}
+                  />
                 </div>
               </div>
             )}
@@ -247,6 +253,7 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
                 { page: 'variable-expenses' as Page, icon: <Receipt size={13} strokeWidth={1.5} />, label: t.nav.variable },
                 { page: 'fixed-expenses' as Page, icon: <Lock size={13} strokeWidth={1.5} />, label: t.nav.fixed },
                 { page: 'categories' as Page, icon: <Tag size={13} strokeWidth={1.5} />, label: t.nav.categories },
+                { page: 'search' as Page, icon: <Search size={13} strokeWidth={1.5} />, label: t.nav.search },
               ]).map(item => (
                 <button
                   key={item.page}

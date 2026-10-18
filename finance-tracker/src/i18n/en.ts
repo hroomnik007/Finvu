@@ -2,6 +2,7 @@ import type { Translations } from './sk'
 
 export const en: Translations = {
   nav: {
+    search: 'Search',
     overview: 'Overview',
     income: 'Income',
     expenses: 'Expenses',
@@ -832,6 +833,23 @@ export const en: Translations = {
     confirmDesc: 'Enter PIN again to confirm',
     enterPin: 'Enter PIN',
     appLocked: 'Finvu is locked',
+  },
+  search: {
+    title: 'Search transactions',
+    text: 'Text (description, note, category)',
+    all: 'All',
+    inc: 'Income',
+    exp: 'Expenses',
+    min: 'Amount from',
+    max: 'Amount to',
+    frm: 'From date',
+    to: 'To date',
+    reset: 'Clear filters',
+    none: 'Nothing found',
+    hint: 'Enter text or set a filter.',
+    count: 'Found: {n}',
+    more: 'Show more',
+    fixed: 'Recurring',
   },
   palette: {
     placeholder: 'Search or perform an action…',

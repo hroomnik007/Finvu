@@ -2,6 +2,7 @@ import type { Translations } from './sk'
 
 export const cs: Translations = {
   nav: {
+    search: 'Hledat',
     overview: 'Přehled',
     income: 'Příjmy',
     expenses: 'Výdaje',
@@ -832,6 +833,23 @@ export const cs: Translations = {
     confirmDesc: 'Zadejte PIN znovu pro potvrzení',
     enterPin: 'Zadejte PIN',
     appLocked: 'Finvu je uzamčeno',
+  },
+  search: {
+    title: 'Hledat transakce',
+    text: 'Text (popis, poznámka, kategorie)',
+    all: 'Vše',
+    inc: 'Příjmy',
+    exp: 'Výdaje',
+    min: 'Částka od',
+    max: 'Částka do',
+    frm: 'Od data',
+    to: 'Do data',
+    reset: 'Zrušit filtry',
+    none: 'Nic nenalezeno',
+    hint: 'Zadej text nebo nastav filtr.',
+    count: 'Nalezeno: {n}',
+    more: 'Zobrazit další',
+    fixed: 'Pravidelné',
   },
   palette: {
     placeholder: 'Hledat nebo provést akci…',

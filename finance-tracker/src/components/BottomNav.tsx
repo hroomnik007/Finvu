@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Home, TrendingUp, Settings, Receipt, Lock, Tag, PiggyBank, MoreHorizontal } from 'lucide-react'
+import { Home, TrendingUp, Settings, Receipt, Lock, Tag, Search, PiggyBank, MoreHorizontal } from 'lucide-react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
@@ -10,7 +10,7 @@ interface BottomNavProps {
   onChange: (page: Page) => void
 }
 
-const EXPENSE_PAGES: Page[] = ['variable-expenses', 'fixed-expenses', 'categories']
+const EXPENSE_PAGES: Page[] = ['variable-expenses', 'fixed-expenses', 'categories', 'search']
 const VIAC_PAGES: Page[] = ['savings', 'household']
 
 export function BottomNav({ current, onChange }: BottomNavProps) {
@@ -73,6 +73,7 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
               { icon: <Receipt size={16} />, label: t.nav.variable, page: 'variable-expenses' as Page },
               { icon: <Lock size={16} />, label: t.nav.fixed, page: 'fixed-expenses' as Page },
               { icon: <Tag size={16} />, label: t.nav.categories, page: 'categories' as Page },
+              { icon: <Search size={16} />, label: t.nav.search, page: 'search' as Page },
             ] as const).map(item => (
               <button
                 key={item.page}

@@ -2,6 +2,7 @@ import type { Translations } from './sk'
 
 export const pl: Translations = {
   nav: {
+    search: 'Szukaj',
     overview: 'Przegląd',
     income: 'Przychody',
     expenses: 'Wydatki',
@@ -832,6 +833,23 @@ export const pl: Translations = {
     confirmDesc: 'Podaj PIN ponownie, aby potwierdzić',
     enterPin: 'Wprowadź PIN',
     appLocked: 'Finvu jest zablokowane',
+  },
+  search: {
+    title: 'Szukaj transakcji',
+    text: 'Tekst (opis, notatka, kategoria)',
+    all: 'Wszystko',
+    inc: 'Przychody',
+    exp: 'Wydatki',
+    min: 'Kwota od',
+    max: 'Kwota do',
+    frm: 'Od daty',
+    to: 'Do daty',
+    reset: 'Wyczyść filtry',
+    none: 'Nic nie znaleziono',
+    hint: 'Wpisz tekst lub ustaw filtr.',
+    count: 'Znaleziono: {n}',
+    more: 'Pokaż więcej',
+    fixed: 'Cykliczne',
   },
   palette: {
     placeholder: 'Szukaj lub wykonaj akcję…',

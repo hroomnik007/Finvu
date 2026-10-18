@@ -11,6 +11,12 @@ export interface TransactionParams {
   offset?: number
   /** 'family' also returns the other sharing household members' rows. */
   scope?: 'personal' | 'family'
+  /** Search: text (description, note, category), amount range, date range. */
+  q?: string
+  minAmount?: number
+  maxAmount?: number
+  from?: string
+  to?: string
 }
 
 export interface TransactionPayload {
@@ -32,6 +38,11 @@ export async function getTransactions(
   if (params.limit !== undefined) query.limit = String(params.limit)
   if (params.offset !== undefined) query.offset = String(params.offset)
   if (params.scope === 'family') query.scope = 'family'
+  if (params.q) query.q = params.q
+  if (params.minAmount !== undefined) query.minAmount = String(params.minAmount)
+  if (params.maxAmount !== undefined) query.maxAmount = String(params.maxAmount)
+  if (params.from) query.from = params.from
+  if (params.to) query.to = params.to
 
   const { data } = await apiClient.get('/api/transactions', { params: query })
   return data

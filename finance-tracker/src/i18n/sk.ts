@@ -1,5 +1,6 @@
 export const sk = {
   nav: {
+    search: 'Hľadať',
     overview: 'Prehľad',
     income: 'Príjmy',
     expenses: 'Výdavky',
@@ -830,6 +831,23 @@ export const sk = {
     confirmDesc: 'Zadaj PIN znova pre potvrdenie',
     enterPin: 'Zadaj PIN',
     appLocked: 'Finvu je uzamknuté',
+  },
+  search: {
+    title: 'Hľadať transakcie',
+    text: 'Text (popis, poznámka, kategória)',
+    all: 'Všetko',
+    inc: 'Príjmy',
+    exp: 'Výdavky',
+    min: 'Suma od',
+    max: 'Suma do',
+    frm: 'Od dátumu',
+    to: 'Do dátumu',
+    reset: 'Zrušiť filtre',
+    none: 'Nič sa nenašlo',
+    hint: 'Zadaj text alebo nastav filter.',
+    count: 'Nájdených: {n}',
+    more: 'Zobraziť ďalšie',
+    fixed: 'Pravidelné',
   },
   palette: {
     placeholder: 'Hľadať alebo vykonať akciu…',
