@@ -428,10 +428,13 @@ const upcomingFixed = useMemo(() => {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{fe.label}</div>
-                    <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20 }}>{badge.text}</span>
-                    {familyView && ownerName(fe.ownerId) && (
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--aurora-violet)', background: 'rgba(139,92,246,0.15)', padding: '2px 7px', borderRadius: 20, marginLeft: 6 }}>{ownerName(fe.ownerId)}</span>
-                    )}
+                    {/* One non-wrapping row: the owner tag (family view) must never push the badge text or the card onto extra lines */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.text}</span>
+                      {familyView && ownerName(fe.ownerId) && (
+                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--aurora-violet)', background: 'rgba(139,92,246,0.15)', padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{ownerName(fe.ownerId)}</span>
+                      )}
+                    </div>
                   </div>
                   <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-rose)', flexShrink: 0 }}>
                     {formatAmount(fe.amount)}
