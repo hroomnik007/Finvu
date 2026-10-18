@@ -603,6 +603,10 @@ export const en: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Shared categories',
+    sharedCount: '{n} shared',
+    sharedOver: '{n} over limit',
+    sharedAdd: '+ Share',
+    sharedStop: 'Stop sharing',
     sharedOnToast: 'Category {name} is now shared',
     sharedOffToast: 'Category {name} is no longer shared',
     sharedCategoriesDesc: 'Pick the categories the whole household shares. The limit is calculated automatically: with fixed expenses it is their total across all members, otherwise the highest limit a member set.',

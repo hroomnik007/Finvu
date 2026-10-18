@@ -601,6 +601,10 @@ export const sk = {
   },
   household: {
     sharedCategoriesTitle: 'Spoločné kategórie',
+    sharedCount: '{n} spoločných',
+    sharedOver: '{n} nad limitom',
+    sharedAdd: '+ Spoločná',
+    sharedStop: 'Zrušiť zdieľanie',
     sharedOnToast: 'Kategória {name} je teraz spoločná',
     sharedOffToast: 'Kategória {name} už nie je spoločná',
     sharedCategoriesDesc: 'Označte kategórie, ktoré budú spoločné pre celú domácnosť. Limit sa počíta automaticky: pri fixných výdavkoch ako ich súčet za všetkých členov, inak je to najvyšší limit, aký člen nastavil.',

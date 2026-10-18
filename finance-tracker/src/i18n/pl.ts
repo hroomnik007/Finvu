@@ -603,6 +603,10 @@ export const pl: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Wspólne kategorie',
+    sharedCount: '{n} wspólnych',
+    sharedOver: '{n} powyżej limitu',
+    sharedAdd: '+ Wspólna',
+    sharedStop: 'Przestań udostępniać',
     sharedOnToast: 'Kategoria {name} jest teraz wspólna',
     sharedOffToast: 'Kategoria {name} nie jest już wspólna',
     sharedCategoriesDesc: 'Zaznacz kategorie wspólne dla całego gospodarstwa. Limit liczy się automatycznie: przy wydatkach stałych jako ich suma dla wszystkich członków, w przeciwnym razie jako najwyższy limit ustawiony przez członka.',

@@ -603,6 +603,10 @@ export const cs: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Společné kategorie',
+    sharedCount: '{n} společných',
+    sharedOver: '{n} nad limitem',
+    sharedAdd: '+ Společná',
+    sharedStop: 'Zrušit sdílení',
     sharedOnToast: 'Kategorie {name} je nyní společná',
     sharedOffToast: 'Kategorie {name} už není společná',
     sharedCategoriesDesc: 'Označte kategorie, které budou společné pro celou domácnost. Limit se počítá automaticky: u fixních výdajů jako jejich součet za všechny členy, jinak jako nejvyšší limit, který člen nastavil.',

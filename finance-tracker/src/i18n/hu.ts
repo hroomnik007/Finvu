@@ -603,6 +603,10 @@ export const hu: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Közös kategóriák',
+    sharedCount: '{n} közös',
+    sharedOver: '{n} a korlát felett',
+    sharedAdd: '+ Közös',
+    sharedStop: 'Megosztás megszüntetése',
     sharedOnToast: 'A(z) {name} kategória mostantól közös',
     sharedOffToast: 'A(z) {name} kategória már nem közös',
     sharedCategoriesDesc: 'Jelölje meg a háztartás közös kategóriáit. A korlát automatikusan számítódik: fix kiadásoknál az összes tag fix kiadásainak összege, egyébként a legmagasabb korlát, amelyet egy tag beállított.',
