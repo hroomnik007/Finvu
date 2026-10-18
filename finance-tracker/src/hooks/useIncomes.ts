@@ -1,9 +1,10 @@
 import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
+import { createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
 import { isEndedInMonth } from './useFixedExpenses'
 import type { Income, ApiTransaction } from '../types'
+import { getAllTransactions } from '../api/allTransactions'
 
 function adjustDateToMonth(originalDate: string, targetMonth: number, targetYear: number): string {
   const originalDay = parseInt(originalDate.split('-')[2], 10)
@@ -47,7 +48,7 @@ export async function fetchIncomes(
     const monthStr = month !== undefined && year !== undefined
       ? `${year}-${String(month).padStart(2, '0')}`
       : undefined
-    const { data } = await getTransactions({ type: 'income', month: monthStr, limit: 200, scope })
+    const data = await getAllTransactions({ type: 'income', month: monthStr, scope })
 
     if (monthStr) {
       const trackingYM = trackingStart ? trackingStart.substring(0, 7) : null
@@ -58,11 +59,7 @@ export async function fetchIncomes(
       // month must appear in every subsequent month. The backend month param
       // filters by creation date, not recurrence — adding it would hide older
       // recurring incomes. Client-side filter on line below enforces t.date <= monthStr.
-      // TODO: paginate if a user accumulates >200 recurring income records.
-      const { data: recurring } = await getTransactions({ type: 'income', isFixed: true, limit: 200, scope })
-      if (recurring.length === 200) {
-        console.warn('useIncomes: recurring income limit reached, some records may be missing')
-      }
+      const recurring = await getAllTransactions({ type: 'income', isFixed: true, scope })
       // A recurring income is a series (same owner and description): only its
       // latest price dated up to this month counts, and only while not ended.
       const latest = new Map<string, ApiTransaction>()
