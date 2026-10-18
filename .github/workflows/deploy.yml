@@ -7,7 +7,6 @@ on:
     paths:
       - 'finance-tracker/**'
       - 'backend/**'
-      - 'landing/**'
 concurrency:
   group: hetzner-deploy
   cancel-in-progress: false
@@ -25,7 +24,6 @@ jobs:
           filters: |
             frontend:
               - 'finance-tracker/**'
-              - 'landing/**'
             backend:
               - 'backend/**'
   lint:
@@ -56,6 +54,13 @@ jobs:
       - name: Backend — tests
         working-directory: backend
         run: npm test
+      # Known vulnerabilities in what actually ships (production dependencies only)
+      - name: Frontend — npm audit
+        working-directory: finance-tracker
+        run: npm audit --omit=dev --audit-level=high
+      - name: Backend — npm audit
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
   deploy-frontend:
     needs: [detect-changes, lint]
     if: needs.lint.result == 'success' && needs.detect-changes.outputs.changed_frontend == 'true'
@@ -83,7 +88,6 @@ jobs:
             sudo mkdir -p /var/www/finance-tracker/finance-tracker/dist
             sudo chown -R deploy:deploy /var/www/finance-tracker/finance-tracker/dist
             cp -r dist/* /var/www/finance-tracker/finance-tracker/dist/
-            cp /var/www/finance-tracker-repo/landing/index.html /var/www/landing/index.html 2>/dev/null || true
             sudo systemctl reload nginx
   deploy-backend:
     needs: [detect-changes, lint, deploy-frontend]
@@ -119,7 +123,10 @@ jobs:
             # Add DATABASE_URL to GitHub repo Settings → Secrets and variables → Actions
             DATABASE_URL=${{ secrets.DATABASE_URL }} npm run db:migrate
             cd /var/www/finance-tracker-repo
+            # Build first, then replace only the backend container and wait until its
+            # healthcheck passes; the old container keeps serving during the build.
             docker compose build backend
-            docker compose down --remove-orphans || true
-            docker rm -f finance-tracker-repo-backend-1 2>/dev/null || true
-            docker compose up -d --no-deps backend
+            docker compose up -d --no-deps --remove-orphans --wait --wait-timeout 90 backend || {
+              docker compose logs backend --tail=50
+              exit 1
+            }

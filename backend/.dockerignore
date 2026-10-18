@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.*
+uploads
+*.md
+coverage
+**/*.test.ts
+vitest.config.mts
+tsconfig.test.json
+ecosystem.config.js
