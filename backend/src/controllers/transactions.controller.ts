@@ -404,7 +404,9 @@ async function cumulativeBalance(
     .orderBy(transactions.date);
 
   const today = new Date();
-  const latest = new Map<string, (typeof fixedRows)[number]>();
+  // Amount, direction and due day are parsed once per row when it becomes the
+  // latest of its series — the month loop below then only does arithmetic.
+  const latest = new Map<string, { isIncome: boolean; amount: number; dueDay: number }>();
   let next = 0;
   let balance = 0;
 
@@ -417,17 +419,21 @@ async function cumulativeBalance(
     // Rows are date-ascending, so the last one seen per series is its latest.
     while (next < fixedRows.length && fixedRows[next].date < monthEnd) {
       const row = fixedRows[next++];
-      latest.set(`${row.userId}|${row.type}|${row.description ?? ""}`, row);
+      latest.set(`${row.userId}|${row.type}|${row.description ?? ""}`, {
+        isIncome: row.type === "income",
+        amount: parseFloat(row.amount),
+        dueDay: fixedDayOfMonth(row.description, row.date),
+      });
     }
 
     const flat = oneOffByMonth.get(ym);
     let income = flat?.income ?? 0;
     let expense = flat?.expense ?? 0;
     for (const row of latest.values()) {
-      if (row.type === "income") {
-        income += parseFloat(row.amount);
-      } else if (isFixedDue(fixedDayOfMonth(row.description, row.date), y, m, today)) {
-        expense += parseFloat(row.amount);
+      if (row.isIncome) {
+        income += row.amount;
+      } else if (isFixedDue(row.dueDay, y, m, today)) {
+        expense += row.amount;
       }
     }
     balance += income - expense;
