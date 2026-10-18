@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { and, eq, gte, lt, inArray, isNull, sql, count, type SQL } from "drizzle-orm";
+import { and, eq, gte, lt, lte, or, inArray, isNull, sql, count, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { transactions, categories, users, householdMembers } from "../db/schema";
@@ -7,6 +7,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
+import { escapeLike } from "../lib/search";
 import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows } from "../lib/recurring";
 
 // YYYY-MM-DD that is also a real calendar date (the bare regex let 2026-02-30
@@ -38,6 +39,12 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).optional().default(50),
   offset: z.coerce.number().int().min(0).optional().default(0),
   scope: z.enum(["personal", "family"]).optional().default("personal"),
+  // Search: text in description/note/category name, amount range, date range
+  q: z.string().trim().min(1).max(100).optional(),
+  minAmount: z.coerce.number().min(0).optional(),
+  maxAmount: z.coerce.number().min(0).optional(),
+  from: isoDate.optional(),
+  to: isoDate.optional(),
 });
 
 const scopeSchema = z.enum(["personal", "family"]).optional().default("personal");
@@ -88,7 +95,8 @@ function buildFilters(
   owner: SQL,
   month?: string,
   type?: string,
-  isFixed?: string
+  isFixed?: string,
+  search?: { q?: string; minAmount?: number; maxAmount?: number; from?: string; to?: string },
 ) {
   const filters: SQL[] = [owner];
   if (month) {
@@ -102,6 +110,19 @@ function buildFilters(
   if (isFixed !== undefined) {
     filters.push(eq(transactions.isFixed, isFixed === "true"));
   }
+  if (search?.q) {
+    const pattern = `%${escapeLike(search.q)}%`;
+    // Recurring expenses keep label, note and due day as JSON in the description:
+    // the key names are stripped so searching "l" or "n" does not match every one.
+    filters.push(or(
+      sql`regexp_replace(${transactions.description}, '"[lnd]":', ' ', 'g') ilike ${pattern}`,
+      sql`${categories.name} ilike ${pattern}`,
+    )!);
+  }
+  if (search?.minAmount !== undefined) filters.push(gte(transactions.amount, String(search.minAmount)));
+  if (search?.maxAmount !== undefined) filters.push(lte(transactions.amount, String(search.maxAmount)));
+  if (search?.from) filters.push(gte(transactions.date, search.from));
+  if (search?.to) filters.push(lte(transactions.date, search.to));
   return filters;
 }
 
@@ -112,7 +133,7 @@ export async function listTransactions(req: AuthRequest, res: Response): Promise
     return;
   }
 
-  const { month, type, isFixed, limit, offset, scope } = query.data;
+  const { month, type, isFixed, limit, offset, scope, q, minAmount, maxAmount, from, to } = query.data;
 
   // Family scope lists every sharing member's rows (read-only context for the
   // dashboard); it silently falls back to the caller's own rows when they are
@@ -124,7 +145,7 @@ export async function listTransactions(req: AuthRequest, res: Response): Promise
       owner = inArray(transactions.userId, familyMemberIds(ctx.householdId));
     }
   }
-  const filters = buildFilters(owner, month, type, isFixed);
+  const filters = buildFilters(owner, month, type, isFixed, { q, minAmount, maxAmount, from, to });
 
   const [rows, [{ total }]] = await Promise.all([
     db
@@ -155,6 +176,7 @@ export async function listTransactions(req: AuthRequest, res: Response): Promise
     db
       .select({ total: count() })
       .from(transactions)
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
       .where(and(...filters)),
   ]);
 

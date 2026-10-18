@@ -15,6 +15,7 @@ const IncomePage = lazy(() => import('./pages/Income').then(m => ({ default: m.I
 const VariableExpensesPage = lazy(() => import('./pages/VariableExpenses').then(m => ({ default: m.VariableExpensesPage })))
 const FixedExpensesPage = lazy(() => import('./pages/FixedExpenses').then(m => ({ default: m.FixedExpensesPage })))
 const CategoriesPage = lazy(() => import('./pages/Categories').then(m => ({ default: m.CategoriesPage })))
+const SearchPage = lazy(() => import('./pages/Search').then(m => ({ default: m.SearchPage })))
 const SettingsPage = lazy(() => import('./pages/Settings').then(m => ({ default: m.SettingsPage })))
 const ProfileModal = lazy(() => import('./pages/Profile').then(m => ({ default: m.ProfileModal })))
 const AdminPage = lazy(() => import('./pages/Admin').then(m => ({ default: m.AdminPage })))
@@ -85,8 +86,9 @@ export type Page =
   | 'settings'
   | 'household'
   | 'savings'
+  | 'search'
 
-const VALID_PAGES: Page[] = ['dashboard', 'income', 'variable-expenses', 'fixed-expenses', 'categories', 'settings', 'household', 'savings']
+const VALID_PAGES: Page[] = ['dashboard', 'income', 'variable-expenses', 'fixed-expenses', 'categories', 'settings', 'household', 'savings', 'search']
 
 function getPageFromHash(): Page {
   const hash = window.location.hash.slice(1).split('?')[0] as Page
@@ -522,6 +524,7 @@ function App() {
             <FixedExpensesPage month={month} year={year} />
           )}
           {page === 'categories' && <CategoriesPage showToast={showToast} />}
+          {page === 'search' && <SearchPage scope={dashView} />}
           {(page === 'settings' || page === 'household') && (
             <div style={{ flex: 1, overflowY: 'auto' }}>
               <div style={{ padding: '20px', minHeight: '100%' }}>

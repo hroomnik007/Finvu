@@ -2,6 +2,7 @@ import type { Translations } from './sk'
 
 export const hu: Translations = {
   nav: {
+    search: 'Keresés',
     overview: 'Áttekintés',
     income: 'Bevételek',
     expenses: 'Kiadások',
@@ -832,6 +833,23 @@ export const hu: Translations = {
     confirmDesc: 'Adja meg a PIN-t újra a megerősítéshez',
     enterPin: 'Adja meg a PIN-t',
     appLocked: 'A Finvu zárolva van',
+  },
+  search: {
+    title: 'Tranzakciók keresése',
+    text: 'Szöveg (leírás, megjegyzés, kategória)',
+    all: 'Mind',
+    inc: 'Bevételek',
+    exp: 'Kiadások',
+    min: 'Összeg-tól',
+    max: 'Összeg-ig',
+    frm: 'Dátumtól',
+    to: 'Dátumig',
+    reset: 'Szűrők törlése',
+    none: 'Nincs találat',
+    hint: 'Írj be szöveget vagy állíts be szűrőt.',
+    count: 'Találatok: {n}',
+    more: 'Továbbiak',
+    fixed: 'Rendszeres',
   },
   palette: {
     placeholder: 'Keresés vagy művelet végrehajtása…',
