@@ -2,7 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { categories, transactions, users } from "../db/schema";
 import { familyMemberIds } from "./household";
-import { pickSharedLimit } from "./sharedLimit";
+import { pickSharedLimit, sumLatestPerSeries } from "./sharedLimit";
 
 // Categories are per user, so "the same category" across the family is matched
 // by type + trimmed, case-insensitive name (the same pairing household stats use).
@@ -34,16 +34,17 @@ async function computeSharedLimit(members: string[], name: string): Promise<stri
     .where(and(inArray(categories.userId, members), eq(categories.type, "expense"), sameName(name)));
   if (copies.length === 0) return null;
 
-  const [{ total }] = await db
-    .select({ total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)` })
+  const fixedRows = await db
+    .select({ userId: transactions.userId, description: transactions.description, amount: transactions.amount })
     .from(transactions)
     .where(and(
       inArray(transactions.categoryId, copies.map((c) => c.id)),
       eq(transactions.isFixed, true),
       eq(transactions.type, "expense"),
-    ));
+    ))
+    .orderBy(transactions.date);
   const limit = pickSharedLimit({
-    fixedTotal: parseFloat(total ?? "0"),
+    fixedTotal: sumLatestPerSeries(fixedRows),
     reserves: copies.map((c) => Number(c.limitReserve ?? 0)),
     limits: copies.map((c) => Number(c.budgetLimit)),
   });

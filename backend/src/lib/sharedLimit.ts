@@ -11,3 +11,14 @@ export function pickSharedLimit(input: { fixedTotal: number; reserves: number[];
   const limits = input.limits.filter((n) => Number.isFinite(n) && n > 0);
   return limits.length ? Math.max(...limits) : null;
 }
+
+// A recurring expense is entered once and may appear in several rows (e.g. one
+// per month or per edit). Like the household stats, count each series once —
+// member + description — through its latest row. Rows must be ordered by date.
+export function sumLatestPerSeries(rows: { userId: string; description: string | null; amount: string }[]): number {
+  const latest = new Map<string, number>();
+  for (const r of rows) latest.set(`${r.userId}|${r.description ?? ""}`, parseFloat(r.amount));
+  let total = 0;
+  for (const v of latest.values()) total += Number.isFinite(v) ? v : 0;
+  return total;
+}
