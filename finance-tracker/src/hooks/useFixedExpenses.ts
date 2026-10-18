@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
 import type { FixedExpense, ApiTransaction } from '../types'
+import type { DataScope } from './useIncomes'
 
 export function parseDescription(desc: string | null, fallbackDay: number): { label: string; note: string; dayOfMonth: number } {
   if (!desc) return { label: '', note: '', dayOfMonth: fallbackDay }
@@ -45,20 +46,26 @@ function toFixedExpense(t: ApiTransaction): FixedExpense {
     dayOfMonth: parsed.dayOfMonth,
     categoryId: t.categoryId ?? null,
     note: parsed.note,
+    categoryName: t.categoryName,
+    categoryColor: t.categoryColor,
+    categoryIcon: t.categoryIcon,
   }
 }
 
-export function fixedExpenseQueryKey(month: number | undefined, year: number | undefined, trackingStart: string | null | undefined) {
+export function fixedExpenseQueryKey(month: number | undefined, year: number | undefined, trackingStart: string | null | undefined, scope: DataScope = 'personal') {
   const monthStr = month !== undefined && year !== undefined
     ? `${year}-${String(month).padStart(2, '0')}`
     : null
-  return ['fixedExpenses', monthStr, trackingStart ?? null] as const
+  return scope === 'family'
+    ? ['fixedExpenses', monthStr, trackingStart ?? null, 'family'] as const
+    : ['fixedExpenses', monthStr, trackingStart ?? null] as const
 }
 
 export async function fetchFixedExpenses(
   month: number | undefined,
   year: number | undefined,
   trackingStart: string | null | undefined,
+  scope: DataScope = 'personal',
 ): Promise<FixedExpense[]> {
   try {
     const monthStr = month !== undefined && year !== undefined
@@ -69,7 +76,7 @@ export async function fetchFixedExpenses(
     if (monthStr && trackingYM && monthStr < trackingYM) return []
 
     if (!monthStr) {
-      const { data } = await getTransactions({ type: 'expense', isFixed: true, limit: 200 })
+      const { data } = await getTransactions({ type: 'expense', isFixed: true, limit: 200, scope })
       return data.map(toFixedExpense)
     }
 
@@ -80,7 +87,7 @@ export async function fetchFixedExpenses(
     // month using its most recent occurrence at or before that month's end,
     // matching the dedup in the getSummaryCards backend endpoint.
     // TODO: paginate if a user accumulates >200 fixed expense records.
-    const { data } = await getTransactions({ type: 'expense', isFixed: true, limit: 200 })
+    const { data } = await getTransactions({ type: 'expense', isFixed: true, limit: 200, scope })
     if (data.length === 200) {
       console.warn('useFixedExpenses: fixed expense limit reached, some records may be missing')
     }
@@ -88,7 +95,8 @@ export async function fetchFixedExpenses(
     for (const t of data) {
       if (t.date.substring(0, 7) > monthStr) continue
       if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
-      const key = t.description ?? ''
+      // Per owner: two members can both have a bill with the same label.
+      const key = `${t.userId}|${t.description ?? ''}`
       const existing = latestByIdentity.get(key)
       if (!existing || t.date > existing.date) latestByIdentity.set(key, t)
     }
@@ -98,14 +106,14 @@ export async function fetchFixedExpenses(
   }
 }
 
-export function useFixedExpenses(month?: number, year?: number) {
+export function useFixedExpenses(month?: number, year?: number, scope: DataScope = 'personal') {
   const { isAuthenticated, user } = useAuth()
   const qc = useQueryClient()
-  const qKey = fixedExpenseQueryKey(month, year, user?.tracking_start_date)
+  const qKey = fixedExpenseQueryKey(month, year, user?.tracking_start_date, scope)
 
   const { data: fixedExpenses = [] } = useQuery({
     queryKey: qKey,
-    queryFn: () => fetchFixedExpenses(month, year, user?.tracking_start_date),
+    queryFn: () => fetchFixedExpenses(month, year, user?.tracking_start_date, scope),
     enabled: isAuthenticated,
   })
 

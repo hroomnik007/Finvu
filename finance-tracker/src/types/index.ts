@@ -27,6 +27,11 @@ export interface FixedExpense {
   dayOfMonth: number
   categoryId?: string | null
   note: string
+  // Display data of the row's category — lets the family view group by name,
+  // since categories are per user and another member's ids don't match ours.
+  categoryName?: string | null
+  categoryColor?: string | null
+  categoryIcon?: string | null
 }
 
 export interface VariableExpense {
@@ -36,6 +41,9 @@ export interface VariableExpense {
   note: string
   date: string
   created_by?: string | null
+  categoryName?: string | null
+  categoryColor?: string | null
+  categoryIcon?: string | null
 }
 
 export interface AppSetting {

@@ -502,6 +502,8 @@ export const hu: Translations = {
     resetLinkSent: 'Ha az e-mail létezik, jelszó-visszaállítási linket küldtünk.',
     passwordResetSuccess: 'Jelszó sikeresen módosítva. Most már bejelentkezhet.',
     notVerified: 'Bejelentkezés előtt ellenőrizze e-mail címét.',
+    resendVerification: 'Ellenőrző e-mail újraküldése',
+    resendVerificationSent: 'Ha a fiók ellenőrzésre vár, új hivatkozást küldtünk.',
     passwordMin8: 'A jelszónak legalább 8 karakter hosszúnak kell lennie',
     resetPasswordDesc: 'Adjon meg egy új jelszót a fiókjához.',
     resetSuccessMsg: 'Jelszó sikeresen megváltoztatva.',

@@ -40,6 +40,11 @@ export async function verifyEmail(token: string): Promise<{ message: string }> {
   return data
 }
 
+export async function resendVerification(email: string): Promise<{ message: string }> {
+  const { data } = await apiClient.post('/api/auth/resend-verification', { email })
+  return data
+}
+
 export async function forgotPassword(email: string): Promise<{ message: string }> {
   const { data } = await apiClient.post('/api/auth/forgot-password', { email })
   return data

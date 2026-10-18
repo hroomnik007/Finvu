@@ -3,7 +3,7 @@ import { Eye, EyeOff, ArrowRight, X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
-import { getAuthMethods, getPinDeviceStatus } from '../api/auth'
+import { getAuthMethods, getPinDeviceStatus, resendVerification } from '../api/auth'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
 import { PinKeypad } from '../components/PinKeypad'
@@ -22,6 +22,8 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   const [focused, setFocused] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [resendSent, setResendSent] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
@@ -77,6 +79,8 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   const handleLogin = async () => {
     if (!email || !password) return
     setError(null)
+    setNeedsVerification(false)
+    setResendSent(false)
     setIsLoading(true)
     try {
       if (email === 'demo@finvu.sk') {
@@ -85,11 +89,19 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         await login(email, password)
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setError(msg ?? t.auth.loginFailed)
+      const data = (err as { response?: { data?: { error?: string; code?: string } } })?.response?.data
+      setError(data?.error ?? t.auth.loginFailed)
+      setNeedsVerification(data?.code === 'EMAIL_NOT_VERIFIED')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleResendVerification = async () => {
+    try {
+      await resendVerification(email)
+    } catch { /* the server answers identically either way; nothing to surface */ }
+    setResendSent(true)
   }
 
   const handlePinLogin = useCallback(async (pin: string) => {
@@ -205,6 +217,19 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         {error && (
           <div style={{ borderRadius: 14, padding: '10px 14px', fontSize: 13, background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', border: '1px solid rgba(251,113,133,0.3)', marginBottom: 14, fontFamily: "'Manrope', sans-serif" }}>
             {error}
+            {needsVerification && (
+              resendSent ? (
+                <div style={{ marginTop: 8 }}>{t.auth.resendVerificationSent}</div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  style={{ display: 'block', marginTop: 8, padding: 0, background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, fontFamily: "'Manrope', sans-serif" }}
+                >
+                  {t.auth.resendVerification}
+                </button>
+              )
+            )}
           </div>
         )}
 

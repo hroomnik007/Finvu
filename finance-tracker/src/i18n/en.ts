@@ -502,6 +502,8 @@ export const en: Translations = {
     resetLinkSent: 'If the email exists, a password reset link has been sent.',
     passwordResetSuccess: 'Password changed successfully. You can now sign in.',
     notVerified: 'Please verify your email before signing in.',
+    resendVerification: 'Resend verification email',
+    resendVerificationSent: 'If the account is awaiting verification, we sent a new link.',
     passwordMin8: 'Password must be at least 8 characters',
     resetPasswordDesc: 'Enter a new password for your account.',
     resetSuccessMsg: 'Password changed successfully.',
