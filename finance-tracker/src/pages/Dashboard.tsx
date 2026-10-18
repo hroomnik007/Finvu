@@ -8,6 +8,8 @@ import { StreakBadge } from '../components/StreakBadge'
 import { StreakModal } from '../components/StreakModal'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
+import { DailyBudgetCard } from '../components/DailyBudgetCard'
+import { dailyBudget } from '../utils/dailyBudget'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { useIncomes } from '../hooks/useIncomes'
@@ -384,6 +386,13 @@ const upcomingFixed = useMemo(() => {
     </HeroCard>
   )
 
+  // "How much can I still spend": only meaningful for the running month
+  const pendingFixed = allMonthFixedExpenses.filter(f => !isFixedExpenseDue(f.dayOfMonth, month, year)).reduce((s, f) => s + f.amount, 0)
+  const budgetToday = month === now.getMonth() + 1 && year === now.getFullYear()
+    ? dailyBudget({ income: heroIncome, spent: heroExpenses, pendingFixed, day: now.getDate(), daysInMonth })
+    : null
+  const dailyBudgetCard = budgetToday ? <DailyBudgetCard budget={budgetToday} pendingFixed={pendingFixed} /> : null
+
   const pieChartCard = (
     <CategoryDonutCard data={pieData} title={t.dashboard.expensesByCategory} total={totalExpenses} />
   )
@@ -678,6 +687,7 @@ const upcomingFixed = useMemo(() => {
       <div className="flex flex-col gap-4 lg:hidden" style={{ paddingBottom: 'calc(156px + env(safe-area-inset-bottom, 0px))' }}>
         <div>{greetingRow}</div>
         {heroSection}
+        {dailyBudgetCard}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {pieChartCard}
           {heatmapCard}
@@ -696,6 +706,7 @@ const upcomingFixed = useMemo(() => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, overflowX: 'hidden' }}>
           {greetingDesktop}
           {heroSection}
+          {dailyBudgetCard}
           <div className="grid grid-cols-2 items-stretch" style={{ gap: 16 }}>
             {heatmapCard}
             {pieChartCard}
