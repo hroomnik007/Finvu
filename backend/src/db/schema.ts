@@ -113,6 +113,23 @@ export const categories = pgTable(
   ]
 );
 
+// Import rules: a keyword in a statement description assigns a category.
+export const categoryRules = pgTable(
+  "category_rules",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    keyword: varchar("keyword", { length: 100 }).notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [unique("category_rules_user_keyword").on(t.userId, t.keyword), index("category_rules_user_id_idx").on(t.userId)]
+);
+
 export const transactions = pgTable(
   "transactions",
   {

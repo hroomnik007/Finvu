@@ -5,6 +5,7 @@ import {
   listTransactions,
   createTransaction,
   createTransactionsBulk,
+  findDuplicateTransactions,
   bulkSetTransactionCategory,
   bulkDeleteTransactions,
   updateTransaction,
@@ -24,6 +25,7 @@ router.get("/balance-at-month", getBalanceAtMonth);
 router.get("/summary-cards",    getSummaryCards);
 router.get("/",        listTransactions);
 router.post("/bulk",   createTransactionsBulk);
+router.post("/duplicates", findDuplicateTransactions);
 router.patch("/bulk",  bulkSetTransactionCategory);
 router.post("/bulk-delete", bulkDeleteTransactions);
 router.post("/",       createTransaction);

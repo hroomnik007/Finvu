@@ -274,6 +274,34 @@ export async function createTransactionsBulk(req: AuthRequest, res: Response): P
   res.status(201).json({ created: rows.length, newlyUnlockedAchievements });
 }
 
+const duplicatesSchema = z.object({
+  items: z.array(z.object({ date: isoDate, type: z.enum(["income", "expense"]), amount: z.number().positive() })).min(1).max(500),
+});
+
+// CSV import: which of the rows already exist (same date, type and amount among
+// the caller's one-off transactions). Bank descriptions rarely match what was
+// typed by hand, so they are not compared; the result is a hint, not a block.
+export async function findDuplicateTransactions(req: AuthRequest, res: Response): Promise<void> {
+  const body = duplicatesSchema.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Validation error" });
+    return;
+  }
+  const dates = body.data.items.map((i) => i.date).sort();
+  const existing = await db
+    .select({ date: transactions.date, type: transactions.type, amount: transactions.amount })
+    .from(transactions)
+    .where(and(
+      eq(transactions.userId, req.userId!),
+      eq(transactions.isFixed, false),
+      sql`${transactions.date} >= ${dates[0]}`,
+      sql`${transactions.date} <= ${dates[dates.length - 1]}`,
+    ));
+  const keys = new Set(existing.map((e) => `${e.date}|${e.type}|${Number(e.amount).toFixed(2)}`));
+  const duplicates = body.data.items.flatMap((i, idx) => (keys.has(`${i.date}|${i.type}|${i.amount.toFixed(2)}`) ? [idx] : []));
+  res.json({ duplicates });
+}
+
 const bulkIdsSchema = z.object({ ids: z.array(z.string().uuid()).min(1).max(500) });
 const bulkCategorySchema = bulkIdsSchema.extend({ categoryId: z.string().uuid().nullable() });
 
