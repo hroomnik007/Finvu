@@ -2,7 +2,7 @@ import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { isIP } from "net";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import { eq, and, gt, desc, sql, isNull, inArray, or } from "drizzle-orm";
+import { eq, and, gt, desc, sql, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { users, refreshTokens, categories, transactions, webauthnCredentials, households, passwordResetTokens, userSessions, pinDeviceTokens } from "../db/schema";
@@ -573,13 +573,14 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Tokens are stored hashed; rows issued before that change still hold the raw
-  // value, so both are accepted. Legacy rows have no expiry (NULL).
+  // Only the hash is stored and compared — never accept the raw value as a
+  // fallback, or a stored hash could itself be presented as the token. Rows from
+  // before hashing were converted by migration 029; those have no expiry (NULL).
   const [user] = await db
     .select()
     .from(users)
     .where(and(
-      inArray(users.verificationToken, [await hashToken(token), token]),
+      eq(users.verificationToken, await hashToken(token)),
       or(isNull(users.verificationExpiresAt), gt(users.verificationExpiresAt, new Date())),
     ))
     .limit(1);
@@ -661,8 +662,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
   const [resetRecord] = await db
     .select()
     .from(passwordResetTokens)
-    // hashed, plus the raw value for links issued before tokens were hashed (1h expiry)
-    .where(and(inArray(passwordResetTokens.token, [await hashToken(token), token]), gt(passwordResetTokens.expiresAt, now)))
+    .where(and(eq(passwordResetTokens.token, await hashToken(token)), gt(passwordResetTokens.expiresAt, now)))
     .limit(1);
 
   if (!resetRecord) {
