@@ -2,6 +2,7 @@ import type { Translations } from './sk'
 
 export const pl: Translations = {
   nav: {
+    annual: 'Przegląd roczny',
     search: 'Szukaj',
     overview: 'Przegląd',
     income: 'Przychody',
@@ -625,6 +626,12 @@ export const pl: Translations = {
     updateBtn: 'Aktualizuj',
   },
   household: {
+    monthsTitle: 'Rodzina miesiąc po miesiącu',
+    monthsTotal: 'Razem',
+    monthsByMember: 'Według członków',
+    monthsSavings: 'Stopa oszczędności {rate}% w tym miesiącu',
+    monthsPoints: 'p. p. wobec poprzedniego miesiąca',
+    monthsNoIncome: 'W tym miesiącu brak przychodów',
     sharedCategoriesTitle: 'Wspólne kategorie',
     sharedCount: '{n} wspólnych',
     sharedOver: '{n} powyżej limitu',
@@ -850,6 +857,18 @@ export const pl: Translations = {
     count: 'Znaleziono: {n}',
     more: 'Pokaż więcej',
     fixed: 'Cykliczne',
+  },
+  annual: {
+    title: 'Przegląd roczny',
+    month: 'Miesiąc',
+    balance: 'Saldo',
+    total: 'Razem',
+    categories: 'Kategorie wydatków',
+    category: 'Kategoria',
+    amount: 'Kwota',
+    noCategory: 'Bez kategorii',
+    export: 'Eksportuj CSV',
+    link: 'Przegląd roczny →',
   },
   palette: {
     placeholder: 'Szukaj lub wykonaj akcję…',

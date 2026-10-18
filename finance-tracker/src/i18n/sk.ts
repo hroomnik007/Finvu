@@ -1,5 +1,6 @@
 export const sk = {
   nav: {
+    annual: 'Ročný prehľad',
     search: 'Hľadať',
     overview: 'Prehľad',
     income: 'Príjmy',
@@ -623,6 +624,12 @@ export const sk = {
     updateBtn: 'Aktualizovať',
   },
   household: {
+    monthsTitle: 'Rodina po mesiacoch',
+    monthsTotal: 'Spolu',
+    monthsByMember: 'Podľa členov',
+    monthsSavings: 'Miera úspor {rate} % v tomto mesiaci',
+    monthsPoints: 'p. b. oproti minulému mesiacu',
+    monthsNoIncome: 'Tento mesiac zatiaľ žiadne príjmy',
     sharedCategoriesTitle: 'Spoločné kategórie',
     sharedCount: '{n} spoločných',
     sharedOver: '{n} nad limitom',
@@ -848,6 +855,18 @@ export const sk = {
     count: 'Nájdených: {n}',
     more: 'Zobraziť ďalšie',
     fixed: 'Pravidelné',
+  },
+  annual: {
+    title: 'Ročný prehľad',
+    month: 'Mesiac',
+    balance: 'Rozdiel',
+    total: 'Spolu',
+    categories: 'Kategórie výdavkov',
+    category: 'Kategória',
+    amount: 'Suma',
+    noCategory: 'Bez kategórie',
+    export: 'Exportovať CSV',
+    link: 'Ročný prehľad →',
   },
   palette: {
     placeholder: 'Hľadať alebo vykonať akciu…',

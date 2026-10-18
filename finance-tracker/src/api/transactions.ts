@@ -129,3 +129,23 @@ export async function getSummaryCards(year: number, month: number, scope: Balanc
   const { data } = await apiClient.get('/api/transactions/summary-cards', { params: { year, month, scope } })
   return data
 }
+
+export interface SeriesMonth {
+  /** YYYY-MM */
+  month: string
+  income: number
+  expense: number
+  members?: { userId: string; name: string; income: number; expense: number }[]
+  categories?: { name: string; color: string | null; type: 'income' | 'expense'; total: number }[]
+}
+
+/** Income and expenses per month for from..to (YYYY-MM, at most 24 months). */
+export async function getMonthlySeries(
+  from: string,
+  to: string,
+  scope: 'personal' | 'family' = 'personal',
+  detail?: 'categories',
+): Promise<{ family: boolean; months: SeriesMonth[] }> {
+  const { data } = await apiClient.get('/api/transactions/monthly-series', { params: { from, to, scope, detail } })
+  return data
+}

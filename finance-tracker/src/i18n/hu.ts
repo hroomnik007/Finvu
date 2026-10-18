@@ -2,6 +2,7 @@ import type { Translations } from './sk'
 
 export const hu: Translations = {
   nav: {
+    annual: 'Éves áttekintés',
     search: 'Keresés',
     overview: 'Áttekintés',
     income: 'Bevételek',
@@ -625,6 +626,12 @@ export const hu: Translations = {
     updateBtn: 'Frissítés',
   },
   household: {
+    monthsTitle: 'Család havonta',
+    monthsTotal: 'Összesen',
+    monthsByMember: 'Tagok szerint',
+    monthsSavings: 'Megtakarítási ráta {rate}% ebben a hónapban',
+    monthsPoints: 'százalékpont az előző hónaphoz képest',
+    monthsNoIncome: 'Ebben a hónapban még nincs bevétel',
     sharedCategoriesTitle: 'Közös kategóriák',
     sharedCount: '{n} közös',
     sharedOver: '{n} a korlát felett',
@@ -850,6 +857,18 @@ export const hu: Translations = {
     count: 'Találatok: {n}',
     more: 'Továbbiak',
     fixed: 'Rendszeres',
+  },
+  annual: {
+    title: 'Éves áttekintés',
+    month: 'Hónap',
+    balance: 'Egyenleg',
+    total: 'Összesen',
+    categories: 'Kiadási kategóriák',
+    category: 'Kategória',
+    amount: 'Összeg',
+    noCategory: 'Kategória nélkül',
+    export: 'CSV exportálása',
+    link: 'Éves áttekintés →',
   },
   palette: {
     placeholder: 'Keresés vagy művelet végrehajtása…',

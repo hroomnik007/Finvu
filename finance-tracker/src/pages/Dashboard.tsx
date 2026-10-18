@@ -391,7 +391,18 @@ const upcomingFixed = useMemo(() => {
   const budgetToday = month === now.getMonth() + 1 && year === now.getFullYear()
     ? dailyBudget({ income: heroIncome, spent: heroExpenses, pendingFixed, day: now.getDate(), daysInMonth })
     : null
-  const dailyBudgetCard = budgetToday ? <DailyBudgetCard budget={budgetToday} pendingFixed={pendingFixed} /> : null
+  const dailyBudgetCard = (
+    <>
+      {budgetToday && <DailyBudgetCard budget={budgetToday} pendingFixed={pendingFixed} />}
+      <button
+        type="button"
+        onClick={() => onNavigate('annual')}
+        style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer', color: 'var(--aurora-violet)', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600 }}
+      >
+        {t.annual.link}
+      </button>
+    </>
+  )
 
   const pieChartCard = (
     <CategoryDonutCard data={pieData} title={t.dashboard.expensesByCategory} total={totalExpenses} />
