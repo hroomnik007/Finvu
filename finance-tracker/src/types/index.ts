@@ -38,6 +38,10 @@ export interface FixedExpense {
   categoryName?: string | null
   categoryColor?: string | null
   categoryIcon?: string | null
+  /** First day of the first month the item no longer applies (null/absent = running). */
+  endedOn?: string | null
+  /** Price history of the item, oldest first (`from` = YYYY-MM). */
+  history?: { from: string; amount: number }[]
 }
 
 export interface VariableExpense {
@@ -158,6 +162,8 @@ export interface ApiTransaction {
   categoryIcon: string | null
   created_by?: string | null
   household_id?: number | null
+  /** Recurring rows: first day of the first month the series no longer applies. */
+  endedOn?: string | null
 }
 
 export interface Deposit {

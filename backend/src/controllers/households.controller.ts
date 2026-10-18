@@ -8,7 +8,7 @@ import { generateInviteCode } from "../utils/inviteCode";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
 import { recalcSharedForHousehold, syncSharedToNewMember, unshareAllFor } from "../lib/sharedCategories";
-import { fixedDayOfMonth, isFixedDue } from "../lib/recurring";
+import { fixedDayOfMonth, isFixedDue, isActiveInMonth } from "../lib/recurring";
 import { DEMO_EMAIL } from "../lib/resetDemo";
 
 const createSchema = z.object({
@@ -326,6 +326,7 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
       description: transactions.description,
       amount: transactions.amount,
       date: transactions.date,
+      endedOn: transactions.endedOn,
       categoryId: transactions.categoryId,
       categoryName: categories.name,
       categoryColor: categories.color,
@@ -363,6 +364,7 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
     else m.income += amount;
   }
   for (const r of latest.values()) {
+    if (!isActiveInMonth(r.endedOn, year, monthNum)) continue;
     const amount = parseFloat(r.amount);
     const m = memberOf(r.userId);
     if (r.type === "income") m.income += amount;

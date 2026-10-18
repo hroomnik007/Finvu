@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { and, eq, gte, lt, inArray, sql, count, type SQL } from "drizzle-orm";
+import { and, eq, gte, lt, inArray, isNull, sql, count, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { transactions, categories, users, householdMembers } from "../db/schema";
@@ -7,7 +7,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
-import { fixedDayOfMonth, isFixedDue, cumulativeBalanceFromRows } from "../lib/recurring";
+import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows } from "../lib/recurring";
 
 // YYYY-MM-DD that is also a real calendar date (the bare regex let 2026-02-30
 // through to Postgres, which rejects it with a 500).
@@ -137,6 +137,7 @@ export async function listTransactions(req: AuthRequest, res: Response): Promise
         description: transactions.description,
         date: transactions.date,
         isFixed: transactions.isFixed,
+        endedOn: transactions.endedOn,
         createdAt: transactions.createdAt,
         updatedAt: transactions.updatedAt,
         categoryName: categories.name,
@@ -338,11 +339,22 @@ export async function bulkDeleteTransactions(req: AuthRequest, res: Response): P
   res.json({ deleted: removed.length });
 }
 
+// A recurring series is the user's rows of one type with the same description:
+// a price change adds a later row to it, so history lives in the series.
+function seriesWhere(userId: string, type: string, description: string | null) {
+  return and(
+    eq(transactions.userId, userId),
+    eq(transactions.type, type),
+    eq(transactions.isFixed, true),
+    description === null ? isNull(transactions.description) : eq(transactions.description, description),
+  );
+}
+
 export async function updateTransaction(req: AuthRequest, res: Response): Promise<void> {
   const id = req.params["id"] as string;
 
   const [existing] = await db
-    .select({ userId: transactions.userId, categoryId: transactions.categoryId, isFixed: transactions.isFixed })
+    .select({ userId: transactions.userId, categoryId: transactions.categoryId, isFixed: transactions.isFixed, type: transactions.type, description: transactions.description })
     .from(transactions)
     .where(eq(transactions.id, id))
     .limit(1);
@@ -371,6 +383,25 @@ export async function updateTransaction(req: AuthRequest, res: Response): Promis
   if (amount !== undefined) patch.amount = String(amount);
   if (categoryId !== undefined) patch.categoryId = categoryId;
 
+  // Renaming or recategorising a recurring item applies to its whole series —
+  // otherwise the older rows would be left behind as a separate item. The amount
+  // stays on this row only (a price change is a new row, see changeFixedPrice).
+  const seriesCategories = new Set<string>();
+  if (existing.isFixed) {
+    const descriptionChanged = rest.description !== undefined && rest.description !== existing.description;
+    const categoryChanged = categoryId !== undefined && categoryId !== existing.categoryId;
+    if (descriptionChanged || categoryChanged) {
+      const seriesPatch: Record<string, unknown> = { updatedAt: new Date() };
+      if (descriptionChanged) seriesPatch.description = rest.description;
+      if (categoryChanged) seriesPatch.categoryId = categoryId;
+      const old = await db.select({ categoryId: transactions.categoryId }).from(transactions).where(seriesWhere(req.userId!, existing.type, existing.description));
+      for (const o of old) if (o.categoryId) seriesCategories.add(o.categoryId);
+      await db.update(transactions).set(seriesPatch).where(seriesWhere(req.userId!, existing.type, existing.description));
+      delete patch.description;
+      delete patch.categoryId;
+    }
+  }
+
   await db
     .update(transactions)
     .set(patch)
@@ -381,7 +412,7 @@ export async function updateTransaction(req: AuthRequest, res: Response): Promis
   if (existing.isFixed) {
     const oldCatId = existing.categoryId;
     const newCatId = categoryId !== undefined ? categoryId : oldCatId;
-    const toRecalc = new Set<string>();
+    const toRecalc = new Set<string>(seriesCategories);
     if (oldCatId) toRecalc.add(oldCatId);
     if (newCatId) toRecalc.add(newCatId);
     for (const catId of toRecalc) {
@@ -396,7 +427,7 @@ export async function deleteTransaction(req: AuthRequest, res: Response): Promis
   const id = req.params["id"] as string;
 
   const [existing] = await db
-    .select({ userId: transactions.userId, categoryId: transactions.categoryId, isFixed: transactions.isFixed })
+    .select({ userId: transactions.userId, categoryId: transactions.categoryId, isFixed: transactions.isFixed, type: transactions.type, description: transactions.description })
     .from(transactions)
     .where(eq(transactions.id, id))
     .limit(1);
@@ -410,13 +441,118 @@ export async function deleteTransaction(req: AuthRequest, res: Response): Promis
     return;
   }
 
-  await db.delete(transactions).where(eq(transactions.id, id));
+  // Deleting a recurring item removes the whole series (all price changes);
+  // ending it keeps the history — see endFixedSeries.
+  const removed = existing.isFixed
+    ? await db.delete(transactions).where(seriesWhere(req.userId!, existing.type, existing.description)).returning({ categoryId: transactions.categoryId })
+    : await db.delete(transactions).where(eq(transactions.id, id)).returning({ categoryId: transactions.categoryId });
 
-  if (existing.isFixed && existing.categoryId) {
-    recalculateCategoryLimit(existing.categoryId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+  if (existing.isFixed) {
+    const cats = new Set(removed.map((r) => r.categoryId).filter((c): c is string => !!c));
+    if (existing.categoryId) cats.add(existing.categoryId);
+    for (const catId of cats) {
+      recalculateCategoryLimit(catId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+    }
   }
 
   res.json({ success: true });
+}
+
+const yearMonth = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+const priceChangeSchema = z.object({
+  amount: z.number().positive().max(9_999_999_999.99),
+  from: yearMonth,
+});
+const endSchema = z.object({ lastMonth: yearMonth.nullable() });
+
+async function loadSeries(req: AuthRequest, res: Response) {
+  const id = req.params["id"] as string;
+  const [row] = await db
+    .select({ userId: transactions.userId, type: transactions.type, description: transactions.description, isFixed: transactions.isFixed })
+    .from(transactions)
+    .where(eq(transactions.id, id))
+    .limit(1);
+  if (!row) { res.status(404).json({ error: "Transaction not found" }); return null; }
+  if (row.userId !== req.userId) { res.status(403).json({ error: "Forbidden" }); return null; }
+  if (!row.isFixed) { res.status(400).json({ error: "Not a recurring item" }); return null; }
+  return row;
+}
+
+// A new price from a given month: the series gets a later row, older months keep
+// the old amount. A change in the month of the latest row simply corrects it.
+export async function changeFixedPrice(req: AuthRequest, res: Response): Promise<void> {
+  const body = priceChangeSchema.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: "Validation error" }); return; }
+  const series = await loadSeries(req, res);
+  if (!series) return;
+
+  const [latest] = await db
+    .select()
+    .from(transactions)
+    .where(seriesWhere(series.userId, series.type, series.description))
+    .orderBy(sql`${transactions.date} DESC, ${transactions.createdAt} DESC`)
+    .limit(1);
+
+  const fromDate = `${body.data.from}-01`;
+  if (body.data.from < latest.date.slice(0, 7)) {
+    res.status(400).json({ error: "Price already changes later; edit it from that month." });
+    return;
+  }
+  if (latest.endedOn && fromDate >= latest.endedOn) {
+    res.status(400).json({ error: "The item has ended before that month." });
+    return;
+  }
+
+  let rowId = latest.id;
+  if (body.data.from === latest.date.slice(0, 7)) {
+    await db.update(transactions).set({ amount: String(body.data.amount), updatedAt: new Date() }).where(eq(transactions.id, latest.id));
+  } else {
+    const [created] = await db
+      .insert(transactions)
+      .values({
+        userId: latest.userId,
+        categoryId: latest.categoryId,
+        type: latest.type,
+        amount: String(body.data.amount),
+        description: latest.description,
+        date: fromDate,
+        isFixed: true,
+        endedOn: latest.endedOn,
+        createdBy: req.userId!,
+        householdId: latest.householdId,
+      })
+      .returning({ id: transactions.id });
+    rowId = created.id;
+  }
+
+  const withCategory = await fetchWithCategory(rowId);
+  if (latest.categoryId) recalculateCategoryLimit(latest.categoryId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+  res.json({ data: normalizeAmount(withCategory) });
+}
+
+// Ends a recurring series after `lastMonth` (inclusive); null brings it back.
+// Every row of the series carries the end, so any month resolves it correctly.
+export async function endFixedSeries(req: AuthRequest, res: Response): Promise<void> {
+  const body = endSchema.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: "Validation error" }); return; }
+  const series = await loadSeries(req, res);
+  if (!series) return;
+
+  let endedOn: string | null = null;
+  if (body.data.lastMonth) {
+    const [y, m] = body.data.lastMonth.split("-").map(Number);
+    endedOn = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+  }
+  const rows = await db
+    .update(transactions)
+    .set({ endedOn, updatedAt: new Date() })
+    .where(seriesWhere(series.userId, series.type, series.description))
+    .returning({ categoryId: transactions.categoryId });
+
+  for (const catId of new Set(rows.map((r) => r.categoryId).filter((c): c is string => !!c))) {
+    recalculateCategoryLimit(catId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+  }
+  res.json({ success: true, endedOn });
 }
 
 export async function getSummary(req: AuthRequest, res: Response): Promise<void> {
@@ -537,6 +673,7 @@ async function cumulativeBalance(
       description: transactions.description,
       amount: transactions.amount,
       date: transactions.date,
+      endedOn: transactions.endedOn,
     })
     .from(transactions)
     .where(and(baseFilter, eq(transactions.isFixed, true), lt(transactions.date, end)))
@@ -648,6 +785,7 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
   const latestRecurringIncomeRows = await db
     .selectDistinctOn([transactions.userId, transactions.description], {
       amount: transactions.amount,
+      endedOn: transactions.endedOn,
     })
     .from(transactions)
     .where(and(
@@ -658,7 +796,9 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
     ))
     .orderBy(transactions.userId, transactions.description, sql`${transactions.date} DESC`);
 
-  const recurringIncome = latestRecurringIncomeRows.reduce((acc, r) => acc + parseFloat(r.amount), 0);
+  const recurringIncome = latestRecurringIncomeRows
+    .filter(r => isActiveInMonth(r.endedOn, year, month))
+    .reduce((acc, r) => acc + parseFloat(r.amount), 0);
 
   const income = Math.round((nonRecurringIncome + recurringIncome) * 100) / 100;
 
@@ -671,6 +811,7 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
       amount: transactions.amount,
       description: transactions.description,
       date: transactions.date,
+      endedOn: transactions.endedOn,
     })
     .from(transactions)
     .where(and(
@@ -685,7 +826,7 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
   // month has actually arrived — mirrors the frontend's isFixedExpenseDue
   // (useFixedExpenses.ts). Months fully in the past always count in full.
   const today = new Date();
-  const fixedExpenses = latestFixedRows.reduce(
+  const fixedExpenses = latestFixedRows.filter(r => isActiveInMonth(r.endedOn, year, month)).reduce(
     (acc, r) => isFixedDue(fixedDayOfMonth(r.description, r.date), year, month, today) ? acc + parseFloat(r.amount) : acc,
     0,
   );

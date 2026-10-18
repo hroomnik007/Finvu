@@ -9,7 +9,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CsvImportModal } from '../components/CsvImportModal'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
-import { useFixedExpenses } from '../hooks/useFixedExpenses'
+import { useFixedExpenses, isEndedInMonth } from '../hooks/useFixedExpenses'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { useFormatters } from '../hooks/useFormatters'
@@ -63,7 +63,11 @@ interface FixedExpensesPageProps {
 }
 
 export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
-  const { fixedExpenses, addFixedExpense, updateFixedExpense, deleteFixedExpense } = useFixedExpenses()
+  const { fixedExpenses: allFixed, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense } = useFixedExpenses(undefined, undefined, 'personal', true)
+  const nowYM = useMemo(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }, [])
+  // Running items drive the totals and lists; ended ones sit in their own section
+  const fixedExpenses = useMemo(() => allFixed.filter(e => !isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
+  const endedExpenses = useMemo(() => allFixed.filter(e => isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
   const { variableExpenses } = useVariableExpenses(month, year)
   const { categories } = useCategories()
   const { formatAmount } = useFormatters()
@@ -96,6 +100,12 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const [dayOfMonth, setDayOfMonth] = useState('1')
   const [categoryId, setCategoryId] = useState<string>('')
   const [note, setNote] = useState('')
+  // Editing an existing item: a changed amount is a price change from `priceFrom`
+  // (YYYY-MM) unless it is ticked as a correction of a typo
+  const [priceFrom, setPriceFrom] = useState(nowYM)
+  const [isCorrection, setIsCorrection] = useState(false)
+  const [endOpen, setEndOpen] = useState(false)
+  const [endMonth, setEndMonth] = useState(nowYM)
 
   const total = useMemo(() => fixedExpenses.reduce((s, e) => s + e.amount, 0), [fixedExpenses])
   const filteredTotal = useMemo(() =>
@@ -161,6 +171,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   function openEdit(e: FixedExpense) {
     setEditing(e); setLabel(e.label); setAmount(String(e.amount))
     setDayOfMonth(String(e.dayOfMonth)); setCategoryId(e.categoryId ?? ''); setNote(e.note)
+    setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
     setSheetOpen(true)
   }
 
@@ -179,7 +190,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     if (!label.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 28) return
     const catId = categoryId || null
     if (editing?.id != null) {
-      await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note })
+      await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, isCorrection ? undefined : priceFrom)
     } else {
       await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note })
     }
@@ -601,6 +612,26 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
           })()}
           </div>
 
+          {endedExpenses.length > 0 && (
+            <details style={{ paddingBottom: 196 }}>
+              <summary style={{ cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-faint)' }}>
+                {t.expenses.fixed.endedSection.replace('{n}', String(endedExpenses.length))}
+              </summary>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                {endedExpenses.map(e => (
+                  <GlassCard key={e.id} radius={14} onClick={() => openEdit(e)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', opacity: 0.75 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13.5, fontWeight: 500, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.label}</div>
+                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 2 }}>
+                        {t.expenses.fixed.endedBadge.replace('{month}', e.endedOn ? `${e.endedOn.slice(5, 7)}/${e.endedOn.slice(0, 4)}` : '')}
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: 'var(--aurora-faint)', flexShrink: 0 }}>{formatAmount(e.amount)}</span>
+                  </GlassCard>
+                ))}
+              </div>
+            </details>
+          )}
 
         </div>
 
@@ -702,6 +733,71 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
         />
 
+        {editing && (() => {
+          const newAmount = parseFloat(amount.replace(',', '.'))
+          const priceChanged = Number.isFinite(newAmount) && newAmount > 0 && newAmount !== editing.amount
+          const box: React.CSSProperties = { background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }
+          const small: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, lineHeight: 1.5 }
+          const monthInput: React.CSSProperties = { background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 10, padding: '6px 10px', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13 }
+          const ended = isEndedInMonth(editing.endedOn, nowYM)
+          return (
+            <>
+              {priceChanged && (
+                <div style={box}>
+                  {isCorrection ? (
+                    <p style={small}>{t.expenses.fixed.correctionHint}</p>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ ...small, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.priceFrom}</span>
+                        <input type="month" value={priceFrom} min={editing.history?.[editing.history.length - 1]?.from} onChange={e => e.target.value && setPriceFrom(e.target.value)} style={monthInput} />
+                      </div>
+                      <p style={{ ...small, marginTop: 6 }}>{t.expenses.fixed.priceFromHint.replace('{amount}', formatAmount(editing.amount))}</p>
+                    </>
+                  )}
+                  <label style={{ ...small, display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={isCorrection} onChange={e => setIsCorrection(e.target.checked)} />
+                    {t.expenses.fixed.correctionLabel}
+                  </label>
+                </div>
+              )}
+
+              {(editing.history?.length ?? 0) > 1 && (
+                <div style={box}>
+                  <p style={{ ...small, color: 'var(--aurora-lo)', fontWeight: 600, marginBottom: 4 }}>{t.expenses.fixed.history}</p>
+                  {editing.history!.map(h => (
+                    <p key={h.from} style={small}>{h.from.slice(5)}/{h.from.slice(0, 4)}: <b style={{ color: 'var(--aurora-hi)' }}>{formatAmount(h.amount)}</b></p>
+                  ))}
+                </div>
+              )}
+
+              {ended ? (
+                <div style={box}>
+                  <p style={small}>{t.expenses.fixed.endedBadge.replace('{month}', editing.endedOn ? `${editing.endedOn.slice(5, 7)}/${editing.endedOn.slice(0, 4)}` : '')}</p>
+                  <button type="button" onClick={async () => { await endFixedExpense(editing.id!, null); closeSheet() }} style={{ marginTop: 8, padding: '7px 14px', borderRadius: 10, border: '1px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600 }}>
+                    {t.expenses.fixed.restore}
+                  </button>
+                </div>
+              ) : endOpen ? (
+                <div style={box}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ ...small, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.endLastMonth}</span>
+                    <input type="month" value={endMonth} onChange={e => e.target.value && setEndMonth(e.target.value)} style={monthInput} />
+                  </div>
+                  <p style={{ ...small, marginTop: 6 }}>{t.expenses.fixed.endHint}</p>
+                  <button type="button" onClick={async () => { await endFixedExpense(editing.id!, endMonth); closeSheet() }} style={{ marginTop: 8, padding: '7px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#FBBF24,#f59e0b)', color: '#fff', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 700 }}>
+                    {t.expenses.fixed.endConfirm}
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setEndOpen(true)} style={{ alignSelf: 'flex-start', padding: '8px 12px', borderRadius: 12, background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', border: '1px solid var(--aurora-gline)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600 }}>
+                  {t.expenses.fixed.endTitle}
+                </button>
+              )}
+            </>
+          )
+        })()}
+
         {editing && (
           <button
             type="button"
@@ -715,7 +811,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
       <ConfirmDialog
         open={deleteId !== null}
-        message={t.expenses.fixed.removeMessage}
+        message={t.expenses.fixed.removeSeriesMessage}
         onConfirm={async () => { if (deleteId !== null) await handleDelete(deleteId) }}
         onCancel={() => { setDeleteId(null); setOpenSwipeId(null) }}
       />

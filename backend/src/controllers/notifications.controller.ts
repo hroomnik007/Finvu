@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { notificationsDismissed, transactions, categories, savingsGoals } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
+import { isActiveInMonth } from "../lib/recurring";
 
 // ── Feed item types (translated client-side from kind + params) ─────────────
 type FeedItem =
@@ -51,9 +52,10 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
         gte(transactions.date, monthStart),
         lte(transactions.date, monthEnd),
       )),
-    db.select({ id: transactions.id, amount: transactions.amount, description: transactions.description, date: transactions.date })
+    db.select({ id: transactions.id, amount: transactions.amount, description: transactions.description, date: transactions.date, endedOn: transactions.endedOn })
       .from(transactions)
-      .where(and(eq(transactions.userId, userId), eq(transactions.type, "expense"), eq(transactions.isFixed, true))),
+      .where(and(eq(transactions.userId, userId), eq(transactions.type, "expense"), eq(transactions.isFixed, true)))
+      .orderBy(transactions.date),
     db.select({ id: transactions.id, amount: transactions.amount, description: transactions.description, date: transactions.date })
       .from(transactions)
       .where(and(eq(transactions.userId, userId), eq(transactions.type, "income")))
@@ -82,7 +84,11 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
   }
 
   // Upcoming fixed expenses (next 7 days, max 2, most urgent first)
-  const upcoming = fixedTxs
+  // One entry per series (its latest row) that still applies this month
+  const latestBySeries = new Map<string, (typeof fixedTxs)[number]>();
+  for (const tx of fixedTxs) latestBySeries.set(tx.description ?? "", tx);
+  const upcoming = [...latestBySeries.values()]
+    .filter((tx) => isActiveInMonth(tx.endedOn, y, m))
     .map((tx) => {
       let dayOfMonth = tx.date ? Number(tx.date.slice(8, 10)) : 1;
       let label = tx.description ?? "";

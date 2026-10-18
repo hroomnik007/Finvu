@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { categories, transactions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
+import { activeSeriesTotal } from "../lib/recurring";
 import { NotSharingError, propagateSharedLimit, recalcSharedLimit, shareCategories, unshareCategories } from "../lib/sharedCategories";
 
 type CategoryRow = typeof categories.$inferSelect;
@@ -31,17 +32,19 @@ export async function recalculateCategoryLimit(categoryId: string, userId: strin
   }
   if (!cat?.autoLimit) return;
 
-  const [{ total }] = await db
-    .select({ total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)` })
+  const fixedRows = await db
+    .select({ userId: transactions.userId, type: transactions.type, description: transactions.description, amount: transactions.amount, date: transactions.date, endedOn: transactions.endedOn })
     .from(transactions)
     .where(and(
       eq(transactions.userId, userId),
       eq(transactions.categoryId, categoryId),
       eq(transactions.isFixed, true),
       eq(transactions.type, "expense")
-    ));
+    ))
+    .orderBy(transactions.date);
 
-  const fixedTotal = parseFloat(total ?? "0");
+  const today = new Date();
+  const fixedTotal = activeSeriesTotal(fixedRows, today.getFullYear(), today.getMonth() + 1);
   if (fixedTotal > 0) {
     // Fixed expenses plus the user's reserve for variable spending in the category.
     const newLimit = Math.round((fixedTotal + parseFloat(cat.limitReserve ?? "0")) * 100) / 100;
