@@ -42,7 +42,6 @@ function toCategory(c: ApiCategory, limits: Record<string, number>): Category {
     limitReserve: c.limitReserve ?? 0,
     hasFixedExpenses: c.hasFixedExpenses ?? false,
     shared: c.shared ?? false,
-    familyMembers: c.familyMembers,
   }
 }
 

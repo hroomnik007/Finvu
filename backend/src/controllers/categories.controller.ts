@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { categories, transactions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
-import { NotSharingError, propagateSharedLimit, shareCategories, sharingMemberIds, unshareCategories } from "../lib/sharedCategories";
+import { NotSharingError, propagateSharedLimit, recalcSharedLimit, shareCategories, unshareCategories } from "../lib/sharedCategories";
 
 type CategoryRow = typeof categories.$inferSelect;
 function normalizeCategory(row: CategoryRow) {
@@ -19,11 +19,16 @@ function normalizeCategory(row: CategoryRow) {
 
 export async function recalculateCategoryLimit(categoryId: string, userId: string): Promise<void> {
   const [cat] = await db
-    .select({ autoLimit: categories.autoLimit, limitReserve: categories.limitReserve })
+    .select({ autoLimit: categories.autoLimit, limitReserve: categories.limitReserve, shared: categories.shared, name: categories.name })
     .from(categories)
     .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)))
     .limit(1);
 
+  // A shared category's limit follows the family's fixed expenses, not this user's alone
+  if (cat?.shared) {
+    await recalcSharedLimit(userId, cat.name);
+    return;
+  }
   if (!cat?.autoLimit) return;
 
   const [{ total }] = await db
@@ -96,14 +101,10 @@ export async function listCategories(req: AuthRequest, res: Response): Promise<v
     fixedCatIds = new Set(fixedRows.map((r) => r.categoryId!));
   }
 
-  // A shared limit is per member, so the family-wide budget is limit x members
-  const familyMembers = rows.some((r) => r.shared) ? ((await sharingMemberIds(req.userId!))?.length ?? 1) : 1;
-
   res.json({
     data: rows.map((r) => ({
       ...normalizeCategory(r),
       hasFixedExpenses: fixedCatIds.has(r.id),
-      ...(r.shared ? { familyMembers } : {}),
     })),
   });
 }
@@ -175,14 +176,18 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
   if (autoLimit !== undefined) setData.autoLimit = autoLimit;
   if (limitReserve !== undefined) setData.limitReserve = String(limitReserve);
 
-  const [updated] = await db
+  let [updated] = await db
     .update(categories)
     .set(setData)
     .where(and(eq(categories.id, id), eq(categories.userId, req.userId!)))
     .returning();
 
-  if (existing.shared && bl !== undefined) {
-    await propagateSharedLimit(req.userId!, existing.name, bl != null ? String(bl) : null);
+  if (existing.shared && (bl !== undefined || limitReserve !== undefined)) {
+    // A manual limit applies to everyone's copy, then the shared rule decides the
+    // final value (fixed expenses of all members win over a typed number)
+    if (bl !== undefined) await propagateSharedLimit(req.userId!, existing.name, bl != null ? String(bl) : null);
+    await recalcSharedLimit(req.userId!, existing.name);
+    [updated] = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
   }
 
   // When auto_limit is being enabled — or its reserve changed on a category that

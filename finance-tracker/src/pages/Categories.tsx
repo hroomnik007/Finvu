@@ -57,7 +57,6 @@ const PRESET_ICONS = [
 
 // "fixné X + variabilné Y" for auto-limit categories that reserve room for variable spending
 function limitBreakdown(cat: Category, formatAmount: (n: number) => string, t: ReturnType<typeof useTranslation>['t']): string {
-  if (cat.shared && (cat.familyMembers ?? 1) > 1) return ` · ${t.expenses.categories.perMember}`
   if (!cat.autoLimit || !cat.limitReserve || cat.budgetLimit == null) return ''
   const fixed = Math.max(0, cat.budgetLimit - cat.limitReserve)
   return ` · ${t.expenses.categories.limitBreakdown.replace('{fixed}', formatAmount(fixed)).replace('{reserve}', formatAmount(cat.limitReserve))}`
@@ -313,10 +312,8 @@ export function CategoriesPage() {
       const spent =
         familyVariable.filter(e => key(e.categoryName) === name).reduce((sum, e) => sum + e.amount, 0) +
         familyFixed.filter(f => key(f.categoryName) === name && isFixedExpenseDue(f.dayOfMonth, month, year, new Date())).reduce((sum, f) => sum + f.amount, 0)
-      // The shared limit is per member, so the family's spend is measured against limit x members
-      const limit = s.limit * (categories.find(c => c.id === s.categoryId)?.familyMembers ?? 1)
-      const percentage = (spent / limit) * 100
-      return { ...s, spent, limit, percentage, isWarning: percentage >= 70 && percentage < 90, isOver: percentage > 100 }
+      const percentage = (spent / s.limit) * 100
+      return { ...s, spent, percentage, isWarning: percentage >= 70 && percentage < 90, isOver: percentage > 100 }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [personalStatuses, sharingOn, categories, familyVariable, familyFixed])

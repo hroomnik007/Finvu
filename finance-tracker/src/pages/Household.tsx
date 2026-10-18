@@ -185,7 +185,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
             amount: m.category_breakdown.filter(b => key(b.name ?? '') === key(c.name)).reduce((s, b) => s + b.amount, 0),
           }))
           .filter(pm => pm.amount > 0)
-        return { name: c.name, perMemberLimit: c.budgetLimit ?? 0, limit: (c.budgetLimit ?? 0) * (c.familyMembers ?? 1), spent: perMember.reduce((s, pm) => s + pm.amount, 0), perMember }
+        return { name: c.name, limit: c.budgetLimit ?? 0, spent: perMember.reduce((s, pm) => s + pm.amount, 0), perMember }
       })
   }, [stats, categories])
 
@@ -299,7 +299,6 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
                     )}
                     <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>
                       {r.perMember.map(pm => `${pm.name} ${formatAmount(pm.amount)}`).join(' · ')}
-                      {r.perMemberLimit > 0 && ` · ${ht.limitPerMember.replace('{amount}', formatAmount(r.perMemberLimit))}`}
                     </div>
                   </div>
                 )
