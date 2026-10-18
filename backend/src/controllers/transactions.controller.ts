@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { and, eq, gte, lt, inArray, sql, count } from "drizzle-orm";
+import { and, eq, gte, lt, inArray, sql, count, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { transactions, categories, users, householdMembers } from "../db/schema";
@@ -330,6 +330,112 @@ export async function getSummary(req: AuthRequest, res: Response): Promise<void>
   });
 }
 
+// Day of month a fixed expense falls due: the day stored in its JSON
+// description ({ d }), otherwise the day of the row's own date.
+function fixedDayOfMonth(description: string | null, date: string): number {
+  let day = date ? Number(date.slice(8, 10)) : 1;
+  try {
+    const obj = JSON.parse(description ?? "");
+    if (obj && typeof obj.d === "number") day = obj.d;
+  } catch { /* plain text description */ }
+  return day;
+}
+
+// A fixed expense only becomes "spent" once its due day in the given month has
+// arrived — mirrors the frontend's isFixedExpenseDue (useFixedExpenses.ts).
+// Past months always count in full, future months not at all.
+function isFixedDue(dayOfMonth: number, year: number, month: number, today: Date): boolean {
+  const curMonth = today.getMonth() + 1;
+  const curYear = today.getFullYear();
+  if (year !== curYear) return year < curYear;
+  if (month !== curMonth) return month < curMonth;
+  return dayOfMonth <= today.getDate();
+}
+
+// Cumulative balance from startDate through the end of (year, month), built
+// month by month with the SAME rules as the monthly cards: one-off rows count in
+// the month they are dated, while a recurring (isFixed) row is entered once and
+// counts in every month from its own date onwards — each series (user +
+// description) via its latest occurrence at or before that month's end, and
+// recurring expenses only once their due day has arrived. Summing every row
+// once (the old behaviour) under-counted recurring items in all but their first
+// month, so the balance drifted away from the monthly income/expense figures.
+async function cumulativeBalance(
+  baseFilter: SQL,
+  startDate: string,
+  year: number,
+  month: number,
+): Promise<number> {
+  const target = year * 12 + (month - 1);
+  const first = Number(startDate.slice(0, 4)) * 12 + (Number(startDate.slice(5, 7)) - 1);
+  if (!(first <= target)) return 0;
+  // Guard against absurd start dates; ~100 years of months is more than enough.
+  const firstMonth = Math.max(first, target - 1200);
+  const { end } = monthRange(`${year}-${String(month).padStart(2, "0")}`);
+
+  const oneOff = await db
+    .select({
+      ym: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`,
+      type: transactions.type,
+      total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+    })
+    .from(transactions)
+    .where(and(baseFilter, gte(transactions.date, startDate), lt(transactions.date, end), eq(transactions.isFixed, false)))
+    .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM')`, transactions.type);
+
+  const oneOffByMonth = new Map<string, { income: number; expense: number }>();
+  for (const r of oneOff) {
+    const entry = oneOffByMonth.get(r.ym) ?? { income: 0, expense: 0 };
+    if (r.type === "income") entry.income += parseFloat(r.total);
+    else entry.expense += parseFloat(r.total);
+    oneOffByMonth.set(r.ym, entry);
+  }
+
+  const fixedRows = await db
+    .select({
+      userId: transactions.userId,
+      type: transactions.type,
+      description: transactions.description,
+      amount: transactions.amount,
+      date: transactions.date,
+    })
+    .from(transactions)
+    .where(and(baseFilter, eq(transactions.isFixed, true), lt(transactions.date, end)))
+    .orderBy(transactions.date);
+
+  const today = new Date();
+  const latest = new Map<string, (typeof fixedRows)[number]>();
+  let next = 0;
+  let balance = 0;
+
+  for (let idx = firstMonth; idx <= target; idx++) {
+    const y = Math.floor(idx / 12);
+    const m = (idx % 12) + 1;
+    const ym = `${y}-${String(m).padStart(2, "0")}`;
+    const monthEnd = monthRange(ym).end;
+
+    // Rows are date-ascending, so the last one seen per series is its latest.
+    while (next < fixedRows.length && fixedRows[next].date < monthEnd) {
+      const row = fixedRows[next++];
+      latest.set(`${row.userId}|${row.type}|${row.description ?? ""}`, row);
+    }
+
+    const flat = oneOffByMonth.get(ym);
+    let income = flat?.income ?? 0;
+    let expense = flat?.expense ?? 0;
+    for (const row of latest.values()) {
+      if (row.type === "income") {
+        income += parseFloat(row.amount);
+      } else if (isFixedDue(fixedDayOfMonth(row.description, row.date), y, m, today)) {
+        expense += parseFloat(row.amount);
+      }
+    }
+    balance += income - expense;
+  }
+
+  return Math.round(balance * 100) / 100;
+}
+
 export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promise<void> {
   const query = balanceAtMonthSchema.safeParse(req.query);
   if (!query.success) {
@@ -338,8 +444,6 @@ export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promis
   }
 
   const { year, month, scope } = query.data;
-  const monthStr = `${year}-${String(month).padStart(2, "0")}`;
-  const { end } = monthRange(monthStr);
 
   const [userRow] = await db
     .select({
@@ -364,25 +468,7 @@ export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promis
     ? await getFamilyStartDate(userRow.householdId!)
     : userRow.trackingStartDate ?? userRow.createdAt.toISOString().split("T")[0];
 
-  const rows = await db
-    .select({
-      type: transactions.type,
-      total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
-    })
-    .from(transactions)
-    .where(
-      and(
-        baseFilter,
-        gte(transactions.date, startDate),
-        lt(transactions.date, end)
-      )
-    )
-    .groupBy(transactions.type);
-
-  const totalIncome = rows.filter(r => r.type === "income").reduce((acc, r) => acc + parseFloat(r.total), 0);
-  const totalExpenses = rows.filter(r => r.type === "expense").reduce((acc, r) => acc + parseFloat(r.total), 0);
-
-  res.json({ balance: totalIncome - totalExpenses });
+  res.json({ balance: await cumulativeBalance(baseFilter, startDate, year, month) });
 }
 
 export async function getSummaryCards(req: AuthRequest, res: Response): Promise<void> {
@@ -419,19 +505,9 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
     ? await getFamilyStartDate(userRow.householdId!)
     : userRow.trackingStartDate ?? userRow.createdAt.toISOString().split("T")[0];
 
-  // Balance: cumulative from tracking start to end of requested month
-  const balanceRows = await db
-    .select({
-      type: transactions.type,
-      total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
-    })
-    .from(transactions)
-    .where(and(baseFilter, gte(transactions.date, startDate), lt(transactions.date, monthEnd)))
-    .groupBy(transactions.type);
-
-  const balanceIncome = balanceRows.filter(r => r.type === "income").reduce((acc, r) => acc + parseFloat(r.total), 0);
-  const balanceExpenses = balanceRows.filter(r => r.type === "expense").reduce((acc, r) => acc + parseFloat(r.total), 0);
-  const balance = Math.round((balanceIncome - balanceExpenses) * 100) / 100;
+  // Balance: cumulative from tracking start to end of requested month, built
+  // month by month with the same recurring-item rules as the figures below.
+  const balance = await cumulativeBalance(baseFilter, startDate, year, month);
 
   // Month income (non-recurring) & variable expenses: exact date match within the month.
   // Recurring (isFixed) rows are excluded here and handled separately below, since a
@@ -500,19 +576,10 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
   // month has actually arrived — mirrors the frontend's isFixedExpenseDue
   // (useFixedExpenses.ts). Months fully in the past always count in full.
   const today = new Date();
-  const curMonth = today.getMonth() + 1;
-  const curYear = today.getFullYear();
-  const fixedExpenses = latestFixedRows.reduce((acc, r) => {
-    let dayOfMonth = r.date ? Number(r.date.slice(8, 10)) : 1;
-    try {
-      const obj = JSON.parse(r.description ?? "");
-      if (obj && typeof obj.d === "number") dayOfMonth = obj.d;
-    } catch { /* plain text description */ }
-    const isDue = year !== curYear ? year < curYear
-      : month !== curMonth ? month < curMonth
-      : dayOfMonth <= today.getDate();
-    return isDue ? acc + parseFloat(r.amount) : acc;
-  }, 0);
+  const fixedExpenses = latestFixedRows.reduce(
+    (acc, r) => isFixedDue(fixedDayOfMonth(r.description, r.date), year, month, today) ? acc + parseFloat(r.amount) : acc,
+    0,
+  );
 
   const expenses = Math.round((variableExpenses + fixedExpenses) * 100) / 100;
   const savingsRate = income > 0 ? Math.round((income - expenses) / income * 100) : 0;
