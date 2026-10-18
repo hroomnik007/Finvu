@@ -283,15 +283,6 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
         </div>
       </HeroCard>
 
-      {/* ── Shared categories: family spend vs. the common limit, tiles to mark/unmark them ── */}
-      {householdData && householdData.members.length > 1 && (
-        <SharedCategoriesCard
-          tiles={categoryTiles}
-          onShare={id => setShareConfirmId(id)}
-          onUnshare={id => void toggleShare(id, false)}
-        />
-      )}
-
       {/* ── ČLENOVIA section header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', flexShrink: 0, margin: 0 }}>{ht.membersSection} ({memberCount})</p>
@@ -428,6 +419,15 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
             )
           })}
         </div>
+      )}
+
+      {/* ── Shared categories: family spend vs. the common limit, tiles to mark/unmark them ── */}
+      {householdData && householdData.members.length > 1 && (
+        <SharedCategoriesCard
+          tiles={categoryTiles}
+          onShare={id => setShareConfirmId(id)}
+          onUnshare={id => void toggleShare(id, false)}
+        />
       )}
 
       {/* ── Activity feed ── */}
