@@ -2,7 +2,7 @@ import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { isIP } from "net";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import { eq, and, gt, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, gt, desc, sql, isNull, inArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { users, refreshTokens, categories, transactions, webauthnCredentials, households, passwordResetTokens, userSessions, pinDeviceTokens } from "../db/schema";
@@ -55,6 +55,9 @@ function rejectDemo(req: AuthRequest, res: Response): boolean {
   }
   return false;
 }
+
+// Verification links stay valid for a week; "resend" issues a fresh one.
+const VERIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const registerSchema = z.object({
   email: emailSchema,
@@ -258,11 +261,14 @@ async function issueTokens(res: Response, userId: string, email: string, req?: R
   const refreshToken = signRefreshToken({ userId, email });
   const tokenHash = await hashToken(refreshToken);
 
-  await db.insert(refreshTokens).values({ userId, tokenHash, expiresAt: refreshTokenExpiry() });
+  const sessionId = req ? await createSession(userId, req) : randomUUID()
+  await db.insert(refreshTokens).values({
+    userId, tokenHash, expiresAt: refreshTokenExpiry(),
+    // Only a real session row can be referenced (see refresh_tokens.session_id)
+    ...(req ? { sessionId } : {}),
+  });
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
   res.cookie(REFRESH_COOKIE, refreshToken, REFRESH_COOKIE_OPTIONS);
-
-  const sessionId = req ? await createSession(userId, req) : randomUUID()
   return { accessToken, sessionId };
 }
 
@@ -284,9 +290,14 @@ export async function register(req: Request, res: Response): Promise<void> {
   const passwordHash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
   const verificationToken = randomUUID();
 
+  // Only the hash is stored; the raw token goes out in the e-mail link.
   const [user] = await db
     .insert(users)
-    .values({ email, passwordHash: passwordHash, name, emailVerified: false, verificationToken })
+    .values({
+      email, passwordHash: passwordHash, name, emailVerified: false,
+      verificationToken: await hashToken(verificationToken),
+      verificationExpiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
+    })
     .returning({ id: users.id, email: users.email, name: users.name });
 
   await db.insert(categories).values(
@@ -424,7 +435,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     if (won.length > 0) {
       const newRefreshToken = signRefreshToken({ userId: payload.userId, email: payload.email });
       const newTokenHash = await hashToken(newRefreshToken);
-      await db.insert(refreshTokens).values({ userId: payload.userId, tokenHash: newTokenHash, expiresAt: refreshTokenExpiry() });
+      await db.insert(refreshTokens).values({ userId: payload.userId, tokenHash: newTokenHash, expiresAt: refreshTokenExpiry(), sessionId: matchedRow.sessionId });
       res.cookie(REFRESH_COOKIE, newRefreshToken, REFRESH_COOKIE_OPTIONS);
     }
   }
@@ -562,7 +573,16 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const [user] = await db.select().from(users).where(eq(users.verificationToken, token)).limit(1);
+  // Tokens are stored hashed; rows issued before that change still hold the raw
+  // value, so both are accepted. Legacy rows have no expiry (NULL).
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(and(
+      inArray(users.verificationToken, [await hashToken(token), token]),
+      or(isNull(users.verificationExpiresAt), gt(users.verificationExpiresAt, new Date())),
+    ))
+    .limit(1);
   if (!user) {
     res.status(400).json({ error: "Neplatný alebo vypršaný overovací odkaz." });
     return;
@@ -570,7 +590,7 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
 
   await db
     .update(users)
-    .set({ emailVerified: true, verificationToken: null })
+    .set({ emailVerified: true, verificationToken: null, verificationExpiresAt: null })
     .where(eq(users.id, user.id));
 
   res.json({ message: "Email bol úspešne overený. Môžete sa prihlásiť." });
@@ -591,7 +611,9 @@ export async function resendVerification(req: Request, res: Response): Promise<v
       .limit(1);
     if (user && !user.emailVerified && user.passwordHash) {
       const verificationToken = randomUUID();
-      await db.update(users).set({ verificationToken }).where(eq(users.id, user.id));
+      await db.update(users)
+        .set({ verificationToken: await hashToken(verificationToken), verificationExpiresAt: new Date(Date.now() + VERIFICATION_TTL_MS) })
+        .where(eq(users.id, user.id));
       await sendEmail(email, "Finvu — Overte váš email", verificationEmailHtml(verificationToken));
     }
   }
@@ -613,7 +635,8 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id));
-    await db.insert(passwordResetTokens).values({ userId: user.id, token, expiresAt });
+    // Stored hashed; the raw token only exists in the e-mail link.
+    await db.insert(passwordResetTokens).values({ userId: user.id, token: await hashToken(token), expiresAt });
 
     await sendEmail(
       email,
@@ -638,7 +661,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
   const [resetRecord] = await db
     .select()
     .from(passwordResetTokens)
-    .where(and(eq(passwordResetTokens.token, token), gt(passwordResetTokens.expiresAt, now)))
+    // hashed, plus the raw value for links issued before tokens were hashed (1h expiry)
+    .where(and(inArray(passwordResetTokens.token, [await hashToken(token), token]), gt(passwordResetTokens.expiresAt, now)))
     .limit(1);
 
   if (!resetRecord) {
@@ -830,7 +854,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
       DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: newUser.id, isDefault: true }))
     );
 
-    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false, pinFailedAttempts: 0, pinLockedUntil: null };
+    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false, pinFailedAttempts: 0, pinLockedUntil: null };
   } else if (!user.googleId) {
     // Google just proved control of this mailbox. If the account was registered
     // with a password but never verified, whoever registered it may not be the

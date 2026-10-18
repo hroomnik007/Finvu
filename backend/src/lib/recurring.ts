@@ -21,3 +21,35 @@ export function isFixedDue(dayOfMonth: number, year: number, month: number, toda
   if (month !== curMonth) return month < curMonth;
   return dayOfMonth <= today.getDate();
 }
+
+export interface FixedRow {
+  userId?: string;
+  type: string;
+  description: string | null;
+  amount: string;
+  date: string;
+}
+
+// Total of the recurring (isFixed) rows that apply to ONE calendar month.
+// `rows` must be ascending by date and contain only rows dated before the end of
+// that month. A recurring row is entered once and counts in every month from its
+// own date on: each series (user + type + description) via its latest
+// occurrence, and recurring expenses only once their due day has arrived.
+export function recurringTotalsForMonth(
+  rows: FixedRow[],
+  year: number,
+  month: number,
+  today: Date,
+): { income: number; expense: number } {
+  const latest = new Map<string, FixedRow>();
+  for (const row of rows) latest.set(`${row.userId ?? ""}|${row.type}|${row.description ?? ""}`, row);
+
+  let income = 0;
+  let expense = 0;
+  for (const row of latest.values()) {
+    const amount = parseFloat(row.amount);
+    if (row.type === "income") income += amount;
+    else if (isFixedDue(fixedDayOfMonth(row.description, row.date), year, month, today)) expense += amount;
+  }
+  return { income, expense };
+}

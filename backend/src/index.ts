@@ -53,7 +53,7 @@ const jsonAvatar = express.json({ limit: "15mb" });
 // could make the server buffer 15mb bodies on that path.
 app.use((req, res, next) =>
   req.path === "/api/auth/avatar"
-    ? authenticateToken(req as AuthRequest, res, () => jsonAvatar(req, res, next))
+    ? authenticateToken(req as AuthRequest, res, () => jsonAvatar(req, res, next)).catch(next)
     : jsonDefault(req, res, next)
 );
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));

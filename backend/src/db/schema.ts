@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   googleId: varchar("google_id", { length: 255 }),
   emailVerified: boolean("email_verified").default(false).notNull(),
   verificationToken: varchar("verification_token", { length: 255 }),
+  verificationExpiresAt: timestamp("verification_expires_at"),
   resetToken: varchar("reset_token", { length: 255 }),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   avatarUrl: text("avatar_url"),
@@ -66,6 +67,8 @@ export const refreshTokens = pgTable("refresh_tokens", {
   // Set when a just-rotated token was legitimately presented once more inside the
   // grace window; any further use of the same token counts as replay.
   graceUsedAt: timestamp("grace_used_at"),
+  // Session (device) this token belongs to; deleting the session deletes the token.
+  sessionId: uuid("session_id").references(() => userSessions.id, { onDelete: "cascade" }),
 }, (t) => [index("refresh_tokens_user_id_idx").on(t.userId)]);
 
 export const households = pgTable("households", {

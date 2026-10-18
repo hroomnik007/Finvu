@@ -3,6 +3,31 @@ import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { db } from "../db";
 import { users, transactions } from "../db/schema";
 import { sendEmail } from "../lib/email";
+import { recurringTotalsForMonth } from "../lib/recurring";
+
+// Income / expenses of one user for [from, to] (inclusive, same calendar month),
+// counted like the app does: one-off rows by their date, plus recurring items
+// carried into the month (see recurringTotalsForMonth). `asOf` is the moment the
+// report is produced — it decides which recurring expenses have already fallen due.
+async function periodTotals(userId: string, from: string, to: string, asOf: Date): Promise<{ income: number; expense: number }> {
+  const oneOff = await db
+    .select({ type: transactions.type, amount: sql<string>`sum(${transactions.amount})` })
+    .from(transactions)
+    .where(and(eq(transactions.userId, userId), eq(transactions.isFixed, false), gte(transactions.date, from), lte(transactions.date, to)))
+    .groupBy(transactions.type);
+
+  const fixed = await db
+    .select({ type: transactions.type, description: transactions.description, amount: transactions.amount, date: transactions.date })
+    .from(transactions)
+    .where(and(eq(transactions.userId, userId), eq(transactions.isFixed, true), lte(transactions.date, to)))
+    .orderBy(transactions.date);
+
+  const recurring = recurringTotalsForMonth(fixed, Number(from.slice(0, 4)), Number(from.slice(5, 7)), asOf);
+  return {
+    income: parseFloat(oneOff.find((r) => r.type === "income")?.amount ?? "0") + recurring.income,
+    expense: parseFloat(oneOff.find((r) => r.type === "expense")?.amount ?? "0") + recurring.expense,
+  };
+}
 
 const MONTHS = ["Január","Február","Marec","Apríl","Máj","Jún","Júl","August","September","Október","November","December"];
 
@@ -38,25 +63,7 @@ async function sendMidMonthReports(): Promise<void> {
     .where(eq(users.weeklyEmailEnabled, true));
 
   for (const user of subscribers) {
-    const txs = await db
-      .select({
-        type: transactions.type,
-        amount: sql<string>`sum(${transactions.amount})`,
-      })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, user.id),
-          gte(transactions.date, from),
-          lte(transactions.date, to)
-        )
-      )
-      .groupBy(transactions.type);
-
-    const income = txs.find((r) => r.type === "income");
-    const expense = txs.find((r) => r.type === "expense");
-    const totalIncome = parseFloat(income?.amount ?? "0");
-    const totalExpense = parseFloat(expense?.amount ?? "0");
+    const { income: totalIncome, expense: totalExpense } = await periodTotals(user.id, from, to, new Date());
     const balance = totalIncome - totalExpense;
 
     const html = `
@@ -128,14 +135,7 @@ async function sendMonthlyReports(): Promise<void> {
     .where(eq(users.monthlyEmailEnabled, true));
 
   for (const user of subscribers) {
-    const txs = await db
-      .select({ type: transactions.type, amount: sql<string>`sum(${transactions.amount})` })
-      .from(transactions)
-      .where(and(eq(transactions.userId, user.id), gte(transactions.date, from), lte(transactions.date, to)))
-      .groupBy(transactions.type);
-
-    const totalIncome = parseFloat(txs.find((r) => r.type === "income")?.amount ?? "0");
-    const totalExpense = parseFloat(txs.find((r) => r.type === "expense")?.amount ?? "0");
+    const { income: totalIncome, expense: totalExpense } = await periodTotals(user.id, from, to, new Date());
     const balance = totalIncome - totalExpense;
 
     const html = `
