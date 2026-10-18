@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CompactModal } from '../components/CompactModal'
+import { BulkBar } from '../components/BulkBar'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { GlassCard } from '../components/GlassCard'
@@ -600,11 +601,11 @@ export function CategoriesPage() {
           ) : (
             <>
               {/* Select toggle — mobile */}
-              <div className="lg:hidden" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                <button onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))} style={selectBtnStyle(selectMode)}>
-                  {selectMode ? t.expenses.categories.selectDone : t.expenses.categories.selectMode}
-                </button>
-              </div>
+              {!selectMode && (
+                <div className="flex justify-end lg:hidden" style={{ marginTop: 8 }}>
+                  <button onClick={() => setSelectMode(true)} style={selectBtnStyle(false)}>{t.expenses.categories.selectMode}</button>
+                </div>
+              )}
 
               {/* View toggle — desktop only */}
               <div className="hidden lg:flex" style={{alignItems:'center',gap:10, marginTop: 8}}>
@@ -626,9 +627,9 @@ export function CategoriesPage() {
                     </button>
                   ))}
                 </div>
-                <button onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))} style={selectBtnStyle(selectMode)}>
-                  {selectMode ? t.expenses.categories.selectDone : t.expenses.categories.selectMode}
-                </button>
+                {!selectMode && (
+                  <button onClick={() => setSelectMode(true)} style={selectBtnStyle(false)}>{t.expenses.categories.selectMode}</button>
+                )}
               </div>
 
               {/* Desktop — dnd-kit sortable */}
@@ -702,18 +703,24 @@ export function CategoriesPage() {
       )}
 
       {/* Bulk action bar */}
-      {selectMode && selectedIds.size > 0 && (
-        <div style={{ position: 'fixed', left: 16, right: 16, bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))', zIndex: 45, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 18, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', boxShadow: '0 10px 30px rgba(0,0,0,0.35)', maxWidth: 560, margin: '0 auto' }}>
-          <span style={{ flex: 1, fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)' }}>
-            {t.expenses.categories.selectedCount.replace('{n}', String(selectedIds.size))}
-          </span>
-          <button onClick={openBulk} style={{ padding: '8px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: 'white', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', fontFamily: "'Outfit', sans-serif" }}>
+      {selectMode && (
+        <BulkBar
+          count={selectedIds.size}
+          total={categories.length}
+          hint={t.expenses.categories.selectHint}
+          countLabel={t.expenses.categories.selectedCount}
+          selectAllLabel={t.common.selectAll}
+          cancelLabel={t.common.cancel}
+          onCancel={exitSelectMode}
+          onSelectAll={() => setSelectedIds(new Set(categories.map(c => c.id!)))}
+        >
+          <button onClick={openBulk} disabled={selectedIds.size === 0} style={{ padding: '8px 16px', borderRadius: 12, border: 'none', cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer', opacity: selectedIds.size === 0 ? 0.5 : 1, fontWeight: 700, fontSize: 13, color: 'white', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', fontFamily: "'Outfit', sans-serif" }}>
             {t.expenses.categories.bulkEdit}
           </button>
-          <button onClick={() => setBulkDeleteOpen(true)} aria-label={t.expenses.categories.bulkDelete} style={{ width: 36, height: 36, borderRadius: 12, border: '1px solid rgba(251,113,133,0.3)', background: 'rgba(251,113,133,0.1)', color: 'var(--aurora-rose)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={() => setBulkDeleteOpen(true)} disabled={selectedIds.size === 0} aria-label={t.expenses.categories.bulkDelete} style={{ width: 36, height: 36, borderRadius: 12, border: '1px solid rgba(251,113,133,0.3)', background: 'rgba(251,113,133,0.1)', color: 'var(--aurora-rose)', cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer', opacity: selectedIds.size === 0 ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Trash2 size={15} />
           </button>
-        </div>
+        </BulkBar>
       )}
 
       <CompactModal

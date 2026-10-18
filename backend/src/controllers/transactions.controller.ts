@@ -274,6 +274,42 @@ export async function createTransactionsBulk(req: AuthRequest, res: Response): P
   res.status(201).json({ created: rows.length, newlyUnlockedAchievements });
 }
 
+const bulkIdsSchema = z.object({ ids: z.array(z.string().uuid()).min(1).max(500) });
+const bulkCategorySchema = bulkIdsSchema.extend({ categoryId: z.string().uuid().nullable() });
+
+// Bulk edit/delete are limited to the caller's one-off rows; fixed items change
+// the auto-limit and are managed individually.
+export async function bulkSetTransactionCategory(req: AuthRequest, res: Response): Promise<void> {
+  const body = bulkCategorySchema.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Validation error" });
+    return;
+  }
+  if (!(await ownsCategory(body.data.categoryId, req.userId!))) {
+    res.status(400).json({ error: "Invalid category" });
+    return;
+  }
+  const updated = await db
+    .update(transactions)
+    .set({ categoryId: body.data.categoryId })
+    .where(and(inArray(transactions.id, body.data.ids), eq(transactions.userId, req.userId!), eq(transactions.isFixed, false)))
+    .returning({ id: transactions.id });
+  res.json({ updated: updated.length });
+}
+
+export async function bulkDeleteTransactions(req: AuthRequest, res: Response): Promise<void> {
+  const body = bulkIdsSchema.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Validation error" });
+    return;
+  }
+  const removed = await db
+    .delete(transactions)
+    .where(and(inArray(transactions.id, body.data.ids), eq(transactions.userId, req.userId!), eq(transactions.isFixed, false)))
+    .returning({ id: transactions.id });
+  res.json({ deleted: removed.length });
+}
+
 export async function updateTransaction(req: AuthRequest, res: Response): Promise<void> {
   const id = req.params["id"] as string;
 
