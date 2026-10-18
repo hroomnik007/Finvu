@@ -8,6 +8,7 @@ import { generateInviteCode } from "../utils/inviteCode";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
 import { fixedDayOfMonth, isFixedDue } from "../lib/recurring";
+import { DEMO_EMAIL } from "../lib/resetDemo";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -117,6 +118,14 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
     .limit(1);
 
   if (!household) {
+    res.status(404).json({ error: "Domácnosť s týmto kódom neexistuje." });
+    return;
+  }
+
+  // Never let a real user into a household owned by the demo account, whatever
+  // its current invite code is (the demo owner could otherwise rotate the code).
+  const [creator] = await db.select({ email: users.email }).from(users).where(eq(users.id, household.createdBy)).limit(1);
+  if (creator?.email.toLowerCase() === DEMO_EMAIL) {
     res.status(404).json({ error: "Domácnosť s týmto kódom neexistuje." });
     return;
   }
@@ -483,6 +492,16 @@ export async function toggleHousehold(req: AuthRequest, res: Response): Promise<
   res.json({ household_enabled: enabled });
 }
 
+// The shared demo account has a public password, so it must not manage a
+// household (or hand out codes): refuse owner actions for it.
+function rejectDemo(req: AuthRequest, res: Response): boolean {
+  if (req.userEmail?.toLowerCase() === DEMO_EMAIL) {
+    res.status(403).json({ error: "Táto akcia nie je v demo účte povolená.", code: "DEMO_RESTRICTED" });
+    return true;
+  }
+  return false;
+}
+
 // Only the household's owner (created_by) may manage members and the invite code.
 async function assertOwner(householdId: number, userId: string, res: Response): Promise<boolean> {
   const [household] = await db
@@ -501,6 +520,7 @@ async function assertOwner(householdId: number, userId: string, res: Response): 
 // so a code that leaked (or was shared with someone who should no longer join)
 // can be retired.
 export async function regenerateInviteCode(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const householdId = parseInt(req.params["id"] as string, 10);
   if (isNaN(householdId)) { res.status(400).json({ error: "Invalid household id" }); return; }
   if (!(await assertMember(householdId, req.userId!, res))) return;
@@ -518,6 +538,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // household switched off for them. Their past rows stay theirs and drop out of
 // the family totals because family scope follows membership.
 export async function removeMember(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const householdId = parseInt(req.params["id"] as string, 10);
   const memberId = req.params["memberId"] as string;
   if (isNaN(householdId)) { res.status(400).json({ error: "Invalid household id" }); return; }
@@ -541,5 +562,10 @@ export async function removeMember(req: AuthRequest, res: Response): Promise<voi
     .set({ householdId: null, householdEnabled: false })
     .where(and(eq(users.id, memberId), eq(users.householdId, householdId)));
 
-  res.json({ success: true });
+  // The removed member knows the current invite code and could simply rejoin with
+  // it, so removing someone retires the code in the same step.
+  const inviteCode = await getUniqueInviteCode();
+  await db.update(households).set({ inviteCode }).where(eq(households.id, householdId));
+
+  res.json({ success: true, invite_code: inviteCode });
 }
