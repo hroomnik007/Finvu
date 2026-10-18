@@ -8,6 +8,7 @@ import { env } from "./config/env";
 import { errorHandler } from "./middleware/errorHandler";
 import { startWeeklyReportJob } from "./jobs/weeklyReport";
 import { startMonthlyReportJob } from "./jobs/monthlyReport";
+import { startCleanupJob } from "./jobs/cleanup";
 import authRouter from "./routes/auth";
 import transactionsRouter from "./routes/transactions";
 import categoriesRouter from "./routes/categories";
@@ -92,6 +93,7 @@ app.listen(env.PORT, () => {
   console.log(`Server running on port ${env.PORT} [${env.NODE_ENV}]`);
   startWeeklyReportJob();
   startMonthlyReportJob();
+  startCleanupJob();
 });
 
 export default app;
