@@ -7,7 +7,7 @@ import { familyMemberIds } from "./household";
 // by type + trimmed, case-insensitive name (the same pairing household stats use).
 const sameName = (name: string) => sql`lower(btrim(${categories.name})) = lower(btrim(${name}))`;
 
-async function sharingMemberIds(userId: string): Promise<string[] | null> {
+export async function sharingMemberIds(userId: string): Promise<string[] | null> {
   const [u] = await db
     .select({ householdId: users.householdId, enabled: users.householdEnabled })
     .from(users)

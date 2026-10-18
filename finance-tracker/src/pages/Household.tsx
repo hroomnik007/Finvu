@@ -60,6 +60,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [shareConfirmId, setShareConfirmId] = useState<string | null>(null)
+  const [editSharing, setEditSharing] = useState(false)
   const toggleShare = async (id: string, shared: boolean) => {
     try { await shareCategories([id], shared) } catch { /* the list below reflects the real state */ }
     await reloadCategories()
@@ -184,7 +185,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
             amount: m.category_breakdown.filter(b => key(b.name ?? '') === key(c.name)).reduce((s, b) => s + b.amount, 0),
           }))
           .filter(pm => pm.amount > 0)
-        return { name: c.name, limit: c.budgetLimit ?? 0, spent: perMember.reduce((s, pm) => s + pm.amount, 0), perMember }
+        return { name: c.name, perMemberLimit: c.budgetLimit ?? 0, limit: (c.budgetLimit ?? 0) * (c.familyMembers ?? 1), spent: perMember.reduce((s, pm) => s + pm.amount, 0), perMember }
       })
   }, [stats, categories])
 
@@ -275,12 +276,13 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
 
       {/* ── Shared categories: family spend vs. the common limit, split by member; chips mark/unmark them ── */}
       {householdData && householdData.members.length > 1 && (
+        <div style={{ width: '100%', maxWidth: 720 }}>
         <GlassCard radius={20}>
           <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 4px' }}>👥 {ht.sharedCategoriesTitle}</p>
           <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-faint)', margin: '0 0 14px', lineHeight: 1.5 }}>{ht.sharedCategoriesDesc}</p>
 
           {sharedCategoryRows.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '14px 28px', marginBottom: 18 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
               {sharedCategoryRows.map(r => {
                 const pct = r.limit > 0 ? Math.min((r.spent / r.limit) * 100, 100) : 0
                 const color = r.limit > 0 && r.spent >= r.limit ? 'var(--aurora-rose)' : r.limit > 0 && r.spent >= r.limit * 0.7 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
@@ -297,6 +299,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
                     )}
                     <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>
                       {r.perMember.map(pm => `${pm.name} ${formatAmount(pm.amount)}`).join(' · ')}
+                      {r.perMemberLimit > 0 && ` · ${ht.limitPerMember.replace('{amount}', formatAmount(r.perMemberLimit))}`}
                     </div>
                   </div>
                 )
@@ -304,7 +307,13 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {sharedCategoryRows.length > 0 && (
+            <button type="button" onClick={() => setEditSharing(v => !v)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600, color: 'var(--aurora-violet)' }}>
+              {editSharing ? ht.sharedEditDone : ht.sharedEdit}
+            </button>
+          )}
+
+          <div style={{ display: sharedCategoryRows.length === 0 || editSharing ? 'flex' : 'none', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
             {categories.filter(c => c.type === 'expense' && c.id).map(c => (
               <button
                 key={c.id}
@@ -322,6 +331,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
             ))}
           </div>
         </GlassCard>
+        </div>
       )}
 
       {/* ── ČLENOVIA section header ── */}

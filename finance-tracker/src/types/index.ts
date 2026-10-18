@@ -12,6 +12,8 @@ export interface Category {
   hasFixedExpenses?: boolean
   /** Same-named category of every sharing household member with one common limit. */
   shared?: boolean
+  /** Sharing members of the household (shared categories only); the limit applies per member. */
+  familyMembers?: number
   type: 'income' | 'expense'
 }
 
@@ -140,6 +142,7 @@ export interface ApiCategory {
   limitReserve?: number
   hasFixedExpenses?: boolean
   shared?: boolean
+  familyMembers?: number
 }
 
 export interface ApiTransaction {

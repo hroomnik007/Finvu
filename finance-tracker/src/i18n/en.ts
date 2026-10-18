@@ -270,6 +270,7 @@ export const en: Translations = {
       autoLimitComputed: 'Auto-calculated: {amount} €',
       autoLimitDesc: 'Limit is auto-calculated from fixed expenses total',
       sharedLabel: 'Shared category',
+      perMember: 'per member',
       shareConfirm: 'The category will be added for every household member and their limits for it will be replaced by the average. Continue?',
       limitBreakdown: 'fixed {fixed} + variable {reserve}',
       selectMode: 'Select',
@@ -599,6 +600,9 @@ export const en: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Shared categories',
+    limitPerMember: 'limit {amount} per member',
+    sharedEdit: 'Edit selection',
+    sharedEditDone: 'Done',
     sharedCategoriesDesc: 'Pick the categories the whole household shares. Every member gets them with one common limit (the average of the current limits).',
     title: 'Household',
     subtitle: 'Family shared finances',

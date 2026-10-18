@@ -270,6 +270,7 @@ export const cs: Translations = {
       autoLimitComputed: 'Automaticky vypočítáno: {amount} €',
       autoLimitDesc: 'Limit se vypočítá automaticky ze součtu fixních výdajů',
       sharedLabel: 'Společná kategorie',
+      perMember: 'na člena',
       shareConfirm: 'Kategorie se přidá všem členům domácnosti a jejich limity pro ni se přepíšou průměrem. Pokračovat?',
       limitBreakdown: 'fixní {fixed} + variabilní {reserve}',
       selectMode: 'Vybrat',
@@ -599,6 +600,9 @@ export const cs: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Společné kategorie',
+    limitPerMember: 'limit {amount} na člena',
+    sharedEdit: 'Upravit výběr',
+    sharedEditDone: 'Hotovo',
     sharedCategoriesDesc: 'Označte kategorie, které budou společné pro celou domácnost. Každý člen je dostane s jedním společným limitem (průměr dosavadních limitů).',
     title: 'Domácnost',
     subtitle: 'Společné finance rodiny',

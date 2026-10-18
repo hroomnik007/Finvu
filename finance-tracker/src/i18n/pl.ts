@@ -270,6 +270,7 @@ export const pl: Translations = {
       autoLimitComputed: 'Automatycznie obliczone: {amount} €',
       autoLimitDesc: 'Limit obliczany automatycznie z sumy stałych wydatków',
       sharedLabel: 'Wspólna kategoria',
+      perMember: 'na członka',
       shareConfirm: 'Kategoria zostanie dodana wszystkim członkom gospodarstwa, a ich limity dla niej zostaną zastąpione średnią. Kontynuować?',
       limitBreakdown: 'stałe {fixed} + zmienne {reserve}',
       selectMode: 'Wybierz',
@@ -599,6 +600,9 @@ export const pl: Translations = {
   },
   household: {
     sharedCategoriesTitle: 'Wspólne kategorie',
+    limitPerMember: 'limit {amount} na członka',
+    sharedEdit: 'Edytuj wybór',
+    sharedEditDone: 'Gotowe',
     sharedCategoriesDesc: 'Zaznacz kategorie wspólne dla całego gospodarstwa. Każdy członek otrzyma je z jednym wspólnym limitem (średnia dotychczasowych limitów).',
     title: 'Gospodarstwo',
     subtitle: 'Wspólne finanse rodziny',

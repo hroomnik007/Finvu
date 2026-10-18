@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { categories, transactions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
-import { NotSharingError, propagateSharedLimit, shareCategories, unshareCategories } from "../lib/sharedCategories";
+import { NotSharingError, propagateSharedLimit, shareCategories, sharingMemberIds, unshareCategories } from "../lib/sharedCategories";
 
 type CategoryRow = typeof categories.$inferSelect;
 function normalizeCategory(row: CategoryRow) {
@@ -96,8 +96,15 @@ export async function listCategories(req: AuthRequest, res: Response): Promise<v
     fixedCatIds = new Set(fixedRows.map((r) => r.categoryId!));
   }
 
+  // A shared limit is per member, so the family-wide budget is limit x members
+  const familyMembers = rows.some((r) => r.shared) ? ((await sharingMemberIds(req.userId!))?.length ?? 1) : 1;
+
   res.json({
-    data: rows.map((r) => ({ ...normalizeCategory(r), hasFixedExpenses: fixedCatIds.has(r.id) })),
+    data: rows.map((r) => ({
+      ...normalizeCategory(r),
+      hasFixedExpenses: fixedCatIds.has(r.id),
+      ...(r.shared ? { familyMembers } : {}),
+    })),
   });
 }
 
