@@ -392,7 +392,7 @@ const upcomingFixed = useMemo(() => {
     ? dailyBudget({ income: heroIncome, spent: heroExpenses, pendingFixed, day: now.getDate(), daysInMonth })
     : null
   const dailyBudgetCard = (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
       {budgetToday && (
         <div style={{ flex: '1 1 260px', minWidth: 0, display: 'flex' }}>
           <DailyBudgetCard budget={budgetToday} pendingFixed={pendingFixed} />
