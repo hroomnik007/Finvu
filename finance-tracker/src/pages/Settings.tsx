@@ -498,6 +498,8 @@ export function SettingsPage() {
   const [weeklyEmailSaving, setWeeklyEmailSaving] = useState(false)
   const [monthlyEmail, setMonthlyEmail] = useState(user?.monthlyEmailEnabled ?? false)
   const [monthlyEmailSaving, setMonthlyEmailSaving] = useState(false)
+  const [monthlyScope, setMonthlyScope] = useState<'personal' | 'family'>(user?.monthlyEmailScope ?? 'personal')
+  const [monthlyHour, setMonthlyHour] = useState(user?.monthlyEmailHour ?? 9)
   const [budgetWarnings, setBudgetWarningsState] = useState(() => loadLocalPref<boolean>('budget_warnings_enabled', true))
   const [savingsGoalReminder, setSavingsGoalReminderState] = useState(() => loadLocalPref<boolean>('savings_goal_reminder_enabled', false))
 
@@ -536,6 +538,19 @@ export function SettingsPage() {
       setMonthlyEmail(next)
     } finally {
       setMonthlyEmailSaving(false)
+    }
+  }
+
+  async function saveMonthlyPref(changes: { monthlyEmailScope?: 'personal' | 'family'; monthlyEmailHour?: number }) {
+    const prevScope = monthlyScope
+    const prevHour = monthlyHour
+    if (changes.monthlyEmailScope) setMonthlyScope(changes.monthlyEmailScope)
+    if (changes.monthlyEmailHour !== undefined) setMonthlyHour(changes.monthlyEmailHour)
+    try {
+      await updateUserSettings(changes)
+    } catch {
+      setMonthlyScope(prevScope)
+      setMonthlyHour(prevHour)
     }
   }
 
@@ -1206,6 +1221,39 @@ export function SettingsPage() {
                   <SettingRow label={t.settings.monthlyEmailLabel} sublabel={t.settings.monthlyEmailSubtitle}>
                     <Toggle checked={monthlyEmail} onChange={handleMonthlyEmailToggle} disabled={monthlyEmailSaving} />
                   </SettingRow>
+
+                  {monthlyEmail && user?.household_enabled && (
+                    <SettingRow label={t.settings.monthlyEmailScopeLabel}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <select
+                        value={monthlyScope}
+                        onChange={e => void saveMonthlyPref({ monthlyEmailScope: e.target.value as 'personal' | 'family' })}
+                        style={{ appearance: 'none' as const, background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', paddingRight: 18, colorScheme: 'var(--aurora-color-scheme)', accentColor: 'var(--accent-color)' }}
+                      >
+                        <option value="personal" style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>{t.settings.monthlyEmailScopePersonal}</option>
+                        <option value="family" style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>{t.settings.monthlyEmailScopeFamily}</option>
+                      </select>
+                      <ChevronRight size={14} style={{ position: 'absolute', right: 0, color: 'var(--aurora-faint)', pointerEvents: 'none' }} />
+                    </div>
+                    </SettingRow>
+                  )}
+
+                  {monthlyEmail && (
+                    <SettingRow label={t.settings.monthlyEmailTimeLabel}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <select
+                        value={monthlyHour}
+                        onChange={e => void saveMonthlyPref({ monthlyEmailHour: Number(e.target.value) })}
+                        style={{ appearance: 'none' as const, background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', paddingRight: 18, colorScheme: 'var(--aurora-color-scheme)', accentColor: 'var(--accent-color)' }}
+                      >
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <option key={h} value={h} style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>{String(h).padStart(2, '0')}:00</option>
+                        ))}
+                      </select>
+                      <ChevronRight size={14} style={{ position: 'absolute', right: 0, color: 'var(--aurora-faint)', pointerEvents: 'none' }} />
+                    </div>
+                    </SettingRow>
+                  )}
                 </div>
                 <div className="border-t border-white/[0.04]" style={{ padding: '10px var(--card-padding, 20px)' }}>
                   <p className="text-xs" style={{ color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif" }}>{t.settings.notificationsNote}</p>

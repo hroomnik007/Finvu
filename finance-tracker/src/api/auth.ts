@@ -87,6 +87,8 @@ export async function googleLogin(accessToken: string): Promise<{ user: import('
 export async function updateUserSettings(settings: {
   onboardingComplete?: boolean
   monthlyEmailEnabled?: boolean
+  monthlyEmailScope?: 'personal' | 'family'
+  monthlyEmailHour?: number
   defaultPage?: string
   currencyFormat?: string
   theme?: string

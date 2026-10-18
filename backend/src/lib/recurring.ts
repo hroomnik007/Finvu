@@ -75,6 +75,18 @@ function nextMonthStart(year: number, month: number): string {
   return month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
 }
 
+// The row each recurring series (user + type + description) has in ONE month: its
+// latest occurrence dated before the month's end, left out once ended. `rows`
+// must be ascending by date.
+export function latestActiveSeries<T extends FixedRow>(rows: T[], year: number, month: number): T[] {
+  const end = nextMonthStart(year, month);
+  const latest = new Map<string, T>();
+  for (const row of rows) {
+    if (row.date < end) latest.set(`${row.userId ?? ""}|${row.type}|${row.description ?? ""}`, row);
+  }
+  return [...latest.values()].filter((r) => isActiveInMonth(r.endedOn, year, month));
+}
+
 // What the recurring series add up to in ONE month, regardless of due days: each
 // series (user + type + description) through its latest row dated before the
 // month's end, left out once it has ended. Used for budgets (auto limit), which
