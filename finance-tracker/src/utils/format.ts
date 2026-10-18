@@ -14,6 +14,13 @@ export function formatDate(dateStr: string): string {
   }).format(new Date(dateStr))
 }
 
+// YYYY-MM-DD of a moment in the user's LOCAL time zone. toISOString() is UTC, which
+// gives the previous day for the first hour or two after local midnight.
+export function toLocalISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 export function todayISO(): string {
-  return new Date().toISOString().split('T')[0]
+  return toLocalISO(new Date())
 }

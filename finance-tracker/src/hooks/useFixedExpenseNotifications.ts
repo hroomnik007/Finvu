@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { FixedExpense } from '../types'
+import { toLocalISO } from '../utils/format'
 
 const STORAGE_KEY = 'fixed_expense_notified'
 const SETTINGS_KEY = 'fixed_expense_notifications_enabled'
@@ -43,7 +44,7 @@ export function useFixedExpenseNotifications(fixedExpenses: FixedExpense[], isAu
 
     const today = new Date()
     const todayDay = today.getDate()
-    const todayStr = today.toISOString().split('T')[0]
+    const todayStr = toLocalISO(today)
 
     async function checkAndNotify() {
       let permission = Notification.permission

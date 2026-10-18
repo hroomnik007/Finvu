@@ -6,6 +6,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
+import { todayISO } from '../utils/format'
 
 interface ExpenseHeatmapProps {
   expenses: VariableExpense[]
@@ -64,7 +65,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
     dailyExpenses[exp.date].push(exp)
   }
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = todayISO()
   const isCurrentMonth = todayStr.startsWith(`${year}-${String(month).padStart(2, '0')}`)
   const todayDay = isCurrentMonth ? new Date().getDate() : 0
 
