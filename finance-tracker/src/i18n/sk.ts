@@ -787,6 +787,7 @@ export const sk = {
     biometrySetLabel: '✓ Zaregistrované',
     biometryLoading: 'Registrujem...',
     biometryDesc: 'Odtlačok prsta alebo Face ID',
+    passkeyPinLabel: 'Aktuálny PIN',
     setupBtn: 'Nastaviť →',
     skip: 'Preskočiť',
     next: 'Ďalej',

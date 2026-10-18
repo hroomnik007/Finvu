@@ -162,7 +162,7 @@ router.delete("/sessions/:id",                authenticateToken, deleteSession);
 router.post("/deactivate",                    sensitiveLimiter, authenticateToken, deactivateAccount);
 
 // WebAuthn
-router.get("/webauthn/register-options",      authenticateToken, webauthnRegisterOptions);
+router.post("/webauthn/register-options",     sensitiveLimiter, authenticateToken, webauthnRegisterOptions);
 router.post("/webauthn/register-verify",      authenticateToken, webauthnRegisterVerify);
 router.get("/webauthn/authenticate-options",  webauthnOptionsLimiter, webauthnAuthenticateOptions);
 router.post("/webauthn/authenticate-verify",  webauthnVerifyLimiter, webauthnAuthenticateVerify);

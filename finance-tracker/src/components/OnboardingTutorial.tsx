@@ -32,6 +32,10 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
   const [webauthnDone, setWebauthnDone] = useState(false)
   const [webauthnLoading, setWebauthnLoading] = useState(false)
   const [webauthnError, setWebauthnError] = useState<string | null>(null)
+  // Registering a passkey re-checks the current password (or PIN for accounts
+  // without one); the field appears on the first press, the second performs it.
+  const [webauthnSecretOpen, setWebauthnSecretOpen] = useState(false)
+  const [webauthnSecret, setWebauthnSecret] = useState('')
   const [pinDone, setPinDone] = useState(false)
 
   const isLastStep = step === STEPS.length - 1
@@ -50,18 +54,31 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
     setTimeout(onComplete, 300)
   }
 
+  const reauthFactor: 'password' | 'pin' | null = user?.has_password ? 'password' : user?.has_pin ? 'pin' : null
+
   const handleWebAuthnSetup = async () => {
+    if (reauthFactor && !webauthnSecretOpen) {
+      setWebauthnSecretOpen(true)
+      return
+    }
+    if (reauthFactor && !webauthnSecret) return
     setWebauthnLoading(true)
     setWebauthnError(null)
     try {
       const { startRegistration } = await import('@simplewebauthn/browser')
-      const options = await webauthnRegisterOptions()
+      const options = await webauthnRegisterOptions(
+        reauthFactor === 'password' ? { currentPassword: webauthnSecret }
+          : reauthFactor === 'pin' ? { currentPin: webauthnSecret }
+          : {},
+      )
       const response = await startRegistration({ optionsJSON: options })
       await webauthnRegisterVerify(response)
       setWebauthnDone(true)
+      setWebauthnSecret('')
       if (user?.email) localStorage.setItem(`webauthn_enabled_${user.email}`, '1')
     } catch (e: unknown) {
-      setWebauthnError((e as Error)?.message ?? t.auth.registerFailed)
+      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      setWebauthnError(serverMsg ?? (e as Error)?.message ?? t.auth.registerFailed)
     } finally {
       setWebauthnLoading(false)
     }
@@ -255,6 +272,20 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
                   </div>
                   {!webauthnDone && !webauthnLoading && <span style={{ fontSize: 12, color: '#A78BFA', fontWeight: 600 }}>{t.onboarding.setupBtn}</span>}
                 </button>
+              )}
+              {webauthnSecretOpen && !webauthnDone && reauthFactor && (
+                <input
+                  type="password"
+                  autoFocus
+                  autoComplete="current-password"
+                  inputMode={reauthFactor === 'pin' ? 'numeric' : undefined}
+                  maxLength={reauthFactor === 'pin' ? 4 : undefined}
+                  value={webauthnSecret}
+                  onChange={e => setWebauthnSecret(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleWebAuthnSetup() }}
+                  placeholder={reauthFactor === 'pin' ? t.onboarding.passkeyPinLabel : t.profile.currentPassword}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12, fontSize: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
+                />
               )}
               {webauthnError && (
                 <p style={{ fontSize: 12, color: '#f87171', textAlign: 'center' }}>{webauthnError}</p>

@@ -789,6 +789,7 @@ export const en: Translations = {
     biometrySetLabel: '✓ Registered',
     biometryLoading: 'Registering...',
     biometryDesc: 'Fingerprint or Face ID',
+    passkeyPinLabel: 'Current PIN',
     setupBtn: 'Set up →',
     skip: 'Skip',
     next: 'Next',
