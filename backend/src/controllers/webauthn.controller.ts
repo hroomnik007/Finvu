@@ -246,6 +246,20 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export async function deletePasskey(req: AuthRequest, res: Response): Promise<void> {
   const id = req.params["id"] as string;
   if (!UUID_RE.test(id)) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  // Without another way to sign in, removing the last passkey would lock the account.
+  const [u] = await db
+    .select({ passwordHash: users.passwordHash, pinHash: users.pinHash, googleId: users.googleId })
+    .from(users)
+    .where(eq(users.id, req.userId!))
+    .limit(1);
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(webauthnCredentials)
+    .where(eq(webauthnCredentials.userId, req.userId!));
+  if (n <= 1 && !u?.passwordHash && !u?.pinHash && !u?.googleId) {
+    res.status(400).json({ error: "Toto je váš jediný spôsob prihlásenia. Najprv nastavte heslo, PIN alebo Google." });
+    return;
+  }
   const removed = await db
     .delete(webauthnCredentials)
     .where(and(eq(webauthnCredentials.id, id), eq(webauthnCredentials.userId, req.userId!)))

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { categories, transactions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
+import { NotSharingError, propagateSharedLimit, shareCategories, unshareCategories } from "../lib/sharedCategories";
 
 type CategoryRow = typeof categories.$inferSelect;
 function normalizeCategory(row: CategoryRow) {
@@ -12,6 +13,7 @@ function normalizeCategory(row: CategoryRow) {
     budgetLimit: row.budgetLimit != null ? Number(row.budgetLimit) : null,
     autoLimit: row.autoLimit,
     limitReserve: Number(row.limitReserve ?? 0),
+    shared: row.shared,
   };
 }
 
@@ -125,7 +127,7 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
   const id = req.params["id"] as string;
 
   const [existing] = await db
-    .select({ userId: categories.userId })
+    .select({ userId: categories.userId, shared: categories.shared, name: categories.name })
     .from(categories)
     .where(eq(categories.id, id))
     .limit(1);
@@ -150,6 +152,16 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
     return;
   }
 
+  // A shared category is paired across members by name and carries one common
+  // limit, so it can't be renamed or switched to the auto limit while shared.
+  if (existing.shared) {
+    const renamed = body.data.name !== undefined && body.data.name.trim().toLowerCase() !== existing.name.trim().toLowerCase();
+    if (renamed || body.data.autoLimit === true) {
+      res.status(400).json({ error: "Shared category can't be renamed or use auto limit. Stop sharing it first." });
+      return;
+    }
+  }
+
   const { budgetLimit: bl, autoLimit, limitReserve, ...fields } = body.data
   const setData: Record<string, unknown> = { ...fields };
   if (body.data.budgetLimit !== undefined) setData.budgetLimit = bl != null ? String(bl) : null;
@@ -161,6 +173,10 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
     .set(setData)
     .where(and(eq(categories.id, id), eq(categories.userId, req.userId!)))
     .returning();
+
+  if (existing.shared && bl !== undefined) {
+    await propagateSharedLimit(req.userId!, existing.name, bl != null ? String(bl) : null);
+  }
 
   // When auto_limit is being enabled — or its reserve changed on a category that
   // already uses it — immediately recalculate from existing fixed expenses
@@ -187,6 +203,30 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
 export async function deleteAllCategories(req: AuthRequest, res: Response): Promise<void> {
   // FK onDelete:'set null' handles transactions automatically
   await db.delete(categories).where(eq(categories.userId, req.userId!));
+  res.json({ success: true });
+}
+
+const shareSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  shared: z.boolean(),
+});
+
+export async function setCategoriesShared(req: AuthRequest, res: Response): Promise<void> {
+  const body = shareSchema.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Validation error" });
+    return;
+  }
+  try {
+    if (body.data.shared) await shareCategories(req.userId!, body.data.ids);
+    else await unshareCategories(req.userId!, body.data.ids);
+  } catch (err) {
+    if (err instanceof NotSharingError) {
+      res.status(400).json({ error: "Zdieľať kategórie možno len v domácnosti so zapnutým zdieľaním." });
+      return;
+    }
+    throw err;
+  }
   res.json({ success: true });
 }
 

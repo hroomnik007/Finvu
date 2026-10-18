@@ -102,6 +102,8 @@ export const categories = pgTable(
     autoLimit: boolean("auto_limit").default(true).notNull(),
     // Added on top of the fixed-expense total when auto_limit is on.
     limitReserve: numeric("limit_reserve", { precision: 12, scale: 2 }).default("0").notNull(),
+    // Same-named category of every sharing household member, with one common limit.
+    shared: boolean("shared").default(false).notNull(),
     sortOrder: integer("sort_order"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

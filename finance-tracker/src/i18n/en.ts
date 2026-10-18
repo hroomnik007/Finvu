@@ -263,6 +263,8 @@ export const en: Translations = {
       autoLimit: 'Auto limit',
       autoLimitComputed: 'Auto-calculated: {amount} €',
       autoLimitDesc: 'Limit is auto-calculated from fixed expenses total',
+      sharedLabel: 'Shared category',
+      sharedDesc: 'Same category and one common limit for every household member (the average of their limits). The limit is compared with the whole family\'s spending.',
       limitReserveLabel: 'Reserve for variable expenses (€) · optional',
       totalLimit: 'Total limit',
       remaining: 'Remaining',
@@ -572,6 +574,8 @@ export const en: Translations = {
     updateBtn: 'Update',
   },
   household: {
+    sharedCategoriesTitle: 'Shared categories',
+    sharedCategoriesDesc: 'Pick the categories the whole household shares. Every member gets them with one common limit (the average of the current limits).',
     title: 'Household',
     subtitle: 'Family shared finances',
     membersTitle: 'Members',
