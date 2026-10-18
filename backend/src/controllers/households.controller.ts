@@ -1,19 +1,37 @@
 import { Response } from "express";
-import { and, eq, sql, desc } from "drizzle-orm";
+import { and, eq, sql, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { households, householdMembers, users, transactions, categories } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { generateInviteCode } from "../utils/inviteCode";
 import { evaluateAchievements } from "../services/achievements.service";
+import { familyMemberIds } from "../lib/household";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
 });
 
 const joinSchema = z.object({
-  invite_code: z.string().min(1),
+  invite_code: z.string().trim().min(1).max(20).transform((c) => c.toUpperCase()),
 });
+
+// Fixed invite code of the public demo household (see lib/resetDemo.ts) — real
+// users must never be able to join it and expose their data to demo visitors.
+const DEMO_INVITE_CODE = "DEMO2026";
+
+// A user may belong to one household at a time. Returns false (and responds
+// 409) when they still are in one; otherwise also purges stale membership rows
+// left behind by the old create/join flow, which never removed the previous one.
+async function ensureNoActiveHousehold(userId: string, res: Response): Promise<boolean> {
+  const [u] = await db.select({ householdId: users.householdId }).from(users).where(eq(users.id, userId)).limit(1);
+  if (u?.householdId) {
+    res.status(409).json({ error: "Najprv opustite aktuálnu domácnosť." });
+    return false;
+  }
+  await db.delete(householdMembers).where(eq(householdMembers.userId, userId));
+  return true;
+}
 
 async function getUniqueInviteCode(): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -32,7 +50,12 @@ async function assertMember(householdId: number, userId: string, res: Response):
   const [membership] = await db
     .select({ id: householdMembers.id })
     .from(householdMembers)
-    .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.userId, userId)))
+    .innerJoin(users, eq(users.id, householdMembers.userId))
+    .where(and(
+      eq(householdMembers.householdId, householdId),
+      eq(householdMembers.userId, userId),
+      eq(users.householdId, householdId),
+    ))
     .limit(1);
   if (!membership) {
     res.status(403).json({ error: "Nie ste členom tohto domácnosti." });
@@ -49,6 +72,7 @@ export async function createHousehold(req: AuthRequest, res: Response): Promise<
   }
 
   const userId = req.userId!;
+  if (!(await ensureNoActiveHousehold(userId, res))) return;
   const inviteCode = await getUniqueInviteCode();
 
   const [household] = await db
@@ -80,6 +104,11 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
 
   const userId = req.userId!;
 
+  if (body.data.invite_code === DEMO_INVITE_CODE) {
+    res.status(404).json({ error: "Domácnosť s týmto kódom neexistuje." });
+    return;
+  }
+
   const [household] = await db
     .select()
     .from(households)
@@ -101,6 +130,8 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
     res.status(409).json({ error: "Ste už členom tejto domácnosti." });
     return;
   }
+
+  if (!(await ensureNoActiveHousehold(userId, res))) return;
 
   await db.insert(householdMembers).values({ householdId: household.id, userId });
 
@@ -254,7 +285,7 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
     .leftJoin(users, eq(transactions.createdBy, users.id))
     .where(
       and(
-        eq(transactions.householdId, householdId),
+        inArray(transactions.userId, familyMemberIds(householdId)),
         sql`${transactions.date} >= ${start}`,
         sql`${transactions.date} < ${nextMonth}`
       )
@@ -285,7 +316,7 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .where(
       and(
-        eq(transactions.householdId, householdId),
+        inArray(transactions.userId, familyMemberIds(householdId)),
         eq(transactions.type, "expense"),
         sql`${transactions.date} >= ${start}`,
         sql`${transactions.date} < ${nextMonth}`
@@ -343,7 +374,7 @@ export async function getActivity(req: AuthRequest, res: Response): Promise<void
     .leftJoin(users, eq(transactions.createdBy, users.id))
     .where(
       and(
-        eq(transactions.householdId, householdId),
+        inArray(transactions.userId, familyMemberIds(householdId)),
         sql`${transactions.date} >= ${start}`,
         sql`${transactions.date} < ${nextMonth}`
       )

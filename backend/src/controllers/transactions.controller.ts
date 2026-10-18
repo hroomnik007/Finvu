@@ -1,11 +1,12 @@
 import { Response } from "express";
-import { and, eq, gte, lt, isNull, or, sql, count } from "drizzle-orm";
+import { and, eq, gte, lt, inArray, sql, count } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { transactions, categories, users, householdMembers } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
+import { familyMemberIds } from "../lib/household";
 
 const createSchema = z.object({
   categoryId: z.string().uuid().nullable().optional(),
@@ -63,7 +64,7 @@ async function getFamilyStartDate(householdId: number): Promise<string> {
     .select({ trackingStartDate: users.trackingStartDate, createdAt: users.createdAt })
     .from(householdMembers)
     .innerJoin(users, eq(householdMembers.userId, users.id))
-    .where(eq(householdMembers.householdId, householdId));
+    .where(and(eq(householdMembers.householdId, householdId), eq(users.householdId, householdId)));
 
   const dates = rows.map((r) => r.trackingStartDate ?? r.createdAt.toISOString().split("T")[0]);
   if (dates.length === 0) return new Date().toISOString().split("T")[0];
@@ -271,10 +272,7 @@ export async function getSummary(req: AuthRequest, res: Response): Promise<void>
   if (scope === "family") {
     const userCtx = await resolveUserHousehold(req.userId!);
     if (userCtx?.householdEnabled && userCtx?.householdId) {
-      baseFilter = or(
-        eq(transactions.householdId, userCtx.householdId),
-        and(eq(transactions.userId, req.userId!), isNull(transactions.householdId))
-      )!;
+      baseFilter = inArray(transactions.userId, familyMemberIds(userCtx.householdId));
     }
   }
 
@@ -359,10 +357,7 @@ export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promis
   const isFamily = scope === "family" && !!userRow.householdEnabled && !!userRow.householdId;
 
   const baseFilter = isFamily
-    ? or(
-        eq(transactions.householdId, userRow.householdId!),
-        and(eq(transactions.userId, req.userId!), isNull(transactions.householdId))
-      )!
+    ? inArray(transactions.userId, familyMemberIds(userRow.householdId!))
     : eq(transactions.userId, req.userId!);
 
   const startDate = isFamily
@@ -417,10 +412,7 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
   const isFamily = scope === "family" && !!userRow.householdEnabled && !!userRow.householdId;
 
   const baseFilter = isFamily
-    ? or(
-        eq(transactions.householdId, userRow.householdId!),
-        and(eq(transactions.userId, req.userId!), isNull(transactions.householdId))
-      )!
+    ? inArray(transactions.userId, familyMemberIds(userRow.householdId!))
     : eq(transactions.userId, req.userId!);
 
   const startDate = isFamily
