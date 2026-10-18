@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
+import { lookupLocation } from "../lib/geoip";
 import { isIP } from "net";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
@@ -245,14 +246,9 @@ async function createSession(userId: string, req: Request): Promise<string> {
 
   // Non-blocking location lookup
   if (isIP(rawIp) && rawIp !== '::1' && rawIp !== '127.0.0.1') {
-    fetch(`http://ip-api.com/json/${rawIp}?fields=city,country`)
-      .then(r => r.json())
-      .then((data) => {
-        const d = data as { city?: string; country?: string }
-        const loc = [d.city, d.country].filter(Boolean).join(', ')
-        if (loc) db.update(userSessions).set({ location: loc }).where(eq(userSessions.id, session.id)).catch(() => {})
-      })
-      .catch(() => {})
+    lookupLocation(rawIp).then((loc) => {
+      if (loc) db.update(userSessions).set({ location: loc }).where(eq(userSessions.id, session.id)).catch(() => {})
+    })
   }
 
   return session.id
