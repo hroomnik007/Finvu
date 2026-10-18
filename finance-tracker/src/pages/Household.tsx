@@ -246,11 +246,14 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
       </HeroCard>
 
       {/* ── Výdavky podľa kategórie (agregované naprieč členmi) ── */}
-      <CategoryDonutCard
-        data={householdPieData}
-        title={t.dashboard.expensesByCategory}
-        total={stats?.total_expenses ?? 0}
-      />
+      {/* Same width as the Dashboard card — stretched over the whole page the legend spread out into rows of 6 */}
+      <div style={{ width: '100%', maxWidth: 640 }}>
+        <CategoryDonutCard
+          data={householdPieData}
+          title={t.dashboard.expensesByCategory}
+          total={stats?.total_expenses ?? 0}
+        />
+      </div>
 
       {/* ── ČLENOVIA section header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

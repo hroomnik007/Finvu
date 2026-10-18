@@ -22,6 +22,7 @@ import { getSummary, getSummaryCards } from '../api/transactions'
 import { updateUserSettings } from '../api/auth'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
+import { useHousehold } from '../hooks/useHousehold'
 import { useCountUp } from '../hooks/useCountUp'
 import type { Page } from '../App'
 import type { ApiSummary } from '../types'
@@ -112,6 +113,14 @@ export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps)
   const { user, refreshUser } = useAuth()
   const displayName = user?.name || profileName
   const householdEnabled = user?.household_enabled ?? false
+  const { members } = useHousehold()
+  // Family view mixes every member's bills: tag them with the owner and don't
+  // offer 'show all' (the Výdavky module only lists the user's own).
+  const familyView = householdEnabled && dashView === 'family'
+  const ownerName = (ownerId?: string) => {
+    const full = members.find(m => m.id === ownerId)?.name
+    return full ? full.trim().split(/\s+/)[0] : null
+  }
   const greeting = getGreeting(displayName, t)
 
   const incomes = useMemo(() =>
@@ -396,7 +405,7 @@ const upcomingFixed = useMemo(() => {
       <GlassCard radius={20}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
           <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-hi)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>{t.dashboard.upcomingPayments}</h3>
-          {upcomingFixed.length > 0 && (
+          {upcomingFixed.length > 0 && !familyView && (
             <button
               onClick={() => onNavigate('fixed-expenses')}
               style={{ fontSize: 11, fontWeight: 600, color: 'var(--aurora-cyan)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
@@ -420,6 +429,9 @@ const upcomingFixed = useMemo(() => {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{fe.label}</div>
                     <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20 }}>{badge.text}</span>
+                    {familyView && ownerName(fe.ownerId) && (
+                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--aurora-violet)', background: 'rgba(139,92,246,0.15)', padding: '2px 7px', borderRadius: 20, marginLeft: 6 }}>{ownerName(fe.ownerId)}</span>
+                    )}
                   </div>
                   <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-rose)', flexShrink: 0 }}>
                     {formatAmount(fe.amount)}
