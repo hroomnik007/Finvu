@@ -16,7 +16,7 @@ import householdsRouter from "./routes/households";
 import savingsRouter from "./routes/savings";
 import notificationsRouter from "./routes/notifications";
 import achievementsRouter from "./routes/achievements";
-import { authenticateToken } from "./middleware/authenticate";
+import { authenticateToken, AuthRequest } from "./middleware/authenticate";
 
 const app = express();
 
@@ -39,7 +39,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error(`Origin ${origin} not allowed`));
+        callback(Object.assign(new Error(`Origin ${origin} not allowed`), { status: 403 }));
       }
     },
     credentials: true,
@@ -49,8 +49,12 @@ app.use(
 // gets a tight limit so oversized payloads are rejected early.
 const jsonDefault = express.json({ limit: "1mb" });
 const jsonAvatar = express.json({ limit: "15mb" });
+// The 15mb parser runs only after the caller is authenticated — otherwise anyone
+// could make the server buffer 15mb bodies on that path.
 app.use((req, res, next) =>
-  req.path === "/api/auth/avatar" ? jsonAvatar(req, res, next) : jsonDefault(req, res, next)
+  req.path === "/api/auth/avatar"
+    ? authenticateToken(req as AuthRequest, res, () => jsonAvatar(req, res, next))
+    : jsonDefault(req, res, next)
 );
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
@@ -76,6 +80,10 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/achievements", achievementsRouter);
 
 app.use(errorHandler);
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[process] unhandledRejection:", reason);
+});
 
 app.listen(env.PORT, () => {
   console.log(`Server running on port ${env.PORT} [${env.NODE_ENV}]`);

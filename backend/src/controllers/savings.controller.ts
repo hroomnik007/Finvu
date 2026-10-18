@@ -181,20 +181,24 @@ export async function addDeposit(req: AuthRequest, res: Response): Promise<void>
   if (!goal) { res.status(404).json({ error: "Not found" }); return; }
   if (goal.userId !== req.userId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const body = z.object({ amount: z.number().positive() }).safeParse(req.body);
+  const body = z.object({ amount: z.number().positive().max(9_999_999_999.99) }).safeParse(req.body);
   if (!body.success) { res.status(400).json({ error: "Invalid amount" }); return; }
 
-  const newSaved = String(Number(goal.savedAmount) + body.data.amount);
-  const [deposit] = await db.insert(savingsDeposits).values({
-    goalId,
-    userId: req.userId!,
-    amount: String(body.data.amount),
-  }).returning();
+  // Increment in SQL (not read-modify-write in JS) so concurrent deposits can't
+  // overwrite each other, and keep deposit + total in one transaction.
+  const { deposit, updated } = await db.transaction(async (tx) => {
+    const [deposit] = await tx.insert(savingsDeposits).values({
+      goalId,
+      userId: req.userId!,
+      amount: String(body.data.amount),
+    }).returning();
 
-  const [updated] = await db.update(savingsGoals)
-    .set({ savedAmount: newSaved, updatedAt: new Date() })
-    .where(eq(savingsGoals.id, goalId))
-    .returning();
+    const [updated] = await tx.update(savingsGoals)
+      .set({ savedAmount: sql`${savingsGoals.savedAmount} + ${String(body.data.amount)}::numeric`, updatedAt: new Date() })
+      .where(eq(savingsGoals.id, goalId))
+      .returning();
+    return { deposit, updated };
+  });
 
   res.status(201).json({ data: { goal: normalizeGoal(updated), deposit: normalizeDeposit(deposit) } });
 }
@@ -212,14 +216,14 @@ export async function deleteDeposit(req: AuthRequest, res: Response): Promise<vo
     .limit(1);
   if (!deposit) { res.status(404).json({ error: "Deposit not found" }); return; }
 
-  await db.delete(savingsDeposits).where(eq(savingsDeposits.id, depositId));
-
-  const [goal] = await db.select().from(savingsGoals).where(eq(savingsGoals.id, goalId)).limit(1);
-  const newSaved = String(Math.max(0, Number(goal.savedAmount) - Number(deposit.amount)));
-  const [updated] = await db.update(savingsGoals)
-    .set({ savedAmount: newSaved, updatedAt: new Date() })
-    .where(eq(savingsGoals.id, goalId))
-    .returning();
+  const updated = await db.transaction(async (tx) => {
+    await tx.delete(savingsDeposits).where(eq(savingsDeposits.id, depositId));
+    const [row] = await tx.update(savingsGoals)
+      .set({ savedAmount: sql`GREATEST(0, ${savingsGoals.savedAmount} - ${String(deposit.amount)}::numeric)`, updatedAt: new Date() })
+      .where(eq(savingsGoals.id, goalId))
+      .returning();
+    return row;
+  });
 
   res.json({ data: normalizeGoal(updated) });
 }

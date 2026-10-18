@@ -1,9 +1,9 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
+import { isIP } from "net";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import { eq, and, gt, desc } from "drizzle-orm";
+import { eq, and, gt, desc, sql, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { OAuth2Client } from "google-auth-library";
 import { db } from "../db";
 import { users, refreshTokens, categories, transactions, webauthnCredentials, households, passwordResetTokens, userSessions, pinDeviceTokens } from "../db/schema";
 import { env } from "../config/env";
@@ -31,16 +31,40 @@ import { DEFAULT_CATEGORIES } from "../lib/defaultCategories";
 import { AuthRequest } from "../middleware/authenticate";
 import { resetDemoAccount, DEMO_EMAIL } from "../lib/resetDemo";
 import { parseImageDataUrl, saveAvatarFile, deleteAvatarFiles } from "../lib/avatarStorage";
+import { releaseOwnedHouseholds } from "../lib/household";
+
+// Emails are stored and matched lower-case. Legacy rows may still be mixed-case,
+// so lookups go through byEmail() (case-insensitive) instead of plain equality.
+const emailSchema = z.string().trim().toLowerCase().email();
+
+function normalizeEmail(raw: unknown): string {
+  return typeof raw === "string" ? raw.trim().toLowerCase() : "";
+}
+
+function byEmail(email: string) {
+  return sql`lower(${users.email}) = ${email}`;
+}
+
+// The shared demo account uses a publicly known password, so anything that
+// would lock the account for everyone else (or persist credentials on it) is
+// refused server-side — the UI-only isDemo flag is not a security boundary.
+function rejectDemo(req: AuthRequest, res: Response): boolean {
+  if (req.userEmail?.toLowerCase() === DEMO_EMAIL) {
+    res.status(403).json({ error: "Táto akcia nie je v demo účte povolená.", code: "DEMO_RESTRICTED" });
+    return true;
+  }
+  return false;
+}
 
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(8),
   name: z.string().min(2).max(100),
   gdprConsent: z.boolean().refine(v => v === true, { message: "GDPR consent is required" }),
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(1),
 });
 
@@ -106,15 +130,16 @@ async function verifyAndSlidePinDeviceToken(res: Response, userId: string, req: 
   const token: string | undefined = req.cookies?.[PIN_DEVICE_COOKIE];
   if (!token) return false;
 
-  const rows = await db
+  const tokenHash = await hashToken(token);
+  const [matched] = await db
     .select()
     .from(pinDeviceTokens)
-    .where(and(eq(pinDeviceTokens.userId, userId), gt(pinDeviceTokens.expiresAt, new Date())));
-
-  let matched: (typeof rows)[number] | undefined;
-  for (const row of rows) {
-    if (await compareToken(token, row.tokenHash)) { matched = row; break; }
-  }
+    .where(and(
+      eq(pinDeviceTokens.userId, userId),
+      eq(pinDeviceTokens.tokenHash, tokenHash),
+      gt(pinDeviceTokens.expiresAt, new Date()),
+    ))
+    .limit(1);
   if (!matched) return false;
 
   const now = new Date();
@@ -138,16 +163,15 @@ export async function pinDeviceStatus(req: Request, res: Response): Promise<void
   const token: string | undefined = req.cookies?.[PIN_DEVICE_COOKIE];
   if (!token) { res.json({ deviceRegistered: false }); return; }
 
-  const rows = await db
-    .select({ tokenHash: pinDeviceTokens.tokenHash })
+  // Token hashes are deterministic SHA-256, so this is an indexed equality
+  // lookup instead of scanning (and comparing against) every device of every user.
+  const tokenHash = await hashToken(token);
+  const [row] = await db
+    .select({ id: pinDeviceTokens.id })
     .from(pinDeviceTokens)
-    .where(gt(pinDeviceTokens.expiresAt, new Date()));
-
-  let deviceRegistered = false;
-  for (const row of rows) {
-    if (await compareToken(token, row.tokenHash)) { deviceRegistered = true; break; }
-  }
-  res.json({ deviceRegistered });
+    .where(and(eq(pinDeviceTokens.tokenHash, tokenHash), gt(pinDeviceTokens.expiresAt, new Date())))
+    .limit(1);
+  res.json({ deviceRegistered: !!row });
 }
 
 const PIN_LOCKOUT_THRESHOLD = 5;
@@ -190,7 +214,9 @@ function parseUA(ua: string): { deviceName: string; browser: string } {
 
 async function createSession(userId: string, req: Request): Promise<string> {
   const ua = (req.headers['user-agent'] as string | undefined) ?? ''
-  const rawIp = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0].trim() ?? req.ip ?? ''
+  // req.ip honours "trust proxy" (the address nginx saw); the first
+  // X-Forwarded-For entry is client-controlled and must not be used.
+  const rawIp = req.ip ?? ''
   const { deviceName, browser } = parseUA(ua)
 
   if (deviceName && browser) {
@@ -213,7 +239,7 @@ async function createSession(userId: string, req: Request): Promise<string> {
   }).returning({ id: userSessions.id })
 
   // Non-blocking location lookup
-  if (rawIp && rawIp !== '::1' && rawIp !== '127.0.0.1') {
+  if (isIP(rawIp) && rawIp !== '::1' && rawIp !== '127.0.0.1') {
     fetch(`http://ip-api.com/json/${rawIp}?fields=city,country`)
       .then(r => r.json())
       .then((data) => {
@@ -249,7 +275,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 
   const { email, password, name } = body.data;
 
-  const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  const existing = await db.select({ id: users.id }).from(users).where(byEmail(email)).limit(1);
   if (existing.length > 0) {
     res.status(409).json({ error: "Email je už zaregistrovaný." });
     return;
@@ -281,7 +307,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
   const { email, password } = body.data;
 
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const [user] = await db.select().from(users).where(byEmail(email)).limit(1);
   if (!user) {
     res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
     return;
@@ -309,7 +335,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
   // Reset demo account data on every login, then re-fetch the updated user record
   let loginUser = user;
-  if (email === DEMO_EMAIL) {
+  if (user.email.toLowerCase() === DEMO_EMAIL) {
     try {
       await resetDemoAccount(user.id);
       const [refreshed] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
@@ -338,16 +364,16 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const stored = await db
+  const presentedHash = await hashToken(token);
+  const [matchedRow] = await db
     .select()
     .from(refreshTokens)
-    .where(and(eq(refreshTokens.userId, payload.userId), gt(refreshTokens.expiresAt, new Date())))
-    .orderBy(desc(refreshTokens.createdAt));
-
-  let matchedRow: (typeof stored)[number] | undefined;
-  for (const row of stored) {
-    if (await compareToken(token, row.tokenHash)) { matchedRow = row; break; }
-  }
+    .where(and(
+      eq(refreshTokens.userId, payload.userId),
+      eq(refreshTokens.tokenHash, presentedHash),
+      gt(refreshTokens.expiresAt, new Date()),
+    ))
+    .limit(1);
 
   if (!matchedRow) { res.status(401).json({ error: "Refresh token not recognized or expired" }); return; }
 
@@ -359,8 +385,15 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  if (matchedRow.revokedAt) {
-    // This token was already rotated away — someone is replaying an old
+  // Two requests presenting the same cookie at (almost) the same time — two tabs,
+  // a PWA next to a browser, a reload during rotation — are normal, not theft.
+  // Within the grace window the loser only gets a fresh access token; the browser
+  // already holds (or is about to receive) the rotated cookie from the winner.
+  const REUSE_GRACE_MS = 30_000;
+  const recentlyRotated = !!matchedRow.revokedAt && Date.now() - matchedRow.revokedAt.getTime() < REUSE_GRACE_MS;
+
+  if (matchedRow.revokedAt && !recentlyRotated) {
+    // This token was rotated away long ago — someone is replaying an old
     // refresh token, which means it was likely stolen. Kill every active
     // refresh token for the user so both the attacker and the legitimate
     // user are forced to log in again.
@@ -370,15 +403,23 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Rotate: revoke the token that was just used and issue a brand new one.
-  await db.update(refreshTokens).set({ revokedAt: new Date() }).where(eq(refreshTokens.id, matchedRow.id));
+  if (!matchedRow.revokedAt) {
+    // Rotate atomically: only one concurrent request can flip revoked_at from NULL.
+    const won = await db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(refreshTokens.id, matchedRow.id), isNull(refreshTokens.revokedAt)))
+      .returning({ id: refreshTokens.id });
+
+    if (won.length > 0) {
+      const newRefreshToken = signRefreshToken({ userId: payload.userId, email: payload.email });
+      const newTokenHash = await hashToken(newRefreshToken);
+      await db.insert(refreshTokens).values({ userId: payload.userId, tokenHash: newTokenHash, expiresAt: refreshTokenExpiry() });
+      res.cookie(REFRESH_COOKIE, newRefreshToken, REFRESH_COOKIE_OPTIONS);
+    }
+  }
 
   const accessToken = signAccessToken({ userId: payload.userId, email: payload.email });
-  const newRefreshToken = signRefreshToken({ userId: payload.userId, email: payload.email });
-  const newTokenHash = await hashToken(newRefreshToken);
-  await db.insert(refreshTokens).values({ userId: payload.userId, tokenHash: newTokenHash, expiresAt: refreshTokenExpiry() });
-  res.cookie(REFRESH_COOKIE, newRefreshToken, REFRESH_COOKIE_OPTIONS);
-
   res.json({ accessToken });
 }
 
@@ -387,13 +428,8 @@ export async function logout(req: Request, res: Response): Promise<void> {
   if (token) {
     try {
       const payload = verifyRefreshToken(token);
-      const stored = await db.select().from(refreshTokens).where(eq(refreshTokens.userId, payload.userId));
-      for (const row of stored) {
-        if (await compareToken(token, row.tokenHash)) {
-          await db.delete(refreshTokens).where(eq(refreshTokens.id, row.id));
-          break;
-        }
-      }
+      const tokenHash = await hashToken(token);
+      await db.delete(refreshTokens).where(and(eq(refreshTokens.userId, payload.userId), eq(refreshTokens.tokenHash, tokenHash)));
     } catch { /* token invalid — still clear cookie */ }
   }
   res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_OPTIONS.path });
@@ -530,8 +566,30 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
   res.json({ message: "Email bol úspešne overený. Môžete sa prihlásiť." });
 }
 
+// Lets a user whose verification mail never arrived (or whose registration
+// failed while sending it) get a fresh link. Response is identical whether or
+// not the address exists / is already verified.
+export async function resendVerification(req: Request, res: Response): Promise<void> {
+  const email = normalizeEmail((req.body as { email?: unknown } | undefined)?.email);
+  const OK_MSG = "Ak účet čaká na overenie, bol odoslaný nový overovací odkaz.";
+
+  if (email && z.string().email().safeParse(email).success) {
+    const [user] = await db
+      .select({ id: users.id, emailVerified: users.emailVerified, passwordHash: users.passwordHash })
+      .from(users)
+      .where(byEmail(email))
+      .limit(1);
+    if (user && !user.emailVerified && user.passwordHash) {
+      const verificationToken = randomUUID();
+      await db.update(users).set({ verificationToken }).where(eq(users.id, user.id));
+      await sendEmail(email, "Finvu — Overte váš email", verificationEmailHtml(verificationToken));
+    }
+  }
+  res.json({ message: OK_MSG });
+}
+
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
-  const { email } = req.body as { email?: string };
+  const email = normalizeEmail((req.body as { email?: unknown } | undefined)?.email);
   const OK_MSG = "Ak email existuje, bol odoslaný odkaz na obnovenie hesla.";
 
   if (!email || !z.string().email().safeParse(email).success) {
@@ -539,7 +597,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     return;
   }
 
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  const [user] = await db.select({ id: users.id }).from(users).where(byEmail(email)).limit(1);
   if (user) {
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
@@ -581,7 +639,9 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
   const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_ROUNDS);
   await db
     .update(users)
-    .set({ passwordHash, pinHash: null, pinFailedAttempts: 0, pinLockedUntil: null })
+    // Receiving the reset link proves control of the mailbox, so an account
+    // that was registered but never verified becomes usable here too.
+    .set({ passwordHash, pinHash: null, pinFailedAttempts: 0, pinLockedUntil: null, emailVerified: true, verificationToken: null })
     .where(eq(users.id, resetRecord.userId));
 
   await db.delete(passwordResetTokens).where(eq(passwordResetTokens.id, resetRecord.id));
@@ -693,8 +753,16 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
 
 export async function googleAuth(req: Request, res: Response): Promise<void> {
   const { accessToken } = req.body as { accessToken?: string };
-  if (!accessToken) {
+  if (!accessToken || typeof accessToken !== "string") {
     res.status(400).json({ error: "accessToken is required" });
+    return;
+  }
+
+  // Without our client id there is no way to tell a token issued for this app
+  // from one issued to any other Google app — fail closed instead of accepting both.
+  if (!env.GOOGLE_CLIENT_ID) {
+    console.error("[googleAuth] GOOGLE_CLIENT_ID is not set — Google sign-in is disabled.");
+    res.status(503).json({ error: "Google prihlásenie nie je nakonfigurované." });
     return;
   }
 
@@ -711,35 +779,31 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
       return;
     }
     const info = await userinfoRes.json() as { sub: string; email: string; name: string; email_verified: boolean };
-    if (!info.email || !info.sub) {
+    if (!info.email || !info.sub || info.email_verified !== true) {
       res.status(401).json({ error: "Neplatný Google token." });
       return;
     }
 
-    if (env.GOOGLE_CLIENT_ID) {
-      const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
-      if (!tokenInfoRes.ok) {
-        res.status(401).json({ error: "Neplatný Google token." });
-        return;
-      }
-      const tokenInfo = await tokenInfoRes.json() as { aud?: string; azp?: string };
-      if (tokenInfo.aud !== env.GOOGLE_CLIENT_ID && tokenInfo.azp !== env.GOOGLE_CLIENT_ID) {
-        res.status(401).json({ error: "Google token nebol vydaný pre túto aplikáciu." });
-        return;
-      }
-    } else {
-      console.warn("[googleAuth] GOOGLE_CLIENT_ID nie je nastavené — overenie audience Google tokenu bolo preskočené.");
+    const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
+    if (!tokenInfoRes.ok) {
+      res.status(401).json({ error: "Neplatný Google token." });
+      return;
+    }
+    const tokenInfo = await tokenInfoRes.json() as { aud?: string; azp?: string };
+    if (tokenInfo.aud !== env.GOOGLE_CLIENT_ID && tokenInfo.azp !== env.GOOGLE_CLIENT_ID) {
+      res.status(401).json({ error: "Google token nebol vydaný pre túto aplikáciu." });
+      return;
     }
 
     googleId = info.sub;
-    email = info.email;
+    email = info.email.trim().toLowerCase();
     name = info.name || email.split("@")[0];
   } catch {
     res.status(401).json({ error: "Nepodarilo sa overiť Google token." });
     return;
   }
 
-  let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  let [user] = await db.select().from(users).where(byEmail(email)).limit(1);
 
   if (user?.isDeactivated) {
     res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
@@ -758,7 +822,14 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
 
     user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false, pinFailedAttempts: 0, pinLockedUntil: null };
   } else if (!user.googleId) {
-    await db.update(users).set({ googleId, emailVerified: true }).where(eq(users.id, user.id));
+    // Google just proved control of this mailbox. If the account was registered
+    // with a password but never verified, whoever registered it may not be the
+    // owner (pre-hijacking) — drop that password so it can't be used afterwards.
+    const wasUnverified = !user.emailVerified;
+    await db.update(users)
+      .set({ googleId, emailVerified: true, ...(wasUnverified ? { passwordHash: null, verificationToken: null } : {}) })
+      .where(eq(users.id, user.id));
+    if (wasUnverified) user = { ...user, passwordHash: null, verificationToken: null, googleId, emailVerified: true };
   }
 
   const { accessToken: accessJwt, sessionId } = await issueTokens(res, user.id, user.email, req);
@@ -766,6 +837,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
 }
 
 export async function deleteAccount(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
   const { currentPassword } = req.body as { currentPassword?: string };
 
@@ -789,6 +861,8 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
   }
 
   await deleteAvatarFiles(userId);
+  // households.created_by has no cascade — hand over / drop owned households first.
+  await releaseOwnedHouseholds(userId);
   // Cascading deletes handle categories, transactions, refresh_tokens automatically
   await db.delete(users).where(eq(users.id, userId));
 
@@ -799,17 +873,21 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
 // ── PIN login ──────────────────────────────────────────────────────────────
 
 export async function pinLogin(req: Request, res: Response): Promise<void> {
-  const { email, pin } = req.body as { email?: string; pin?: string };
-  if (!email || !pin || typeof pin !== 'string' || pin.length !== 4) {
+  const body = req.body as { email?: unknown; pin?: unknown };
+  const email = normalizeEmail(body.email);
+  const pin = body.pin;
+  if (!email || typeof pin !== 'string' || pin.length !== 4) {
     res.status(400).json({ error: "Neplatná požiadavka." });
     return;
   }
 
   const GENERIC_FAIL = { error: "Nesprávny PIN." };
 
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  // Unknown email, no PIN and a foreign device all answer identically so the
+  // endpoint cannot be used to find out which accounts exist.
+  const [user] = await db.select().from(users).where(byEmail(email)).limit(1);
   if (!user || !user.pinHash) {
-    res.status(401).json({ error: "PIN prihlásenie nie je aktivované." });
+    res.status(401).json(GENERIC_FAIL);
     return;
   }
 
@@ -855,6 +933,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
 }
 
 export async function updatePin(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
   const { pin, currentPassword, currentPin } = req.body as { pin?: string; currentPassword?: string; currentPin?: string };
   if (!pin || typeof pin !== 'string' || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
@@ -913,6 +992,7 @@ export async function updatePin(req: AuthRequest, res: Response): Promise<void> 
 }
 
 export async function removePin(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
   const { currentPassword, currentPin } = req.body as { currentPassword?: string; currentPin?: string };
 
@@ -991,6 +1071,7 @@ export async function deletePinDevice(req: AuthRequest, res: Response): Promise<
 }
 
 export async function changePassword(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
   const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
 
@@ -1071,6 +1152,7 @@ export async function deleteSession(req: AuthRequest, res: Response): Promise<vo
 }
 
 export async function deactivateAccount(req: AuthRequest, res: Response): Promise<void> {
+  if (rejectDemo(req, res)) return
   const userId = req.userId!
   await db.update(users).set({ isDeactivated: true, updatedAt: new Date() }).where(eq(users.id, userId))
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId))
@@ -1083,12 +1165,12 @@ export async function pingSession(req: AuthRequest, res: Response): Promise<void
 }
 
 export async function getAuthMethods(req: Request, res: Response): Promise<void> {
-  const { email } = req.query as { email?: string }
-  if (!email || typeof email !== 'string') {
+  const email = normalizeEmail(req.query.email)
+  if (!email) {
     res.status(400).json({ error: 'Email required' })
     return
   }
-  const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1)
+  const [user] = await db.select().from(users).where(byEmail(email)).limit(1)
   if (!user) {
     res.json({ pin: false, google: false, password: false })
     return

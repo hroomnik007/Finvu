@@ -20,6 +20,9 @@ const envSchema = z.object({
   ADMIN_PASSWORD: z.string().min(12),
   JWT_ADMIN_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: z.string().optional(),
+  // Default to the host/origin of APP_URL; override only for unusual setups.
+  WEBAUTHN_RP_ID: z.string().optional(),
+  WEBAUTHN_ORIGIN: z.string().optional(),
   UPLOAD_DIR: z.string().default("uploads"),
 });
 

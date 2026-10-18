@@ -87,7 +87,9 @@ async function sendMidMonthReports(): Promise<void> {
 </body>
 </html>`;
 
-    await sendEmail(user.email, `Finvu — Súhrn v polovici mesiaca (${label})`, html);
+    await sendEmail(user.email, `Finvu — Súhrn v polovici mesiaca (${label})`, html).catch((err) =>
+      console.error(`[midMonthReport] send failed for ${user.id}:`, err)
+    );
   }
 }
 
@@ -161,7 +163,9 @@ async function sendMonthlyReports(): Promise<void> {
   </p>
 </body></html>`;
 
-    await sendEmail(user.email, `Finvu — Mesačný prehľad (${label})`, html);
+    await sendEmail(user.email, `Finvu — Mesačný prehľad (${label})`, html).catch((err) =>
+      console.error(`[monthlyReport] send failed for ${user.id}:`, err)
+    );
   }
 }
 

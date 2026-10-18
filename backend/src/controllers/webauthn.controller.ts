@@ -9,11 +9,12 @@ import type {
   RegistrationResponseJSON,
   AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import { users, webauthnCredentials, refreshTokens, userSessions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { randomUUID } from "crypto";
+import { env } from "../config/env";
 import {
   signAccessToken,
   signRefreshToken,
@@ -24,8 +25,8 @@ import {
 } from "../lib/tokens";
 
 const RP_NAME = "Finvu";
-const RP_ID = process.env.WEBAUTHN_RP_ID ?? "financie.pedani.eu";
-const ORIGIN = process.env.WEBAUTHN_ORIGIN ?? "https://financie.pedani.eu";
+const RP_ID = env.WEBAUTHN_RP_ID ?? new URL(env.APP_URL).hostname;
+const ORIGIN = env.WEBAUTHN_ORIGIN ?? new URL(env.APP_URL).origin;
 
 // Unauthenticated login-challenge issuance (webauthnAuthenticateOptions below)
 // means this store must defend itself: bounded size (oldest-inserted entries
@@ -157,17 +158,19 @@ export async function webauthnAuthenticateOptions(req: any, res: Response): Prom
   const email = req.query.email as string | undefined;
 
   let allowCredentials: { id: string; type: 'public-key' }[] = [];
-  let challengeKey = email ?? 'anonymous';
+  // A fresh random key per request: a shared/guessable key (the old 'anonymous'
+  // or the user's id) let anyone consume or overwrite someone else's pending
+  // challenge, and echoing the user id leaked the email -> id mapping.
+  const challengeKey = randomUUID();
 
-  if (email) {
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (typeof email === 'string' && email) {
+    const [user] = await db.select({ id: users.id }).from(users).where(sql`lower(${users.email}) = ${email.trim().toLowerCase()}`).limit(1);
     if (user) {
       const creds = await db
         .select({ credentialId: webauthnCredentials.credentialId })
         .from(webauthnCredentials)
         .where(eq(webauthnCredentials.userId, user.id));
       allowCredentials = creds.map(c => ({ id: c.credentialId, type: 'public-key' as const }));
-      challengeKey = user.id;
     }
   }
 
@@ -224,6 +227,10 @@ export async function webauthnAuthenticateVerify(req: any, res: Response): Promi
 
   const [user] = await db.select().from(users).where(eq(users.id, storedCred.userId)).limit(1);
   if (!user) { res.status(404).json({ error: "Používateľ nenájdený." }); return; }
+  if (user.isDeactivated) {
+    res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
+    return;
+  }
 
   const { accessToken, sessionId } = await issueTokens(res, user.id, user.email);
   res.json({ user: userPublic(user), accessToken, sessionId });

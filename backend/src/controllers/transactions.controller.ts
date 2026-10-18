@@ -8,19 +8,30 @@ import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
 
+// YYYY-MM-DD that is also a real calendar date (the bare regex let 2026-02-30
+// through to Postgres, which rejects it with a 500).
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  }, "Invalid calendar date");
+
 const createSchema = z.object({
   categoryId: z.string().uuid().nullable().optional(),
   type: z.enum(["income", "expense"]),
-  amount: z.number().positive(),
+  // numeric(12,2) overflows above this
+  amount: z.number().positive().max(9_999_999_999.99),
   description: z.string().max(500).optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+  date: isoDate,
   isFixed: z.boolean().optional().default(false),
 });
 
 const updateSchema = createSchema.partial();
 
 const listQuerySchema = z.object({
-  month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
   type: z.enum(["income", "expense"]).optional(),
   isFixed: z.enum(["true", "false"]).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional().default(50),
@@ -30,7 +41,7 @@ const listQuerySchema = z.object({
 const scopeSchema = z.enum(["personal", "family"]).optional().default("personal");
 
 const summaryQuerySchema = z.object({
-  month: z.string().regex(/^\d{4}-\d{2}$/, "month must be YYYY-MM"),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "month must be YYYY-MM"),
   scope: scopeSchema,
 });
 
