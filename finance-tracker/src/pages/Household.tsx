@@ -6,7 +6,6 @@ import { BottomSheet } from '../components/BottomSheet'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
-import { CategoryDonutCard } from '../components/CategoryDonutCard'
 import { useAuth } from '../context/AuthContext'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCategories } from '../hooks/useCategories'
@@ -189,30 +188,6 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
       })
   }, [stats, categories])
 
-  const householdPieData = useMemo(() => {
-    if (!stats) return []
-    const map = new Map<string, { name: string; color: string; value: number; icon?: string | null }>()
-    for (const m of stats.per_member) {
-      for (const c of m.category_breakdown) {
-        if (c.amount <= 0) continue
-        // Každý člen má vlastnú tabuľku kategórií, takže "Zdravie" mňa a "Zdravie"
-        // manželky majú rôzne category_id. V module Domácnosť ich párujeme podľa
-        // názvu kategórie (na Dashboarde ostávajú separátne — tam sa táto agregácia
-        // nepoužíva).
-        const name = (c.name ?? '').trim()
-        const key = name.toLowerCase() || (c.category_id ?? '__uncategorized')
-        const existing = map.get(key)
-        if (existing) {
-          existing.value += c.amount
-        } else {
-          const cat = c.category_id ? categories.find(k => k.id === c.category_id) : undefined
-          map.set(key, { name: name || c.name, color: c.color ?? cat?.color ?? '#6b7280', value: c.amount, icon: cat?.icon })
-        }
-      }
-    }
-    return Array.from(map.values())
-  }, [stats, categories])
-
   if (!householdEnabled) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '64px 20px', textAlign: 'center' }}>
@@ -298,46 +273,56 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
         </div>
       </HeroCard>
 
-      {/* ── Výdavky podľa kategórie (agregované naprieč členmi) ── */}
-      {/* Same width as the Dashboard card — stretched over the whole page the legend spread out into rows of 6 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[640px_minmax(0,1fr)]" style={{ gap: 16, width: '100%', alignItems: 'stretch' }}>
-        <CategoryDonutCard
-          data={householdPieData}
-          title={t.dashboard.expensesByCategory}
-          total={stats?.total_expenses ?? 0}
-        />
+      {/* ── Shared categories: family spend vs. the common limit, split by member; chips mark/unmark them ── */}
+      {householdData && householdData.members.length > 1 && (
+        <GlassCard radius={20}>
+          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 4px' }}>👥 {ht.sharedCategoriesTitle}</p>
+          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-faint)', margin: '0 0 14px', lineHeight: 1.5 }}>{ht.sharedCategoriesDesc}</p>
 
-        {/* Shared categories: spend vs. the common limit, split by member (the donut shows shares only) */}
-        {sharedCategoryRows.length > 0 && (
-          <div className="hidden lg:block">
-            <GlassCard radius={20} style={{ height: '100%', boxSizing: 'border-box' }}>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>👥 {ht.sharedCategoriesTitle}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {sharedCategoryRows.map(r => {
-                  const pct = r.limit > 0 ? Math.min((r.spent / r.limit) * 100, 100) : 0
-                  const color = r.limit > 0 && r.spent >= r.limit ? 'var(--aurora-rose)' : r.limit > 0 && r.spent >= r.limit * 0.7 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
-                  return (
-                    <div key={r.name}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontFamily: "'Manrope', sans-serif", fontSize: 13 }}>
-                        <span style={{ fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
-                        <span style={{ color: 'var(--aurora-faint)', flexShrink: 0 }}>{formatAmount(r.spent)}{r.limit > 0 ? ` / ${formatAmount(r.limit)}` : ''}</span>
-                      </div>
-                      {r.limit > 0 && (
-                        <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', margin: '6px 0' }}>
-                          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3 }} />
-                        </div>
-                      )}
-                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>
-                        {r.perMember.map(pm => `${pm.name} ${formatAmount(pm.amount)}`).join(' · ')}
-                      </div>
+          {sharedCategoryRows.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: '14px 28px', marginBottom: 18 }}>
+              {sharedCategoryRows.map(r => {
+                const pct = r.limit > 0 ? Math.min((r.spent / r.limit) * 100, 100) : 0
+                const color = r.limit > 0 && r.spent >= r.limit ? 'var(--aurora-rose)' : r.limit > 0 && r.spent >= r.limit * 0.7 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+                return (
+                  <div key={r.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontFamily: "'Manrope', sans-serif", fontSize: 13 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                      <span style={{ color: 'var(--aurora-faint)', flexShrink: 0 }}>{formatAmount(r.spent)}{r.limit > 0 ? ` / ${formatAmount(r.limit)}` : ''}</span>
                     </div>
-                  )
-                })}
-              </div>
-            </GlassCard>
+                    {r.limit > 0 && (
+                      <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', margin: '6px 0' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3 }} />
+                      </div>
+                    )}
+                    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>
+                      {r.perMember.map(pm => `${pm.name} ${formatAmount(pm.amount)}`).join(' · ')}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {categories.filter(c => c.type === 'expense' && c.id).map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => (c.shared ? void toggleShare(c.id!, false) : setShareConfirmId(c.id!))}
+                style={{
+                  padding: '7px 14px', borderRadius: 99, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
+                  background: c.shared ? 'rgba(139,92,246,0.18)' : 'var(--aurora-glass)',
+                  color: c.shared ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+                  border: c.shared ? '1px solid rgba(139,92,246,0.45)' : '1px solid var(--aurora-gline)',
+                }}
+              >
+                {c.shared ? '✓ ' : ''}{c.name}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+        </GlassCard>
+      )}
 
       {/* ── ČLENOVIA section header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -532,31 +517,6 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
               {activityExpanded ? ht.showLess : ht.showMore}
             </button>
           )}
-        </div>
-      )}
-
-      {/* ── Shared categories ── */}
-      {householdData && householdData.members.length > 1 && (
-        <div style={{ marginTop: 24 }}>
-          <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 4px' }}>👥 {ht.sharedCategoriesTitle}</h3>
-          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-faint)', margin: '0 0 12px', lineHeight: 1.5 }}>{ht.sharedCategoriesDesc}</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {categories.filter(c => c.type === 'expense' && c.id).map(c => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => (c.shared ? void toggleShare(c.id!, false) : setShareConfirmId(c.id!))}
-                style={{
-                  padding: '7px 14px', borderRadius: 99, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
-                  background: c.shared ? 'rgba(139,92,246,0.18)' : 'var(--aurora-glass)',
-                  color: c.shared ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
-                  border: c.shared ? '1px solid rgba(139,92,246,0.45)' : '1px solid var(--aurora-gline)',
-                }}
-              >
-                {c.shared ? '✓ ' : ''}{c.name}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
