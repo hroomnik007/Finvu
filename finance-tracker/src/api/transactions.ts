@@ -69,6 +69,16 @@ export async function bulkDeleteTransactions(ids: string[]): Promise<{ deleted: 
   return data
 }
 
+/** A new price from `from` (YYYY-MM); older months keep the old amount. */
+export async function changeFixedPrice(id: string, amount: number, from: string): Promise<void> {
+  await apiClient.post(`/api/transactions/${id}/price-change`, { amount, from })
+}
+
+/** Ends a recurring item after `lastMonth` (YYYY-MM, inclusive); null brings it back. */
+export async function endFixedSeries(id: string, lastMonth: string | null): Promise<void> {
+  await apiClient.post(`/api/transactions/${id}/end`, { lastMonth })
+}
+
 /** Indexes of the rows that already exist (same date, type and amount). */
 export async function findDuplicateRows(items: { date: string; type: 'income' | 'expense'; amount: number }[]): Promise<number[]> {
   const { data } = await apiClient.post('/api/transactions/duplicates', { items })

@@ -145,6 +145,8 @@ export const transactions = pgTable(
     description: varchar("description", { length: 500 }),
     date: date("date").notNull(),
     isFixed: boolean("is_fixed").default(false).notNull(),
+    // First day of the first month a recurring series no longer applies (null = running)
+    endedOn: date("ended_on"),
     householdId: integer("household_id").references(() => households.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),

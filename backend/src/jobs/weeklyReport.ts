@@ -17,7 +17,7 @@ async function periodTotals(userId: string, from: string, to: string, asOf: Date
     .groupBy(transactions.type);
 
   const fixed = await db
-    .select({ type: transactions.type, description: transactions.description, amount: transactions.amount, date: transactions.date })
+    .select({ type: transactions.type, description: transactions.description, amount: transactions.amount, date: transactions.date, endedOn: transactions.endedOn })
     .from(transactions)
     .where(and(eq(transactions.userId, userId), eq(transactions.isFixed, true), lte(transactions.date, to)))
     .orderBy(transactions.date);

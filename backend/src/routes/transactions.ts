@@ -6,6 +6,8 @@ import {
   createTransaction,
   createTransactionsBulk,
   findDuplicateTransactions,
+  changeFixedPrice,
+  endFixedSeries,
   bulkSetTransactionCategory,
   bulkDeleteTransactions,
   updateTransaction,
@@ -30,6 +32,8 @@ router.patch("/bulk",  bulkSetTransactionCategory);
 router.post("/bulk-delete", bulkDeleteTransactions);
 router.post("/",       createTransaction);
 router.put("/:id",     updateTransaction);
+router.post("/:id/price-change", changeFixedPrice);
+router.post("/:id/end", endFixedSeries);
 router.delete("/:id",  deleteTransaction);
 
 export default router;

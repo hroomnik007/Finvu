@@ -28,6 +28,20 @@ export interface FixedRow {
   description: string | null;
   amount: string;
   date: string;
+  /** First day of the first month the series no longer applies (null/absent = running). */
+  endedOn?: string | null;
+}
+
+// Index of a month on a single axis (year * 12 + month - 1).
+function monthIndex(year: number, month: number): number {
+  return year * 12 + (month - 1);
+}
+
+// Whether a series still applies to the month: it ended on the first day of the
+// first month it no longer counts (endedOn), so months from that one on are out.
+export function isActiveInMonth(endedOn: string | null | undefined, year: number, month: number): boolean {
+  if (!endedOn) return true;
+  return monthIndex(year, month) < monthIndex(Number(endedOn.slice(0, 4)), Number(endedOn.slice(5, 7)));
 }
 
 // Total of the recurring (isFixed) rows that apply to ONE calendar month.
@@ -47,6 +61,7 @@ export function recurringTotalsForMonth(
   let income = 0;
   let expense = 0;
   for (const row of latest.values()) {
+    if (!isActiveInMonth(row.endedOn, year, month)) continue;
     const amount = parseFloat(row.amount);
     if (row.type === "income") income += amount;
     else if (isFixedDue(fixedDayOfMonth(row.description, row.date), year, month, today)) expense += amount;
@@ -58,6 +73,25 @@ export function recurringTotalsForMonth(
 // belong to that month or earlier.
 function nextMonthStart(year: number, month: number): string {
   return month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+}
+
+// What the recurring series add up to in ONE month, regardless of due days: each
+// series (user + type + description) through its latest row dated before the
+// month's end, left out once it has ended. Used for budgets (auto limit), which
+// plan the whole month. `rows` must be ascending by date.
+export function activeSeriesTotal(rows: FixedRow[], year: number, month: number): number {
+  const end = nextMonthStart(year, month);
+  const latest = new Map<string, FixedRow>();
+  for (const row of rows) {
+    if (row.date < end) latest.set(`${row.userId ?? ""}|${row.type}|${row.description ?? ""}`, row);
+  }
+  let total = 0;
+  for (const row of latest.values()) {
+    if (!isActiveInMonth(row.endedOn, year, month)) continue;
+    const amount = parseFloat(row.amount);
+    total += Number.isFinite(amount) ? amount : 0;
+  }
+  return total;
 }
 
 // Cumulative balance over the month indexes [firstIdx, targetIdx] (index = year * 12
@@ -75,7 +109,7 @@ export function cumulativeBalanceFromRows(
 ): number {
   // Amount, direction and due day are parsed once per row when it becomes the
   // latest of its series — the month loop below then only does arithmetic.
-  const latest = new Map<string, { isIncome: boolean; amount: number; dueDay: number }>();
+  const latest = new Map<string, { isIncome: boolean; amount: number; dueDay: number; endIdx: number }>();
   let next = 0;
   let balance = 0;
 
@@ -90,6 +124,7 @@ export function cumulativeBalanceFromRows(
         isIncome: row.type === "income",
         amount: parseFloat(row.amount),
         dueDay: fixedDayOfMonth(row.description, row.date),
+        endIdx: row.endedOn ? monthIndex(Number(row.endedOn.slice(0, 4)), Number(row.endedOn.slice(5, 7))) : Infinity,
       });
     }
 
@@ -97,6 +132,7 @@ export function cumulativeBalanceFromRows(
     let income = flat?.income ?? 0;
     let expense = flat?.expense ?? 0;
     for (const row of latest.values()) {
+      if (idx >= row.endIdx) continue;
       if (row.isIncome) income += row.amount;
       else if (isFixedDue(row.dueDay, y, m, today)) expense += row.amount;
     }

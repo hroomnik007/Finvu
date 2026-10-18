@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeSeriesTotal,
   cumulativeBalanceFromRows,
   fixedDayOfMonth,
+  isActiveInMonth,
   isFixedDue,
   recurringTotalsForMonth,
   type FixedRow,
@@ -119,5 +121,61 @@ describe("cumulativeBalanceFromRows", () => {
   it("rounds to cents", () => {
     const oneOff = new Map([["2026-01", { income: 0.1, expense: 0 }], ["2026-02", { income: 0.2, expense: 0 }]]);
     expect(cumulativeBalanceFromRows(oneOff, [], idx(2026, 1), idx(2026, 2), TODAY)).toBe(0.3);
+  });
+});
+
+describe("price change and end of a recurring series", () => {
+  // Rent 650 until Aug 2026, 700 from September (a later row of the same series)
+  const rent = [row({ date: "2026-01-05" }), row({ date: "2026-09-01", amount: "700" })];
+
+  it("keeps the old price for months before the change", () => {
+    expect(recurringTotalsForMonth(rent.filter((r) => r.date < "2026-08-01"), 2026, 7, TODAY).expense).toBe(650);
+  });
+
+  it("uses the new price from the month of the change", () => {
+    expect(recurringTotalsForMonth(rent, 2026, 9, TODAY).expense).toBe(700);
+  });
+
+  it("isActiveInMonth: a series that ended on 1 Oct 2026 still counts in September but not October", () => {
+    expect(isActiveInMonth("2026-10-01", 2026, 9)).toBe(true);
+    expect(isActiveInMonth("2026-10-01", 2026, 10)).toBe(false);
+    expect(isActiveInMonth("2026-10-01", 2027, 1)).toBe(false);
+    expect(isActiveInMonth(null, 2030, 1)).toBe(true);
+  });
+
+  it("an ended series no longer counts towards the monthly total", () => {
+    const ended = [row({ date: "2026-01-05", endedOn: "2026-09-01" })];
+    expect(recurringTotalsForMonth(ended, 2026, 8, TODAY).expense).toBe(650);
+    expect(recurringTotalsForMonth(ended, 2026, 9, TODAY).expense).toBe(0);
+  });
+
+  it("the cumulative balance follows price changes and stops at the end", () => {
+    // Jan..Dec: 650 for Jan-Aug (8 months), 700 for Sep-Oct (2 months, Oct due day 5 passed), nothing after
+    const balance = cumulativeBalanceFromRows(new Map(), [...rent, ], idx(2026, 1), idx(2026, 10), TODAY);
+    expect(balance).toBe(-(650 * 8 + 700 * 2));
+    const ended = [row({ date: "2026-01-05", endedOn: "2026-04-01" })];
+    expect(cumulativeBalanceFromRows(new Map(), ended, idx(2026, 1), idx(2026, 10), TODAY)).toBe(-(650 * 3));
+  });
+});
+
+describe("activeSeriesTotal", () => {
+  it("counts each series once through its latest row, regardless of due day", () => {
+    const rows = [
+      row({ date: "2026-01-05", amount: "300" }),
+      row({ date: "2026-09-01", amount: "320" }),
+      row({ userId: "u2", date: "2026-02-10", amount: "251.25" }),
+      row({ description: "Energie", date: "2026-03-01", amount: "80" }),
+    ];
+    expect(activeSeriesTotal(rows, 2026, 10)).toBe(320 + 251.25 + 80);
+    expect(activeSeriesTotal(rows, 2026, 8)).toBe(300 + 251.25 + 80);
+  });
+
+  it("ignores rows dated after the month and series that have ended", () => {
+    const rows = [
+      row({ date: "2026-01-05", amount: "300", endedOn: "2026-11-01" }),
+      row({ description: "Poistenie", date: "2026-12-01", amount: "50" }),
+    ];
+    expect(activeSeriesTotal(rows, 2026, 10)).toBe(300);
+    expect(activeSeriesTotal(rows, 2026, 11)).toBe(0);
   });
 });
