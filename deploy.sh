@@ -13,9 +13,7 @@ FRONTEND_SRC="${REPO_ROOT}/finance-tracker"
 BACKEND_SRC="${REPO_ROOT}/backend"
 
 FRONTEND_DEST="/var/www/finance-tracker/finance-tracker/dist"
-BACKEND_DEST="/var/www/finance-tracker-api"
 
-API_NAME="finance-tracker-api"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 log()  { echo ""; echo "▶  $*"; }
@@ -64,34 +62,22 @@ deploy_frontend() {
 #  BACKEND
 # ────────────────────────────────────────────────────────────────────────────
 deploy_backend() {
-    log "Building backend..."
-    cd "${BACKEND_SRC}"
-    npm ci --prefer-offline
-    npm run build
-    ok "Backend built → ${BACKEND_SRC}/dist"
-
-    log "Deploying backend to ${BACKEND_DEST}..."
-    # Copy compiled output and package files (node_modules already installed)
-    cp -r "${BACKEND_SRC}/dist/."        "${BACKEND_DEST}/dist/"
-    cp    "${BACKEND_SRC}/package.json"  "${BACKEND_DEST}/"
-    cp    "${BACKEND_SRC}/package-lock.json" "${BACKEND_DEST}/" 2>/dev/null || true
-
-    # Install production dependencies in deployment dir
-    cd "${BACKEND_DEST}"
-    npm ci --omit=dev --prefer-offline
-    ok "Backend files deployed"
+    # Mirrors the "Deploy backend" step of .github/workflows/deploy.yml (the normal
+    # way to deploy is a push to main — use this script only as a manual fallback).
+    [ -n "${DATABASE_URL:-}" ] || fail "Set DATABASE_URL (the migration role, as in the GitHub secret) before deploying the backend"
 
     log "Running database migrations..."
-    # Run migrations from BACKEND_SRC where drizzle-kit (dev dep) is installed,
-    # using the .env from BACKEND_SRC which has the real DATABASE_URL.
     cd "${BACKEND_SRC}"
-    npx drizzle-kit migrate
+    npm ci --prefer-offline
+    npm run db:migrate
     ok "Migrations applied"
 
-    log "Rebuilding Docker container..."
-    cd "$(dirname "${BACKEND_SRC}")"
-    docker compose up --build -d backend
-    ok "Docker container rebuilt and running"
+    log "Rebuilding and replacing the backend container..."
+    cd "${REPO_ROOT}"
+    docker compose build backend
+    docker compose up -d --no-deps --remove-orphans --wait --wait-timeout 90 backend \
+        || { docker compose logs backend --tail=50; fail "Backend did not become healthy"; }
+    ok "Backend container running and healthy"
 
     echo ""
     echo "  Backend live at https://api.pedani.eu"

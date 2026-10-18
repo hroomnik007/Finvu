@@ -28,6 +28,20 @@ jobs:
               - 'backend/**'
   lint:
     runs-on: ubuntu-latest
+    # Throw-away database to prove the migrations build the schema the code expects
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: finvu_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,6 +68,14 @@ jobs:
       - name: Backend — tests
         working-directory: backend
         run: npm test
+      - name: Backend — database from scratch matches the code
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://postgres:ci@localhost:5432/finvu_ci
+        run: |
+          npm run db:setup
+          npm run db:setup
+          npm run db:check-schema
       # Known vulnerabilities in what actually ships (production dependencies only)
       - name: Frontend — npm audit
         working-directory: finance-tracker

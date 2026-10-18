@@ -91,21 +91,21 @@ cd backend
 cp .env.example .env          # set DATABASE_URL, JWT_SECRET, etc.
 docker compose up -d postgres # start database only
 npm install
-npm run migrate               # run migrations
+npm run db:setup              # empty database: legacy schema + all migrations
 npm run dev                   # → http://localhost:3001
 ```
 
 ### Database migrations
 
 ```bash
-# Local
-npm run migrate
+# Local (existing database)
+npm run db:migrate
 
 # Production (inside Docker container)
 docker exec <backend-container> node dist/scripts/migrate.js
 ```
 
-Migrations are numbered SQL files in `backend/migrations/` and run automatically on deploy.
+Migrations are numbered SQL files in `backend/migrations/` and run automatically on deploy. `backend/drizzle/` is the frozen legacy schema; add new changes only to `backend/migrations/`. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 

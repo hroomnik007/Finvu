@@ -1,204 +1,66 @@
-# Deployment Guide — pedani.eu
+# Deployment — pedani.eu
 
 Domains:
-- **Frontend:** https://financie.pedani.eu → `/var/www/finance-tracker/dist`
-- **Backend API:** https://api.pedani.eu → `localhost:3001` (PM2)
-- **Database:** PostgreSQL 16 via Docker Compose (localhost:5432)
+- **Frontend:** https://finvu.pedani.eu — static build served by nginx
+- **Backend API:** https://api.pedani.eu — nginx → `127.0.0.1:3001` (Docker container `backend`)
+- **Database:** PostgreSQL 17 in its own Docker container (`finance-tracker-postgres-1`)
 
----
+## How a deploy works
 
-## First-Time Server Setup
+Every push to `main` runs `.github/workflows/deploy.yml`:
 
-Run these steps once on a fresh Hetzner server as the `deploy` user (use `sudo` where indicated).
+1. **lint** — ESLint, typecheck and tests for frontend and backend, `npm audit` of production
+   dependencies, and a throw-away Postgres on which `npm run db:setup` builds the schema from
+   scratch and `npm run db:check-schema` proves it matches `backend/src/db/schema.ts`.
+2. **deploy-frontend** (when `finance-tracker/**` changed) — SSH to the server, `git reset --hard origin/main`,
+   `npm ci`, `npm run build`, copy `dist/` to `/var/www/finance-tracker/finance-tracker/dist`, reload nginx.
+3. **deploy-backend** (when `backend/**` changed) — SSH to the server, `git reset --hard origin/main`,
+   `npm run db:migrate` (role from the `DATABASE_URL` secret), `docker compose build backend`, then
+   `docker compose up -d --no-deps --wait backend` — the container is replaced and the step waits for its healthcheck.
 
-### 1 — Install PM2 globally
+GitHub secrets used: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, `DATABASE_URL`, `VITE_VAPID_PUBLIC_KEY`.
 
-```bash
-npm install -g pm2
-```
+**nginx configuration is not deployed by CI.** After changing `nginx/*.conf`, copy the file to
+`/etc/nginx/sites-enabled/` on the server and run `sudo nginx -t && sudo systemctl reload nginx`.
 
-### 2 — Create required directories
+## Database migrations
 
-```bash
-sudo mkdir -p /var/www/finance-tracker/dist
-sudo mkdir -p /var/www/finance-tracker-api/dist
-sudo mkdir -p /var/log/finance-tracker-api
+- New changes go to `backend/migrations/` as the next numbered `NNN_name.sql`. `npm run db:migrate`
+  applies the files that are not recorded in `_migrations` yet, each in one transaction.
+- `backend/drizzle/` is the frozen legacy schema (see its README). Do not generate new files there.
+- Empty database (development, CI): `npm run db:setup` applies the legacy schema and then all migrations.
+- Check that a database matches the code: `npm run db:check-schema`.
 
-sudo chown -R deploy:deploy /var/www/finance-tracker
-sudo chown -R deploy:deploy /var/www/finance-tracker-api
-sudo chown -R deploy:deploy /var/log/finance-tracker-api
-```
+## Manual fallback
 
-### 3 — Configure backend environment
+`./deploy.sh [frontend|backend]` runs the same steps by hand on the server (the backend part needs
+`DATABASE_URL` exported). Use it only when GitHub Actions is unavailable.
 
-```bash
-cp /path/to/repo/backend/.env.example /var/www/finance-tracker-api/.env
-nano /var/www/finance-tracker-api/.env
-```
-
-Fill in real values — **never commit this file**:
-
-```env
-DATABASE_URL=postgresql://user:STRONG_PASSWORD@localhost:5432/finance_tracker
-JWT_ACCESS_SECRET=<random 64-char string>
-JWT_REFRESH_SECRET=<random 64-char string>
-PORT=3001
-NODE_ENV=production
-BCRYPT_ROUNDS=12
-```
-
-Generate strong secrets:
-```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
-
-### 4 — Copy backend PM2 ecosystem config
+## Operations
 
 ```bash
-cp /path/to/repo/backend/ecosystem.config.js /var/www/finance-tracker-api/
-```
-
-### 5 — Install Nginx configs
-
-```bash
-sudo cp /path/to/repo/nginx/financie.pedani.eu.conf /etc/nginx/sites-available/
-sudo cp /path/to/repo/nginx/api.pedani.eu.conf       /etc/nginx/sites-available/
-
-sudo ln -sf /etc/nginx/sites-available/financie.pedani.eu.conf /etc/nginx/sites-enabled/
-sudo ln -sf /etc/nginx/sites-available/api.pedani.eu.conf       /etc/nginx/sites-enabled/
-
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### 6 — Issue SSL certificates via Certbot
-
-Frontend cert (already issued if frontend is live):
-```bash
-sudo certbot --nginx -d financie.pedani.eu
-```
-
-Backend API cert (new):
-```bash
-sudo certbot --nginx -d api.pedani.eu
-```
-
-Certbot will automatically patch the Nginx configs with the certificate paths
-and set up auto-renewal via a systemd timer.
-
-### 7 — Start PostgreSQL via Docker Compose
-
-```bash
-cd /path/to/repo
-
-# Copy and configure Docker env (optional — or pass vars directly)
-cp backend/.env.example backend/.env
-# Edit backend/.env with the same DB credentials as step 3
-
-docker compose up -d postgres
-docker compose ps   # confirm postgres is healthy
-```
-
-### 8 — Run initial database migration
-
-```bash
-cd /var/www/finance-tracker-api
-npx drizzle-kit migrate
-```
-
-### 9 — Start the backend with PM2
-
-```bash
-cd /var/www/finance-tracker-api
-pm2 start ecosystem.config.js --env production
-pm2 status
-pm2 logs finance-tracker-api --lines 50
-```
-
-### 10 — Configure PM2 to start on reboot
-
-```bash
-pm2 startup          # follow the printed sudo command
-pm2 save
-```
-
----
-
-## Routine Deployments
-
-After first-time setup, all deployments use `deploy.sh` from the repo root:
-
-```bash
-# Both frontend and backend
-./deploy.sh
-
-# Frontend only
-./deploy.sh frontend
-
-# Backend only
-./deploy.sh backend
-```
-
-The script:
-1. `git pull` latest code
-2. Builds the target(s)
-3. Copies files to `/var/www/...`
-4. Runs DB migrations (backend only)
-5. Restarts PM2 / reloads Nginx
-
----
-
-## Monitoring
-
-```bash
-# PM2 process status
-pm2 status
-
-# Live logs
-pm2 logs finance-tracker-api
-
-# Error log
-tail -f /var/log/finance-tracker-api/error.log
-
-# Nginx access log
+docker compose ps                       # backend status and health
+docker compose logs backend --tail=50   # backend logs
+docker compose restart backend
 sudo tail -f /var/log/nginx/access.log
-
-# PostgreSQL (via Docker)
-docker compose logs postgres
 ```
 
----
-
-## Database Backup
+Database backup:
 
 ```bash
-docker exec $(docker compose ps -q postgres) \
-  pg_dump -U user finance_tracker | gzip > backup-$(date +%F).sql.gz
+docker exec finance-tracker-postgres-1 pg_dump -U user finance_tracker | gzip > backup-$(date +%F).sql.gz
 ```
 
----
+The backend runs a nightly cleanup (03:30) of expired tokens, shared reports and idle sessions, and
+the monthly summary e-mail job (last day of the month, at each user's chosen hour).
 
-## Rollback
+## Backend environment (`backend/.env`, never committed)
 
-```bash
-# Roll back to previous PM2 snapshot
-pm2 reload finance-tracker-api
+See `backend/.env.example` for the full list. The required ones:
 
-# Or manually restart from a previous dist/
-pm2 stop finance-tracker-api
-# restore old dist/ files
-pm2 start ecosystem.config.js --env production
-```
-
----
-
-## Environment Variables Reference
-
-| Variable | Description | Example |
-|---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/finance_tracker` |
-| `JWT_ACCESS_SECRET` | Secret for 15-min access tokens | 64-char hex |
-| `JWT_REFRESH_SECRET` | Secret for 30-day refresh tokens | 64-char hex |
-| `PORT` | Backend listen port | `3001` |
-| `NODE_ENV` | Runtime environment | `production` |
-| `BCRYPT_ROUNDS` | bcrypt cost factor | `12` |
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string used by the running backend |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ADMIN_SECRET` | token signing secrets (long random strings) |
+| `ADMIN_PASSWORD` | password of the admin area |
+| `SMTP_*`, `APP_URL` | outgoing e-mail and links inside e-mails |

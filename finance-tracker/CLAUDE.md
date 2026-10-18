@@ -89,18 +89,13 @@ npm run preview   # preview buildu
 ```
 
 ## Deployment
-- Frontend: GitHub Actions → GitHub Pages
+- Frontend: statický build na serveri (nginx), nasadzuje GitHub Actions
 - Backend: Hetzner CX23, `https://api.pedani.eu`
-- deploy.sh v root adresári
+- Deploy robí GitHub Actions (`.github/workflows/deploy.yml`, popis v `DEPLOYMENT.md`); `deploy.sh` v root adresári je len ručná záloha
 
 ## Databázové migrácie
 
-Migrácie sú číslované SQL súbory v `backend/migrations/`, automaticky spúšťané cez `backend/src/scripts/migrate.ts`.
-
-| Súbor | Obsah |
-|---|---|
-| `014_add_language_and_auto_limit.sql` | `language` stĺpec na `users`; `auto_limit` boolean na `categories` |
-| `015_savings_goal_paused.sql` | `paused` boolean na `savings_goals` (default `false`) |
+Migrácie sú číslované SQL súbory v `backend/migrations/` (aktuálne do 033), spúšťa ich `backend/src/scripts/migrate.ts` (`npm run db:migrate`) pri každom deployi v GitHub Actions. Nové zmeny schémy patria **len sem**. `backend/drizzle/` je zmrazená pôvodná schéma (len pre prázdnu databázu cez `npm run db:setup`), nič do nej nepridávať. CI overuje, že schéma postavená od nuly zodpovedá `backend/src/db/schema.ts` (`npm run db:check-schema`).
 
 **Spustenie migrácií v produkcii** (vnútri Docker kontajnera):
 ```bash
