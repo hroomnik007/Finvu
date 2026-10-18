@@ -39,6 +39,7 @@ function toCategory(c: ApiCategory, limits: Record<string, number>): Category {
     // prefer server value; fall back to localStorage for backwards compatibility
     budgetLimit: c.budgetLimit != null ? c.budgetLimit : limits[c.id],
     autoLimit: c.autoLimit ?? false,
+    limitReserve: c.limitReserve ?? 0,
     hasFixedExpenses: c.hasFixedExpenses ?? false,
   }
 }
@@ -85,11 +86,12 @@ export function useCategories() {
   }, [invalidate])
 
   const updateCategoryFn = useCallback(async (id: string, changes: Partial<Category>): Promise<void> => {
-    const apiChanges: { name?: string; color?: string; icon?: string; budgetLimit?: number | null; autoLimit?: boolean } = {}
+    const apiChanges: { name?: string; color?: string; icon?: string; budgetLimit?: number | null; autoLimit?: boolean; limitReserve?: number } = {}
     if (changes.name !== undefined) apiChanges.name = changes.name
     if (changes.color !== undefined) apiChanges.color = changes.color
     if (changes.icon !== undefined) apiChanges.icon = changes.icon
     if (changes.autoLimit !== undefined) apiChanges.autoLimit = changes.autoLimit
+    if (changes.limitReserve !== undefined) apiChanges.limitReserve = changes.limitReserve
     if (changes.budgetLimit !== undefined) {
       apiChanges.budgetLimit = changes.budgetLimit > 0 ? changes.budgetLimit : null
       // mirror to localStorage as fallback

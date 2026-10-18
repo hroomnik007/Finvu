@@ -365,7 +365,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {budgetStatuses.map((bs: BudgetStatus) => {
                   const bsCat = getCategoryById(bs.categoryId)
-                  const barColor = getBudgetBarColor(bs.percentage, bsCat?.autoLimit ?? false)
+                  const barColor = getBudgetBarColor(bs.percentage, (bsCat?.autoLimit ?? false) && !bsCat?.limitReserve)
                   const pct = Math.min(bs.percentage, 100)
                   return (
                     <GlassCard key={bs.categoryId} radius={12} style={{ padding: '12px 14px', border: bs.isOver ? '1px solid rgba(251,113,133,0.35)' : '1px solid var(--aurora-gline)' }}>

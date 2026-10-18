@@ -263,6 +263,7 @@ export const hu: Translations = {
       autoLimit: 'Automatikus korlát',
       autoLimitComputed: 'Automatikusan számított: {amount} €',
       autoLimitDesc: 'A korlátot automatikusan számítja ki a fix kiadások összegéből',
+      limitReserveLabel: 'Tartalék a változó kiadásokra (€) · opcionális',
       totalLimit: 'Teljes korlát',
       remaining: 'Maradék',
       nearLimit: 'Korlát közelében',

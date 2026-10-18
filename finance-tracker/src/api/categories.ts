@@ -8,6 +8,7 @@ export interface CategoryPayload {
   icon?: string
   budgetLimit?: number | null
   autoLimit?: boolean
+  limitReserve?: number
 }
 
 export async function getCategories(): Promise<{ data: ApiCategory[] }> {

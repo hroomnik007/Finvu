@@ -449,7 +449,7 @@ const upcomingFixed = useMemo(() => {
         <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.dashboard.budget}</p>
         {sortedBudgetStatuses.map(b => {
           const bCat = categories.find(c => c.id === b.categoryId)
-          const barColor = (bCat?.autoLimit) ? 'var(--aurora-emerald)' : b.percentage >= 100 ? 'var(--aurora-rose)' : b.percentage >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+          const barColor = (bCat?.autoLimit && !bCat.limitReserve) ? 'var(--aurora-emerald)' : b.percentage >= 100 ? 'var(--aurora-rose)' : b.percentage >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
           return (
             <div key={b.categoryId} style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
