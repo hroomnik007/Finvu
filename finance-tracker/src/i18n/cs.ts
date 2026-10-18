@@ -270,6 +270,7 @@ export const cs: Translations = {
       autoLimitComputed: 'Automaticky vypočítáno: {amount} €',
       autoLimitDesc: 'Limit se vypočítá automaticky ze součtu fixních výdajů',
       sharedLabel: 'Společná kategorie',
+      shareConfirm: 'Kategorie se přidá všem členům domácnosti a jejich limity pro ni se přepíšou průměrem. Pokračovat?',
       limitBreakdown: 'fixní {fixed} + variabilní {reserve}',
       selectMode: 'Vybrat',
       selectHint: 'Vyberte kategorie',

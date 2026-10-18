@@ -3,6 +3,7 @@ import { Copy, Check, Crown, Users } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { MemberAvatar } from '../components/MemberAvatar'
 import { BottomSheet } from '../components/BottomSheet'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
 import { CategoryDonutCard } from '../components/CategoryDonutCard'
@@ -59,6 +60,11 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [shareConfirmId, setShareConfirmId] = useState<string | null>(null)
+  const toggleShare = async (id: string, shared: boolean) => {
+    try { await shareCategories([id], shared) } catch { /* the list below reflects the real state */ }
+    await reloadCategories()
+  }
   const [leavePending, setLeavePending] = useState(false)
   const [leaveLoading, setLeaveLoading] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -166,6 +172,23 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
 
   // Výdavky podľa kategórie — agregované naprieč VŠETKÝMI členmi domácnosti pre
   // zvolený mesiac (rovnaký zdroj ako Hero agregácia: stats.per_member).
+  // Own shared categories with the family's spend (paired by name, like the donut) split per member
+  const sharedCategoryRows = useMemo(() => {
+    if (!stats) return []
+    const key = (n: string) => n.trim().toLowerCase()
+    return categories
+      .filter(c => c.shared && c.type === 'expense')
+      .map(c => {
+        const perMember = stats.per_member
+          .map(m => ({
+            name: m.name,
+            amount: m.category_breakdown.filter(b => key(b.name ?? '') === key(c.name)).reduce((s, b) => s + b.amount, 0),
+          }))
+          .filter(pm => pm.amount > 0)
+        return { name: c.name, limit: c.budgetLimit ?? 0, spent: perMember.reduce((s, pm) => s + pm.amount, 0), perMember }
+      })
+  }, [stats, categories])
+
   const householdPieData = useMemo(() => {
     if (!stats) return []
     const map = new Map<string, { name: string; color: string; value: number; icon?: string | null }>()
@@ -284,30 +307,29 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
           total={stats?.total_expenses ?? 0}
         />
 
-        {/* Latest activity fills the space beside the donut on wide screens; the full feed stays below */}
-        {activityFeed.length > 0 && (
+        {/* Shared categories: spend vs. the common limit, split by member (the donut shows shares only) */}
+        {sharedCategoryRows.length > 0 && (
           <div className="hidden lg:block">
             <GlassCard radius={20} style={{ height: '100%', boxSizing: 'border-box' }}>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{ht.activityLabel}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {activityFeed.slice(0, 6).map((a, i) => {
-                  const member = householdData?.members.find(m => m.id === a.created_by)
-                  const name = a.created_by_name ?? member?.name ?? '?'
-                  const isIncome = a.type === 'income'
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>👥 {ht.sharedCategoriesTitle}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {sharedCategoryRows.map(r => {
+                  const pct = r.limit > 0 ? Math.min((r.spent / r.limit) * 100, 100) : 0
+                  const color = r.limit > 0 && r.spent >= r.limit ? 'var(--aurora-rose)' : r.limit > 0 && r.spent >= r.limit * 0.7 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
                   return (
-                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                      <MemberAvatar userId={a.created_by ?? 'unknown'} userName={name} size={26} avatarUrl={member?.avatar_url ?? null} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontWeight: 600 }}>{name}</span>
-                          <span style={{ color: 'var(--aurora-faint)' }}> {isIncome ? ht.addedIncome : ht.addedExpense} </span>
-                          <span style={{ fontWeight: 500 }}>{parseDescription(a.description, 1).label || '—'}</span>
-                        </p>
-                        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>{timeAgo(a.created_at, ht)}</p>
+                    <div key={r.name}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontFamily: "'Manrope', sans-serif", fontSize: 13 }}>
+                        <span style={{ fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                        <span style={{ color: 'var(--aurora-faint)', flexShrink: 0 }}>{formatAmount(r.spent)}{r.limit > 0 ? ` / ${formatAmount(r.limit)}` : ''}</span>
                       </div>
-                      <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', flexShrink: 0 }}>
-                        {isIncome ? '+' : '−'}{formatAmount(a.amount)}
-                      </span>
+                      {r.limit > 0 && (
+                        <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', margin: '6px 0' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3 }} />
+                        </div>
+                      )}
+                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>
+                        {r.perMember.map(pm => `${pm.name} ${formatAmount(pm.amount)}`).join(' · ')}
+                      </div>
                     </div>
                   )
                 })}
@@ -523,7 +545,7 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
               <button
                 key={c.id}
                 type="button"
-                onClick={async () => { await shareCategories([c.id!], !c.shared); await reloadCategories() }}
+                onClick={() => (c.shared ? void toggleShare(c.id!, false) : setShareConfirmId(c.id!))}
                 style={{
                   padding: '7px 14px', borderRadius: 99, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
                   background: c.shared ? 'rgba(139,92,246,0.18)' : 'var(--aurora-glass)',
@@ -537,6 +559,13 @@ export function HouseholdPage({ month, year }: HouseholdPageProps) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={shareConfirmId !== null}
+        message={t.expenses.categories.shareConfirm}
+        onConfirm={() => { const id = shareConfirmId; setShareConfirmId(null); if (id) void toggleShare(id, true) }}
+        onCancel={() => setShareConfirmId(null)}
+      />
 
       {/* ── Invite BottomSheet ── */}
       <BottomSheet open={inviteOpen} onClose={() => setInviteOpen(false)} title={ht.inviteMember}>
