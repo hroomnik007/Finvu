@@ -59,6 +59,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
     { kind: 'nav', id: 'variable-expenses', label: t.palette.variableExpenses, hint: 'Variable', icon: '🧾', action: () => onNavigate('variable-expenses') },
     { kind: 'nav', id: 'fixed-expenses', label: t.palette.fixedExpenses, hint: 'Fixed', icon: '🔒', action: () => onNavigate('fixed-expenses') },
     { kind: 'nav', id: 'search', label: t.nav.search, hint: 'Search', icon: '🔎', action: () => onNavigate('search') },
+    { kind: 'nav', id: 'annual', label: t.nav.annual, hint: 'Annual', icon: '📅', action: () => onNavigate('annual') },
     { kind: 'nav', id: 'categories', label: t.nav.categories, hint: 'Categories', icon: '🏷️', action: () => onNavigate('categories') },
     { kind: 'nav', id: 'household', label: t.nav.household, hint: 'Household', icon: '🏠', action: () => onNavigate('household') },
     { kind: 'nav', id: 'savings', label: t.nav.savings, hint: 'Savings', icon: '🐷', action: () => onNavigate('savings') },

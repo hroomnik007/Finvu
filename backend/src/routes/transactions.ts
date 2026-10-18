@@ -16,6 +16,7 @@ import {
   getBalanceAtMonth,
   getSummaryCards,
 } from "../controllers/transactions.controller";
+import { getMonthlySeries } from "../controllers/series.controller";
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.param("id", uuidParam);
 router.get("/summary",          getSummary);
 router.get("/balance-at-month", getBalanceAtMonth);
 router.get("/summary-cards",    getSummaryCards);
+router.get("/monthly-series",   getMonthlySeries);
 router.get("/",        listTransactions);
 router.post("/bulk",   createTransactionsBulk);
 router.post("/duplicates", findDuplicateTransactions);

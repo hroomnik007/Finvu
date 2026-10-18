@@ -2,6 +2,7 @@ import type { Translations } from './sk'
 
 export const cs: Translations = {
   nav: {
+    annual: 'Roční přehled',
     search: 'Hledat',
     overview: 'Přehled',
     income: 'Příjmy',
@@ -625,6 +626,12 @@ export const cs: Translations = {
     updateBtn: 'Aktualizovat',
   },
   household: {
+    monthsTitle: 'Rodina po měsících',
+    monthsTotal: 'Celkem',
+    monthsByMember: 'Podle členů',
+    monthsSavings: 'Míra úspor {rate} % tento měsíc',
+    monthsPoints: 'p. b. oproti minulému měsíci',
+    monthsNoIncome: 'Tento měsíc zatím žádné příjmy',
     sharedCategoriesTitle: 'Společné kategorie',
     sharedCount: '{n} společných',
     sharedOver: '{n} nad limitem',
@@ -850,6 +857,18 @@ export const cs: Translations = {
     count: 'Nalezeno: {n}',
     more: 'Zobrazit další',
     fixed: 'Pravidelné',
+  },
+  annual: {
+    title: 'Roční přehled',
+    month: 'Měsíc',
+    balance: 'Rozdíl',
+    total: 'Celkem',
+    categories: 'Kategorie výdajů',
+    category: 'Kategorie',
+    amount: 'Částka',
+    noCategory: 'Bez kategorie',
+    export: 'Exportovat CSV',
+    link: 'Roční přehled →',
   },
   palette: {
     placeholder: 'Hledat nebo provést akci…',

@@ -2,6 +2,7 @@ import type { Translations } from './sk'
 
 export const en: Translations = {
   nav: {
+    annual: 'Annual overview',
     search: 'Search',
     overview: 'Overview',
     income: 'Income',
@@ -625,6 +626,12 @@ export const en: Translations = {
     updateBtn: 'Update',
   },
   household: {
+    monthsTitle: 'Family by month',
+    monthsTotal: 'Total',
+    monthsByMember: 'By member',
+    monthsSavings: 'Savings rate {rate}% this month',
+    monthsPoints: 'pp vs last month',
+    monthsNoIncome: 'No income this month yet',
     sharedCategoriesTitle: 'Shared categories',
     sharedCount: '{n} shared',
     sharedOver: '{n} over limit',
@@ -850,6 +857,18 @@ export const en: Translations = {
     count: 'Found: {n}',
     more: 'Show more',
     fixed: 'Recurring',
+  },
+  annual: {
+    title: 'Annual overview',
+    month: 'Month',
+    balance: 'Balance',
+    total: 'Total',
+    categories: 'Expense categories',
+    category: 'Category',
+    amount: 'Amount',
+    noCategory: 'No category',
+    export: 'Export CSV',
+    link: 'Annual overview →',
   },
   palette: {
     placeholder: 'Search or perform an action…',

@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
 import { SharedCategoriesCard } from '../components/SharedCategoriesCard'
+import { FamilyMonthsCard } from '../components/FamilyMonthsCard'
 import type { SharedCategoryTile } from '../components/SharedCategoriesCard'
 import { useAuth } from '../context/AuthContext'
 import { useFormatters } from '../hooks/useFormatters'
@@ -46,10 +47,11 @@ function dayLabel(iso: string, ht: { today: string; timeYesterday: string; timeD
 interface HouseholdPageProps {
   month: number
   year: number
+  onMonthChange?: (month: number, year: number) => void
   showToast?: (msg: string) => void
 }
 
-export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
+export function HouseholdPage({ month, year, onMonthChange, showToast }: HouseholdPageProps) {
   const { user, refreshUser } = useAuth()
   const { formatAmount } = useFormatters()
   const { categories, reload: reloadCategories } = useCategories()
@@ -419,6 +421,11 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
             )
           })}
         </div>
+      )}
+
+      {/* ── Six months of family income and spending ── */}
+      {householdData && householdData.members.length > 1 && (
+        <FamilyMonthsCard month={month} year={year} onSelectMonth={(m, y) => onMonthChange?.(m, y)} />
       )}
 
       {/* ── Shared categories: family spend vs. the common limit, tiles to mark/unmark them ── */}
