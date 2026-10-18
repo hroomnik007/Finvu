@@ -21,6 +21,7 @@ export interface Income {
   label: string
   date: string
   recurring: boolean
+  endedOn?: string | null
   created_by?: string | null
 }
 

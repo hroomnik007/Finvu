@@ -1,7 +1,8 @@
 import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from '../api/transactions'
+import { getTransactions, createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
+import { isEndedInMonth } from './useFixedExpenses'
 import type { Income, ApiTransaction } from '../types'
 
 function adjustDateToMonth(originalDate: string, targetMonth: number, targetYear: number): string {
@@ -18,6 +19,7 @@ function toIncome(t: ApiTransaction): Income {
     label: t.description ?? '',
     date: t.date,
     recurring: t.isFixed,
+    endedOn: t.endedOn ?? null,
     created_by: t.created_by ?? null,
   }
 }
@@ -61,19 +63,23 @@ export async function fetchIncomes(
       if (recurring.length === 200) {
         console.warn('useIncomes: recurring income limit reached, some records may be missing')
       }
-      const existingIds = new Set(data.map(t => t.id))
-      const extra = recurring
-        .filter(t => {
-          if (existingIds.has(t.id)) return false
-          if (t.date.substring(0, 7) > monthStr) return false
-          if (trackingYM && t.date.substring(0, 7) < trackingYM) return false
-          return true
-        })
+      // A recurring income is a series (same owner and description): only its
+      // latest price dated up to this month counts, and only while not ended.
+      const latest = new Map<string, ApiTransaction>()
+      for (const t of recurring) {
+        if (t.date.substring(0, 7) > monthStr) continue
+        if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
+        const key = `${t.created_by ?? ''}|${t.description ?? ''}`
+        const cur = latest.get(key)
+        if (!cur || t.date > cur.date) latest.set(key, t)
+      }
+      const extra = [...latest.values()]
+        .filter(t => !isEndedInMonth(t.endedOn, monthStr))
         .map(t => t.date.substring(0, 7) !== monthStr
           ? { ...t, date: adjustDateToMonth(t.date, month!, year!) }
           : t
         )
-      return [...data, ...extra].map(toIncome)
+      return [...data.filter(t => !t.isFixed), ...extra].map(toIncome)
     }
     return data.map(toIncome)
   } catch {
@@ -119,10 +125,20 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
     await invalidate()
   }, [invalidate])
 
+  const changeIncomePrice = useCallback(async (id: string, amount: number, from: string): Promise<void> => {
+    await changeFixedPrice(id, amount, from)
+    await invalidate()
+  }, [invalidate])
+
+  const endIncome = useCallback(async (id: string, lastMonth: string | null): Promise<void> => {
+    await endFixedSeries(id, lastMonth)
+    await invalidate()
+  }, [invalidate])
+
   const deleteIncome = useCallback(async (id: string): Promise<void> => {
     await deleteTransaction(id)
     await invalidate()
   }, [invalidate])
 
-  return { incomes, addIncome, updateIncome, deleteIncome }
+  return { incomes, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome }
 }
