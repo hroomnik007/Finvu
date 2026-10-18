@@ -482,3 +482,64 @@ export async function toggleHousehold(req: AuthRequest, res: Response): Promise<
 
   res.json({ household_enabled: enabled });
 }
+
+// Only the household's owner (created_by) may manage members and the invite code.
+async function assertOwner(householdId: number, userId: string, res: Response): Promise<boolean> {
+  const [household] = await db
+    .select({ createdBy: households.createdBy })
+    .from(households)
+    .where(eq(households.id, householdId))
+    .limit(1);
+  if (!household || household.createdBy !== userId) {
+    res.status(403).json({ error: "Túto akciu môže vykonať len správca domácnosti." });
+    return false;
+  }
+  return true;
+}
+
+// POST /api/households/:id/invite-code — the old code stops working immediately,
+// so a code that leaked (or was shared with someone who should no longer join)
+// can be retired.
+export async function regenerateInviteCode(req: AuthRequest, res: Response): Promise<void> {
+  const householdId = parseInt(req.params["id"] as string, 10);
+  if (isNaN(householdId)) { res.status(400).json({ error: "Invalid household id" }); return; }
+  if (!(await assertMember(householdId, req.userId!, res))) return;
+  if (!(await assertOwner(householdId, req.userId!, res))) return;
+
+  const inviteCode = await getUniqueInviteCode();
+  await db.update(households).set({ inviteCode }).where(eq(households.id, householdId));
+  res.json({ invite_code: inviteCode });
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// DELETE /api/households/:id/members/:memberId — owner removes another member.
+// The member leaves exactly as if they had pressed "leave": membership row gone,
+// household switched off for them. Their past rows stay theirs and drop out of
+// the family totals because family scope follows membership.
+export async function removeMember(req: AuthRequest, res: Response): Promise<void> {
+  const householdId = parseInt(req.params["id"] as string, 10);
+  const memberId = req.params["memberId"] as string;
+  if (isNaN(householdId)) { res.status(400).json({ error: "Invalid household id" }); return; }
+  if (!UUID_RE.test(memberId)) { res.status(404).json({ error: "Člen nenájdený." }); return; }
+  if (!(await assertMember(householdId, req.userId!, res))) return;
+  if (!(await assertOwner(householdId, req.userId!, res))) return;
+
+  if (memberId === req.userId) {
+    res.status(400).json({ error: "Seba nemôžete odstrániť. Použite Opustiť domácnosť." });
+    return;
+  }
+
+  const removed = await db
+    .delete(householdMembers)
+    .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.userId, memberId)))
+    .returning({ id: householdMembers.id });
+  if (removed.length === 0) { res.status(404).json({ error: "Člen nenájdený." }); return; }
+
+  await db
+    .update(users)
+    .set({ householdId: null, householdEnabled: false })
+    .where(and(eq(users.id, memberId), eq(users.householdId, householdId)));
+
+  res.json({ success: true });
+}

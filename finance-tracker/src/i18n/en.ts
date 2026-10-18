@@ -613,6 +613,12 @@ export const en: Translations = {
     showMore: 'Show more →',
     showLess: 'Show less ↑',
     leaveError: 'Error leaving household',
+    removeMember: 'Remove from household',
+    confirmRemoveMember: 'Really remove?',
+    removeMemberError: 'Could not remove the member',
+    regenerateCode: 'Generate a new code',
+    confirmRegenerateCode: 'The old code stops working. Continue?',
+    regenerateCodeError: 'Could not generate a new code',
   },
   savings: {
     title: 'Savings',

@@ -9,6 +9,8 @@ import {
   getActivity,
   leaveHousehold,
   toggleHousehold,
+  regenerateInviteCode,
+  removeMember,
 } from "../controllers/households.controller";
 
 const router = Router();
@@ -33,5 +35,7 @@ router.patch("/toggle", toggleHousehold);
 router.get("/:id/members", getHouseholdMembers);
 router.get("/:id/stats/monthly", getMonthlyStats);
 router.get("/:id/activity", getActivity);
+router.post("/:id/invite-code", regenerateInviteCode);
+router.delete("/:id/members/:memberId", removeMember);
 
 export default router;

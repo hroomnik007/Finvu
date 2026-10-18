@@ -613,6 +613,12 @@ export const hu: Translations = {
     showMore: 'Több megjelenítése →',
     showLess: 'Kevesebb megjelenítése ↑',
     leaveError: 'Hiba a háztartás elhagyásakor',
+    removeMember: 'Eltávolítás a háztartásból',
+    confirmRemoveMember: 'Biztosan eltávolítja?',
+    removeMemberError: 'Hiba a tag eltávolításakor',
+    regenerateCode: 'Új kód generálása',
+    confirmRegenerateCode: 'A régi kód érvénytelenné válik. Folytatja?',
+    regenerateCodeError: 'Hiba a kód generálásakor',
   },
   savings: {
     title: 'Megtakarítás',
