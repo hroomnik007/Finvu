@@ -98,15 +98,17 @@ export const ADMIN_COOKIE = "adminToken";
 
 export const ADMIN_COOKIE_OPTIONS = cookieOptions("/api/admin", 4 * 60 * 60 * 1000);
 
-// Double-submit CSRF token for mutating /api/admin routes. Deliberately NOT
-// httpOnly so frontend JS can echo it back as a header; requireAdminCsrf in
-// routes/admin.ts rejects any non-GET request where the two don't match.
+// Double-submit CSRF token for mutating /api/admin routes. The frontend
+// (finvu.pedani.eu) can't read cookies set by api.pedani.eu, so it gets the
+// token from the admin-login response or GET /api/admin/csrf, keeps it in
+// memory and sends it back as a header; requireAdminCsrf in routes/admin.ts
+// rejects any non-GET request where header and cookie don't match.
 // SameSite=Lax already keeps the admin cookie off cross-site requests; this
 // stays as a second layer.
 export const ADMIN_CSRF_COOKIE = "adminCsrf";
 export const ADMIN_CSRF_HEADER = "x-admin-csrf-token";
 
-export const ADMIN_CSRF_COOKIE_OPTIONS = cookieOptions("/api/admin", 4 * 60 * 60 * 1000, false);
+export const ADMIN_CSRF_COOKIE_OPTIONS = cookieOptions("/api/admin", 4 * 60 * 60 * 1000);
 
 // ── PIN device binding ──────────────────────────────────────────────────────
 // PIN login is a full-strength remote credential (same privilege as password

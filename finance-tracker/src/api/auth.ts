@@ -69,11 +69,6 @@ export async function demoLogin(): Promise<{ user: import('../types').AuthUser; 
   return data
 }
 
-export async function adminLogin(username: string, password: string): Promise<void> {
-  // Sets an httpOnly cookie server-side (scoped to /api/admin) — no token in the response body.
-  await apiClient.post('/api/auth/admin-login', { username, password }, { withCredentials: true })
-}
-
 export async function updateWeeklyEmail(enabled: boolean): Promise<{ weeklyEmailEnabled: boolean }> {
   const { data } = await apiClient.patch('/api/auth/weekly-email', { enabled })
   return data

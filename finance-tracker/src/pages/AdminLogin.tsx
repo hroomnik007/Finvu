@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
-import { adminLogin } from '../api/auth'
+import { adminLogin } from '../api/admin'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
 import { GlassCard } from '../components/GlassCard'
 
