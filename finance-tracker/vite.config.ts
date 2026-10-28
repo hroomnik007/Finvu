@@ -11,6 +11,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
+      // Registered from PWAUpdateBanner via virtual:pwa-register/react; never inject an inline script.
+      injectRegister: false,
       strategies: 'generateSW',
       manifest: {
         name: 'Finvu',
@@ -44,6 +46,8 @@ export default defineConfig({
         // listener, so the prompt's updateServiceWorker(true) → messageSkipWaiting()
         // has nothing to talk to and the page never reloads. Leave them off.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // index.html loads /theme-init.js?v=N; match it to the precached file offline.
+        ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

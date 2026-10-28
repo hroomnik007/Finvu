@@ -2,16 +2,7 @@
 <html lang="sk">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      (function() {
-        try {
-          var theme = localStorage.getItem('theme_preference') || 'dark';
-          var resolved = theme === 'system' ? 'dark' : theme;
-          document.documentElement.setAttribute('data-theme', resolved);
-          document.documentElement.classList.add(resolved);
-        } catch(e) {}
-      })();
-    </script>
+    <script src="/theme-init.js?v=1"></script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
