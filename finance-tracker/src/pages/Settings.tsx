@@ -1835,7 +1835,6 @@ export function SettingsPage() {
         identityCheck={hasPin ? 'pin' : (user?.has_password ? 'password' : null)}
         onSetPin={async (pin, identity) => {
           await setupPin(pin, identity?.currentPassword, identity?.currentPin)
-          if (user?.email) localStorage.setItem(`pin_enabled_${user.email}`, '1')
         }}
       />
 

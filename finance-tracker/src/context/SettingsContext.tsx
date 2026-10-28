@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import { DEFAULT_SETTINGS } from '../types'
 import type { AppSettings } from '../types'
+import { USER_DATA_CLEARED_EVENT } from '../lib/userDataReset'
 
 const SETTINGS_KEY = 'app_settings'
 const SUPPORTED_LANGS = ['sk', 'cs', 'pl', 'hu', 'en']
@@ -61,6 +62,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [profileAvatar, setProfileAvatar] = useState<string>(
     () => localStorage.getItem('profile_avatar') ?? '👤'
   )
+
+  // Logout wipes profile_name/profile_avatar from storage; drop the copy in state too.
+  useEffect(() => {
+    const handler = () => { setProfileName(''); setProfileAvatar('👤') }
+    window.addEventListener(USER_DATA_CLEARED_EVENT, handler)
+    return () => window.removeEventListener(USER_DATA_CLEARED_EVENT, handler)
+  }, [])
 
   useEffect(() => {
     const handler = () => setSettings(loadSettings())

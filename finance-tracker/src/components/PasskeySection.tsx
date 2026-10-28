@@ -52,7 +52,6 @@ export function PasskeySection() {
       await webauthnRegisterVerify(response)
       setSecret('')
       setSecretOpen(false)
-      if (user?.email) localStorage.setItem(`webauthn_enabled_${user.email}`, '1')
       await load()
     } catch (e: unknown) {
       const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
