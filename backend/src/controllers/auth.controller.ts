@@ -728,7 +728,7 @@ export async function adminLogin(req: Request, res: Response): Promise<void> {
   const csrfToken = randomBytes(32).toString("hex");
   res.cookie(ADMIN_COOKIE, token, ADMIN_COOKIE_OPTIONS);
   res.cookie(ADMIN_CSRF_COOKIE, csrfToken, ADMIN_CSRF_COOKIE_OPTIONS);
-  res.json({ success: true });
+  res.json({ success: true, csrfToken });
 }
 
 export async function adminLogout(_req: Request, res: Response): Promise<void> {

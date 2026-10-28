@@ -45,13 +45,12 @@ describe("auth cookies", () => {
     for (const h of await setCookieHeaders("development")) expect(h).not.toMatch(/; Secure/);
   });
 
-  it("keep httpOnly except the CSRF cookie, and clear with the same path", async () => {
+  it("are all httpOnly, and clear with the same path", async () => {
     const headers = await setCookieHeaders("production");
     const byName = (name: string) => headers.filter(h => h.startsWith(`${name}=`));
-    for (const [name, path] of [["refreshToken", "/api/auth"], ["adminToken", "/api/admin"], ["pinDevice", "/api/auth"]]) {
+    for (const [name, path] of [["refreshToken", "/api/auth"], ["adminToken", "/api/admin"], ["adminCsrf", "/api/admin"], ["pinDevice", "/api/auth"]]) {
       for (const h of byName(name)) { expect(h).toMatch(/HttpOnly/); expect(h).toContain(`Path=${path}`); }
     }
-    for (const h of byName("adminCsrf")) { expect(h).not.toMatch(/HttpOnly/); expect(h).toContain("Path=/api/admin"); }
     // the clear headers expire the cookie
     expect(headers.slice(4).every(h => /Expires=Thu, 01 Jan 1970/.test(h))).toBe(true);
   });

@@ -3,7 +3,7 @@ import { Users, UserPlus, CreditCard, Flame, LogOut, Check, X } from 'lucide-rea
 import { AdminLoginPage } from './AdminLogin'
 import { GlassCard } from '../components/GlassCard'
 import {
-  checkAdminSession, adminLogout,
+  checkAdminSession, adminLogout, clearAdminState,
   fetchAdminStats, fetchAdminUsers,
   type AdminStats, type AdminUser,
 } from '../api/admin'
@@ -33,7 +33,9 @@ export function AdminPage() {
         setUsers(u.users)
       })
       .catch((err) => {
-        if (err?.response?.status === 401) {
+        const status = err?.response?.status
+        if (status === 401 || status === 403) {
+          clearAdminState()
           setHasSession(false)
         } else {
           setError('Nepodarilo sa načítať admin dáta.')
