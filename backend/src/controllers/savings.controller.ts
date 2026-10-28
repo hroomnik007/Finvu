@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { zodDetails } from "../lib/validation";
 import { db } from "../db";
 import { savingsGoals, savingsDeposits } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
@@ -48,7 +49,7 @@ export async function listSavingsGoals(req: AuthRequest, res: Response): Promise
 export async function createSavingsGoal(req: AuthRequest, res: Response): Promise<void> {
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 
@@ -92,7 +93,7 @@ export async function updateSavingsGoal(req: AuthRequest, res: Response): Promis
 
   const body = updateSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 

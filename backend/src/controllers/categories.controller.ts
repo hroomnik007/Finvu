@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { and, eq, inArray, isNotNull, sql, asc } from "drizzle-orm";
 import { z } from "zod";
+import { zodDetails } from "../lib/validation";
 import { db } from "../db";
 import { categories, transactions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
@@ -115,7 +116,7 @@ export async function listCategories(req: AuthRequest, res: Response): Promise<v
 export async function createCategory(req: AuthRequest, res: Response): Promise<void> {
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 
@@ -154,7 +155,7 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
 
   const body = updateSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 

@@ -557,7 +557,7 @@ export const hu: Translations = {
     verifyingEmail: 'E-mail ellenőrzése...',
     verifyEmailSuccess: 'E-mail sikeresen ellenőrizve! Most már bejelentkezhet.',
     verifyEmailError: 'Érvénytelen vagy lejárt ellenőrzési hivatkozás.',
-    verificationSent: 'Sikeres regisztráció! Ellenőrizze e-mailjét és kattintson az ellenőrző linkre bejelentkezés előtt.',
+    verificationSent: 'Ellenőrizze e-mailjét. Elküldtük a folytatáshoz szükséges linket.',
     gdprConsent: 'Hozzájárulok a személyes adatok feldolgozásához',
     privacyPolicy: 'Adatvédelmi irányelvek',
     resetLinkSent: 'Ha az e-mail létezik, jelszó-visszaállítási linket küldtünk.',

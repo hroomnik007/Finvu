@@ -3,7 +3,7 @@ import { Eye, EyeOff, ArrowRight, X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
-import { getAuthMethods, getPinDeviceStatus, resendVerification, webauthnAuthenticateOptions, webauthnAuthenticateVerify } from '../api/auth'
+import { getPinDeviceStatus, resendVerification, webauthnAuthenticateOptions, webauthnAuthenticateVerify } from '../api/auth'
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
@@ -37,7 +37,10 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   // pin-device-status endpoint / PIN device-binding architecture).
   const [pinDeviceRegistered, setPinDeviceRegistered] = useState<boolean | null>(null)
 
-  const [authMethods, setAuthMethods] = useState({ pin: false, google: false, password: false, passkey: false })
+  // Whether this browser holds a valid PIN-device cookie. Decided by the cookie
+  // alone, never by the typed email, so the form doesn't reveal which emails
+  // have an account or which sign-in methods they use.
+  const [pinOnThisDevice, setPinOnThisDevice] = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const lastPinTapRef = useRef(0)
 
@@ -48,20 +51,12 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   }, [])
 
   useEffect(() => {
-    if (!email.includes('@')) {
-      setAuthMethods({ pin: false, google: false, password: false, passkey: false })
-      return
-    }
-    const timer = setTimeout(async () => {
-      try {
-        const methods = await getAuthMethods(email)
-        setAuthMethods(methods)
-      } catch {
-        setAuthMethods({ pin: false, google: false, password: false, passkey: false })
-      }
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [email])
+    let cancelled = false
+    getPinDeviceStatus()
+      .then(({ deviceRegistered }) => { if (!cancelled) setPinOnThisDevice(deviceRegistered) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   const googleLogin = useGoogleLogin({
     onSuccess: async tokenResponse => {
@@ -334,11 +329,14 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         {/* Alt sign-in methods */}
         <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, margin: '24px 0 10px' }}>{t.auth.continueWithLabel}</p>
 
-        {authMethods.pin ? (
+        {pinOnThisDevice ? (
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               type="button"
-              onClick={() => { setPinModalOpen(true); setPinValue(''); setPinError(null) }}
+              onClick={() => {
+                if (!email.includes('@')) { setError(t.auth.enterEmail); return }
+                setError(null); setPinModalOpen(true); setPinValue(''); setPinError(null)
+              }}
               style={{ ...altPillStyle, flex: 1 }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 10V7a5 5 0 0110 0v3"/></svg>
@@ -382,7 +380,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           </button>
         )}
 
-        {typeof window !== 'undefined' && 'PublicKeyCredential' in window && (!email || authMethods.passkey) && (
+        {typeof window !== 'undefined' && 'PublicKeyCredential' in window && (
           <button
             type="button"
             onClick={handlePasskeyLogin}

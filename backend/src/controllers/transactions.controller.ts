@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { and, eq, gte, lt, lte, or, inArray, isNull, sql, count, type SQL } from "drizzle-orm";
 import { z } from "zod";
+import { zodDetails } from "../lib/validation";
 import { db } from "../db";
 import { transactions, categories, users, householdMembers } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
@@ -131,7 +132,7 @@ function buildFilters(
 export async function listTransactions(req: AuthRequest, res: Response): Promise<void> {
   const query = listQuerySchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
+    res.status(400).json({ error: "Invalid query params", details: zodDetails(query.error) });
     return;
   }
 
@@ -201,7 +202,7 @@ async function ownsCategory(categoryId: string | null | undefined, userId: strin
 export async function createTransaction(req: AuthRequest, res: Response): Promise<void> {
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
   if (!(await ownsCategory(body.data.categoryId, req.userId!))) {
@@ -257,7 +258,7 @@ const bulkSchema = z.object({
 export async function createTransactionsBulk(req: AuthRequest, res: Response): Promise<void> {
   const body = bulkSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 
@@ -394,7 +395,7 @@ export async function updateTransaction(req: AuthRequest, res: Response): Promis
 
   const body = updateSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
   if (!(await ownsCategory(body.data.categoryId, req.userId!))) {
@@ -582,7 +583,7 @@ export async function endFixedSeries(req: AuthRequest, res: Response): Promise<v
 export async function getSummary(req: AuthRequest, res: Response): Promise<void> {
   const query = summaryQuerySchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
+    res.status(400).json({ error: "Invalid query params", details: zodDetails(query.error) });
     return;
   }
 
@@ -709,7 +710,7 @@ async function cumulativeBalance(
 export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promise<void> {
   const query = balanceAtMonthSchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
+    res.status(400).json({ error: "Invalid query params", details: zodDetails(query.error) });
     return;
   }
 
@@ -744,7 +745,7 @@ export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promis
 export async function getSummaryCards(req: AuthRequest, res: Response): Promise<void> {
   const query = balanceAtMonthSchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
+    res.status(400).json({ error: "Invalid query params", details: zodDetails(query.error) });
     return;
   }
 

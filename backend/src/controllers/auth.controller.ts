@@ -6,6 +6,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { eq, and, gt, desc, sql, isNull, or } from "drizzle-orm";
 import { z } from "zod";
+import { zodDetails } from "../lib/validation";
 import { db } from "../db";
 import { users, refreshTokens, categories, transactions, webauthnCredentials, households, passwordResetTokens, userSessions, pinDeviceTokens } from "../db/schema";
 import { env } from "../config/env";
@@ -28,7 +29,7 @@ import {
   generatePinDeviceToken,
   pinDeviceTokenExpiry,
 } from "../lib/tokens";
-import { sendEmail, verificationEmailHtml, resetPasswordEmailHtml, resetPasswordEmailText } from "../lib/email";
+import { sendEmail, verificationEmailHtml, resetPasswordEmailHtml, resetPasswordEmailText, accountExistsEmailHtml } from "../lib/email";
 import { DEFAULT_CATEGORIES } from "../lib/defaultCategories";
 import { AuthRequest } from "../middleware/authenticate";
 import { resetDemoAccount, DEMO_EMAIL } from "../lib/resetDemo";
@@ -45,6 +46,14 @@ function normalizeEmail(raw: unknown): string {
 
 function byEmail(email: string) {
   return sql`lower(${users.email}) = ${email}`;
+}
+
+// A real bcrypt hash with the same cost as user passwords, compared against
+// when there is no account (or no password) so login takes the same time.
+let dummyHash: Promise<string> | null = null;
+function dummyPasswordHash(): Promise<string> {
+  dummyHash ??= bcrypt.hash(randomBytes(16).toString("hex"), env.BCRYPT_ROUNDS);
+  return dummyHash;
 }
 
 // The shared demo account uses a publicly known password, so anything that
@@ -271,22 +280,27 @@ export async function issueTokens(res: Response, userId: string, email: string, 
   return { accessToken, sessionId };
 }
 
+const REGISTER_OK_MSG = "Skontrolujte email. Poslali sme vám odkaz na pokračovanie.";
+
 export async function register(req: Request, res: Response): Promise<void> {
   const body = registerSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 
   const { email, password, name } = body.data;
 
+  // Same answer whether or not the address is taken, so this endpoint can't be
+  // used to find out who has an account. The owner gets a heads-up instead.
   const existing = await db.select({ id: users.id }).from(users).where(byEmail(email)).limit(1);
+  const passwordHash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
   if (existing.length > 0) {
-    res.status(409).json({ error: "Email je už zaregistrovaný." });
+    await sendEmail(email, "Finvu — účet s týmto emailom už existuje", accountExistsEmailHtml());
+    res.status(201).json({ message: REGISTER_OK_MSG });
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
   const verificationToken = randomUUID();
 
   // Only the hash is stored; the raw token goes out in the e-mail link.
@@ -305,30 +319,25 @@ export async function register(req: Request, res: Response): Promise<void> {
 
   await sendEmail(email, "Finvu — Overte váš email", verificationEmailHtml(verificationToken));
 
-  res.status(201).json({ message: "Registrácia úspešná. Skontrolujte email a kliknite na overovací odkaz." });
+  res.status(201).json({ message: REGISTER_OK_MSG });
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
   const body = loginSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 
   const { email, password } = body.data;
 
   const [user] = await db.select().from(users).where(byEmail(email)).limit(1);
-  if (!user) {
-    res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
-    return;
-  }
 
-  if (!user.passwordHash) {
-    res.status(401).json({ error: "Tento účet používa Google prihlásenie." });
-    return;
-  }
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) {
+  // Unknown email, a Google-only account and a wrong password all get the same
+  // answer, and all of them pay for one bcrypt compare so timing doesn't tell
+  // them apart either.
+  const valid = await bcrypt.compare(password, user?.passwordHash ?? await dummyPasswordHash());
+  if (!user || !user.passwordHash || !valid) {
     res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
     return;
   }
@@ -1202,22 +1211,9 @@ export async function pingSession(req: AuthRequest, res: Response): Promise<void
   res.json({ ok: true });
 }
 
-export async function getAuthMethods(req: Request, res: Response): Promise<void> {
-  const email = normalizeEmail(req.query.email)
-  if (!email) {
-    res.status(400).json({ error: 'Email required' })
-    return
-  }
-  const [user] = await db.select().from(users).where(byEmail(email)).limit(1)
-  if (!user) {
-    res.json({ pin: false, google: false, password: false, passkey: false })
-    return
-  }
-  const [passkey] = await db.select({ id: webauthnCredentials.id }).from(webauthnCredentials).where(eq(webauthnCredentials.userId, user.id)).limit(1)
-  res.json({
-    pin: !!user.pinHash,
-    google: !!user.googleId,
-    password: !!user.passwordHash,
-    passkey: !!passkey,
-  })
+// Kept for older cached app versions. It used to report which sign-in methods
+// an email has, which also told anyone whether the account exists. Now every
+// email gets the same answer and the login form shows all methods.
+export async function getAuthMethods(_req: Request, res: Response): Promise<void> {
+  res.json({ pin: true, google: true, password: true, passkey: true })
 }
