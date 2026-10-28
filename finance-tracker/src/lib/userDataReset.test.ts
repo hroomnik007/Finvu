@@ -35,7 +35,7 @@ describe('clearUserData (logout)', () => {
 
   it('removes per-user storage, keeps device prefs', () => {
     for (const k of ['category_budget_limits', 'fixed_expense_notified', 'finvu_read_notifications',
-      'finvu_session_id', 'profile_name', 'profile_avatar', 'auth_remember',
+      'finvu_session_id', 'profile_name', 'profile_avatar', 'auth_remember', 'budget_template_dismissed',
       'pin_enabled_a@b.sk', 'webauthn_enabled_a@b.sk']) localStorage.setItem(k, 'x')
     localStorage.setItem('theme_preference', 'dark')
     localStorage.setItem('lock_method', 'pin')

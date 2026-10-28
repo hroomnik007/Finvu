@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, CalendarRange, X, Tag, Target } from 'lucide-react'
+import { CalendarClock, CalendarRange, X, Tag, Target, LayoutTemplate } from 'lucide-react'
 import { ExpenseHeatmap } from '../components/ExpenseHeatmap'
 import { CategoryDonutCard } from '../components/CategoryDonutCard'
 import { ForecastCard } from '../components/ForecastCard'
@@ -81,9 +81,11 @@ interface DashboardProps {
   year: number
   onNavigate: (page: Page) => void
   dashView: 'personal' | 'family'
+  /** Present while a new account is offered a budget template (see App). */
+  budgetTemplateOffer?: { onOpen: () => void; onDismiss: () => void }
 }
 
-export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps) {
+export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOffer }: DashboardProps) {
   const [showTrackingModal, setShowTrackingModal] = useState(false)
   const [streakModalOpen, setStreakModalOpen] = useState(false)
   const [trackingDate, setTrackingDate] = useState(() => todayISO())
@@ -590,6 +592,50 @@ const upcomingFixed = useMemo(() => {
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
     <div style={{ padding: '20px' }} className="flex flex-col gap-4 lg:gap-0 pb-4 w-full">
+
+      {/* Budget template offer: non-blocking replacement for the old modal */}
+      {budgetTemplateOffer && (
+        <GlassCard radius={14} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, padding: '12px 16px',
+          background: 'rgba(139,92,246,0.1)',
+          border: '1px solid rgba(139,92,246,0.3)',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+            <LayoutTemplate size={18} strokeWidth={1.8} color="var(--aurora-violet)" style={{ flexShrink: 0 }} />
+            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.4 }}>
+              {t.budgetTemplate.bannerText}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={budgetTemplateOffer.onOpen}
+              style={{
+                padding: '6px 14px', borderRadius: 10,
+                background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white',
+                fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+              }}
+            >
+              {t.budgetTemplate.bannerCta}
+            </button>
+            <button
+              onClick={budgetTemplateOffer.onDismiss}
+              style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: 'transparent', border: '1px solid var(--aurora-gline)',
+                color: 'var(--aurora-faint)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}
+              title={t.budgetTemplate.bannerDismiss}
+              aria-label={t.budgetTemplate.bannerDismiss}
+            >
+              <X size={14} strokeWidth={2} />
+            </button>
+          </div>
+        </GlassCard>
+      )}
 
       {/* Tracking start date banner */}
       {showTrackingBanner && (

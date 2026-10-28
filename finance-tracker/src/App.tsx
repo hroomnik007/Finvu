@@ -29,7 +29,7 @@ const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicy').then(m => (
 import { OnboardingTutorial } from './components/OnboardingTutorial'
 import { useOnboarding } from './hooks/useOnboarding'
 import { BudgetTemplateModal } from './components/BudgetTemplateModal'
-import { useBudgetTemplate } from './hooks/useBudgetTemplate'
+import { useBudgetTemplate, isBudgetTemplateDismissed, dismissBudgetTemplate } from './hooks/useBudgetTemplate'
 import { PinLock } from './components/PinLock'
 import { PinLockProvider, usePinLockContext } from './context/PinLockContext'
 import { useToast } from './hooks/useToast'
@@ -143,6 +143,17 @@ function App() {
   const { showOnboarding, completeOnboarding } = useOnboarding()
   const needsBudgetTemplate = useBudgetTemplate()
   const [showBudgetTemplate, setShowBudgetTemplate] = useState(false)
+  // The template is offered as a dismissible dashboard banner (not a blocking
+  // modal) for the session in which the account still needs onboarding.
+  // Keyed by user id so it never carries over to another account; it stays up
+  // after the tutorial flips onboardingComplete, until dismissed or applied.
+  const [budgetTemplateOfferedFor, setBudgetTemplateOfferedFor] = useState<string | null>(null)
+  const budgetTemplateOffered = !!user && budgetTemplateOfferedFor === user.id
+  const handleDismissBudgetTemplate = () => {
+    if (user) dismissBudgetTemplate(user.id)
+    setBudgetTemplateOfferedFor(null)
+    setShowBudgetTemplate(false)
+  }
   const [showTutorial, setShowTutorial] = useState(false)
   const [showTrackingOnboarding, setShowTrackingOnboarding] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
@@ -267,9 +278,10 @@ function App() {
         setShowTrackingOnboarding(true)
         return
       }
-      if (needsBudgetTemplate) {
-        setShowBudgetTemplate(true)
-      } else if (showOnboarding) {
+      if (needsBudgetTemplate && !isBudgetTemplateDismissed(user.id)) {
+        setBudgetTemplateOfferedFor(user.id)
+      }
+      if (showOnboarding) {
         setShowTutorial(true)
       }
     }
@@ -514,7 +526,13 @@ function App() {
         <PullToRefresh onRefresh={() => queryClient.refetchQueries()}>
           <Suspense fallback={null}>
           {page === 'dashboard' && (
-            <Dashboard month={month} year={year} onNavigate={setPage} dashView={dashView} />
+            <Dashboard
+              month={month} year={year} onNavigate={setPage} dashView={dashView}
+              budgetTemplateOffer={budgetTemplateOffered ? {
+                onOpen: () => setShowBudgetTemplate(true),
+                onDismiss: handleDismissBudgetTemplate,
+              } : undefined}
+            />
           )}
           {page === 'income' && (
             <IncomePage month={month} year={year} />
@@ -555,10 +573,8 @@ function App() {
 
       {showBudgetTemplate && (
         <BudgetTemplateModal
-          onComplete={() => {
-            setShowBudgetTemplate(false)
-            if (showOnboarding) setShowTutorial(true)
-          }}
+          onComplete={handleDismissBudgetTemplate}
+          onClose={() => setShowBudgetTemplate(false)}
         />
       )}
       {showTutorial && !showBudgetTemplate && (

@@ -943,6 +943,33 @@ export const sk = {
     longestLabel: 'Najdlhšia séria',
     explanation: 'Séria rastie o 1 za každý deň, keď pridáš aspoň jednu transakciu. Keď deň vynecháš, začína odznova. Udrž si sériu aspoň 7 dní a odomkneš odznak „Týždeň v rade"! 🔥',
   },
+  budgetTemplate: {
+    title: 'Vyberte šablónu rozpočtu',
+    subtitle: 'Začnite s predpripravenými kategóriami a limitmi, alebo ich preskočte.',
+    replaceWarning: 'Použitie šablóny nahradí vaše súčasné kategórie.',
+    apply: 'Použiť šablónu',
+    applying: 'Vytváranie...',
+    skip: 'Preskočiť',
+    close: 'Zavrieť',
+    bannerText: 'Začnite rýchlo so šablónou rozpočtu – predpripravené kategórie a limity.',
+    bannerCta: 'Vybrať šablónu',
+    bannerDismiss: 'Už nezobrazovať',
+    templates: {
+      family: { label: 'Rodina', description: 'Pre rodinu s deťmi' },
+      couple: { label: 'Pár', description: 'Pre páry' },
+      single: { label: 'Jednotlivec', description: 'Pre jednotlivca' },
+    },
+    categories: {
+      food: 'Jedlo',
+      transport: 'Doprava',
+      housing: 'Bývanie',
+      kids: 'Deti',
+      health: 'Zdravie',
+      fun: 'Zábava',
+      together: 'Spoločné',
+      personal: 'Osobné',
+    },
+  },
 }
 
 export type Translations = typeof sk
