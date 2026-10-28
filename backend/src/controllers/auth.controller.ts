@@ -26,6 +26,7 @@ import {
   ADMIN_CSRF_COOKIE_OPTIONS,
   PIN_DEVICE_COOKIE,
   PIN_DEVICE_COOKIE_OPTIONS,
+  clearCookieOptions,
   generatePinDeviceToken,
   pinDeviceTokenExpiry,
 } from "../lib/tokens";
@@ -135,7 +136,7 @@ async function issuePinDeviceToken(res: Response, userId: string, req: Request):
 
 async function revokePinDeviceTokens(res: Response, userId: string): Promise<void> {
   await db.delete(pinDeviceTokens).where(eq(pinDeviceTokens.userId, userId));
-  res.clearCookie(PIN_DEVICE_COOKIE, { path: PIN_DEVICE_COOKIE_OPTIONS.path });
+  res.clearCookie(PIN_DEVICE_COOKIE, clearCookieOptions(PIN_DEVICE_COOKIE_OPTIONS));
 }
 
 // Verifies the pinDevice cookie against stored (hashed) tokens for this user
@@ -399,7 +400,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
   const [tokenUser] = await db.select({ isDeactivated: users.isDeactivated }).from(users).where(eq(users.id, payload.userId)).limit(1);
   if (!tokenUser || tokenUser.isDeactivated) {
     await db.delete(refreshTokens).where(eq(refreshTokens.userId, payload.userId));
-    res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_OPTIONS.path });
+    res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS));
     res.status(403).json({ error: "Účet je deaktivovaný.", code: "ACCOUNT_DEACTIVATED" });
     return;
   }
@@ -427,7 +428,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     // likely stolen. Kill every active refresh token for the user so both the
     // attacker and the legitimate user are forced to log in again.
     await db.delete(refreshTokens).where(eq(refreshTokens.userId, payload.userId));
-    res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_OPTIONS.path });
+    res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS));
     res.status(401).json({ error: "Refresh token reuse detected — all sessions revoked" });
     return;
   }
@@ -461,7 +462,7 @@ export async function logout(req: Request, res: Response): Promise<void> {
       await db.delete(refreshTokens).where(and(eq(refreshTokens.userId, payload.userId), eq(refreshTokens.tokenHash, tokenHash)));
     } catch { /* token invalid — still clear cookie */ }
   }
-  res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_OPTIONS.path });
+  res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS));
   res.json({ success: true });
 }
 
@@ -731,8 +732,8 @@ export async function adminLogin(req: Request, res: Response): Promise<void> {
 }
 
 export async function adminLogout(_req: Request, res: Response): Promise<void> {
-  res.clearCookie(ADMIN_COOKIE, { path: ADMIN_COOKIE_OPTIONS.path });
-  res.clearCookie(ADMIN_CSRF_COOKIE, { path: ADMIN_CSRF_COOKIE_OPTIONS.path });
+  res.clearCookie(ADMIN_COOKIE, clearCookieOptions(ADMIN_COOKIE_OPTIONS));
+  res.clearCookie(ADMIN_CSRF_COOKIE, clearCookieOptions(ADMIN_CSRF_COOKIE_OPTIONS));
   res.json({ success: true });
 }
 
@@ -913,7 +914,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
   // Cascading deletes handle categories, transactions, refresh_tokens automatically
   await db.delete(users).where(eq(users.id, userId));
 
-  res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_OPTIONS.path });
+  res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS));
   res.json({ success: true });
 }
 
@@ -1111,7 +1112,7 @@ export async function deletePinDevice(req: AuthRequest, res: Response): Promise<
 
   const cookieToken: string | undefined = req.cookies?.[PIN_DEVICE_COOKIE];
   if (cookieToken && await compareToken(cookieToken, deleted[0].tokenHash)) {
-    res.clearCookie(PIN_DEVICE_COOKIE, { path: PIN_DEVICE_COOKIE_OPTIONS.path });
+    res.clearCookie(PIN_DEVICE_COOKIE, clearCookieOptions(PIN_DEVICE_COOKIE_OPTIONS));
   }
 
   res.json({ success: true });
@@ -1145,7 +1146,7 @@ export async function changePassword(req: AuthRequest, res: Response): Promise<v
   }).where(eq(users.id, userId));
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
   await revokePinDeviceTokens(res, userId);
-  res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_OPTIONS.path });
+  res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS));
   res.json({ success: true });
 }
 
@@ -1203,7 +1204,7 @@ export async function deactivateAccount(req: AuthRequest, res: Response): Promis
   const userId = req.userId!
   await db.update(users).set({ isDeactivated: true, updatedAt: new Date() }).where(eq(users.id, userId))
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId))
-  res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_OPTIONS.path })
+  res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS))
   res.json({ success: true })
 }
 

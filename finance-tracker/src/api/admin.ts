@@ -8,10 +8,9 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 // since the browser — not our JS — holds it.
 const adminClient = axios.create({ baseURL: BASE_URL, withCredentials: true })
 
-// Cross-subdomain cookies must be sameSite:none, so the browser attaches
-// them on cross-site requests too — the backend rejects any non-GET
-// /api/admin request unless this header echoes the (non-httpOnly) CSRF
-// cookie, which a cross-site attacker can't read to forge.
+// Double-submit CSRF: the backend rejects any non-GET /api/admin request
+// unless this header echoes the (non-httpOnly) CSRF cookie, which a
+// cross-site attacker can't read to forge.
 function readCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
   return match ? decodeURIComponent(match[1]) : null

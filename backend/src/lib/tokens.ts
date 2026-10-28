@@ -69,44 +69,44 @@ export function refreshTokenExpiry(): Date {
   return d;
 }
 
+// One set of cookie options for every auth cookie.
+// SameSite=Lax is enough: finvu.pedani.eu and api.pedani.eu are the same site
+// (pedani.eu), so the frontend's credentialed fetch() calls carry Lax cookies,
+// while cross-site requests (another site's form or fetch) do not. Local dev
+// (localhost:5173 -> localhost:3001) is same-site too.
+export function cookieOptions(path: string, maxAge: number, httpOnly = true) {
+  return {
+    httpOnly,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    maxAge,
+    path,
+  };
+}
+
+// clearCookie must use the same attributes as the set, minus maxAge.
+export function clearCookieOptions(opts: ReturnType<typeof cookieOptions>) {
+  const { maxAge: _maxAge, ...rest } = opts;
+  return rest;
+}
+
 export const REFRESH_COOKIE = "refreshToken";
 
-export const REFRESH_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: env.NODE_ENV === "production",
-  sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
-  maxAge: 30 * 24 * 60 * 60 * 1000,
-  path: "/api/auth",
-};
+export const REFRESH_COOKIE_OPTIONS = cookieOptions("/api/auth", 30 * 24 * 60 * 60 * 1000);
 
 export const ADMIN_COOKIE = "adminToken";
 
-export const ADMIN_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: env.NODE_ENV === "production",
-  sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
-  maxAge: 4 * 60 * 60 * 1000,
-  path: "/api/admin",
-};
+export const ADMIN_COOKIE_OPTIONS = cookieOptions("/api/admin", 4 * 60 * 60 * 1000);
 
-// sameSite: "none" is required because the admin UI (finvu.pedani.eu) and
-// API (api.pedani.eu) are different subdomains — but that also means the
-// browser attaches ADMIN_COOKIE on cross-site requests, opening a CSRF hole
-// on any mutating /api/admin route. This second cookie is deliberately NOT
-// httpOnly so frontend JS can read it and echo it back as a header
-// (double-submit pattern) — requireAdminCsrf in routes/admin.ts rejects any
-// non-GET request where the header doesn't match this cookie, which a
-// cross-site attacker cannot forge since they can't read our cookies.
+// Double-submit CSRF token for mutating /api/admin routes. Deliberately NOT
+// httpOnly so frontend JS can echo it back as a header; requireAdminCsrf in
+// routes/admin.ts rejects any non-GET request where the two don't match.
+// SameSite=Lax already keeps the admin cookie off cross-site requests; this
+// stays as a second layer.
 export const ADMIN_CSRF_COOKIE = "adminCsrf";
 export const ADMIN_CSRF_HEADER = "x-admin-csrf-token";
 
-export const ADMIN_CSRF_COOKIE_OPTIONS = {
-  httpOnly: false,
-  secure: env.NODE_ENV === "production",
-  sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
-  maxAge: 4 * 60 * 60 * 1000,
-  path: "/api/admin",
-};
+export const ADMIN_CSRF_COOKIE_OPTIONS = cookieOptions("/api/admin", 4 * 60 * 60 * 1000, false);
 
 // ── PIN device binding ──────────────────────────────────────────────────────
 // PIN login is a full-strength remote credential (same privilege as password
@@ -128,17 +128,6 @@ export function pinDeviceTokenExpiry(): Date {
   return d;
 }
 
-// sameSite: "none" (prod) matches REFRESH_COOKIE/ADMIN_COOKIE in this file —
-// the frontend and API are served from different subdomains, and a stricter
-// SameSite value is silently never sent cross-site, which would make PIN
-// login appear to work in local dev (same-origin) and then fail for every
-// user in production. httpOnly + a dedicated, narrowly-scoped, short-lived
-// (relative to the refresh cookie) opaque token is the actual defense here,
-// not the SameSite attribute.
-export const PIN_DEVICE_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: env.NODE_ENV === "production",
-  sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
-  maxAge: 90 * 24 * 60 * 60 * 1000,
-  path: "/api/auth",
-};
+// httpOnly + a dedicated, narrowly-scoped, short-lived (relative to the
+// refresh cookie) opaque token is the main defense here; Lax adds to it.
+export const PIN_DEVICE_COOKIE_OPTIONS = cookieOptions("/api/auth", 90 * 24 * 60 * 60 * 1000);
