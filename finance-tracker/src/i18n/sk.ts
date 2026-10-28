@@ -555,7 +555,7 @@ export const sk = {
     verifyingEmail: 'Overujem email...',
     verifyEmailSuccess: 'Email bol úspešne overený! Môžete sa prihlásiť.',
     verifyEmailError: 'Neplatný alebo vypršaný overovací odkaz.',
-    verificationSent: 'Registrácia úspešná! Skontrolujte email a kliknite na overovací odkaz pred prihlásením.',
+    verificationSent: 'Skontrolujte email. Poslali sme vám odkaz na pokračovanie.',
     gdprConsent: 'Súhlasím so spracovaním osobných údajov',
     privacyPolicy: 'Zásady ochrany súkromia',
     resetLinkSent: 'Ak email existuje, bol odoslaný odkaz na obnovenie hesla.',

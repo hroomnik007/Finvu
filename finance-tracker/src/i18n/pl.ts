@@ -557,7 +557,7 @@ export const pl: Translations = {
     verifyingEmail: 'Weryfikuję e-mail...',
     verifyEmailSuccess: 'E-mail zweryfikowany pomyślnie! Możesz się teraz zalogować.',
     verifyEmailError: 'Nieprawidłowy lub wygasły link weryfikacyjny.',
-    verificationSent: 'Rejestracja zakończona! Sprawdź e-mail i kliknij link weryfikacyjny przed zalogowaniem.',
+    verificationSent: 'Sprawdź e-mail. Wysłaliśmy Ci link, aby kontynuować.',
     gdprConsent: 'Wyrażam zgodę na przetwarzanie danych osobowych',
     privacyPolicy: 'Polityka prywatności',
     resetLinkSent: 'Jeśli e-mail istnieje, link do resetowania hasła został wysłany.',

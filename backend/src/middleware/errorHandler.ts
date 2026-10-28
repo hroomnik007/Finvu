@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+import { zodDetails } from "../lib/validation";
 
 export function errorHandler(
   err: unknown,
@@ -8,7 +9,7 @@ export function errorHandler(
   _next: NextFunction
 ): void {
   if (err instanceof ZodError) {
-    res.status(400).json({ error: "Validation error", details: err.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(err) });
     return;
   }
 

@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { and, eq, sql, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { zodDetails } from "../lib/validation";
 import { db } from "../db";
 import { households, householdMembers, users, transactions, categories } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
@@ -71,7 +72,7 @@ export async function createHousehold(req: AuthRequest, res: Response): Promise<
   if (rejectDemo(req, res)) return;
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 
@@ -103,7 +104,7 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
   if (rejectDemo(req, res)) return;
   const body = joinSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.issues });
+    res.status(400).json({ error: "Validation error", details: zodDetails(body.error) });
     return;
   }
 

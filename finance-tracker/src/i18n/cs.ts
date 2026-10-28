@@ -557,7 +557,7 @@ export const cs: Translations = {
     verifyingEmail: 'Ověřuji e-mail...',
     verifyEmailSuccess: 'E-mail úspěšně ověřen! Nyní se můžete přihlásit.',
     verifyEmailError: 'Neplatný nebo expirovaný ověřovací odkaz.',
-    verificationSent: 'Registrace úspěšná! Zkontrolujte e-mail a klikněte na ověřovací odkaz před přihlášením.',
+    verificationSent: 'Zkontrolujte e-mail. Poslali jsme vám odkaz pro pokračování.',
     gdprConsent: 'Souhlasím se zpracováním osobních údajů',
     privacyPolicy: 'Zásady ochrany osobních údajů',
     resetLinkSent: 'Pokud e-mail existuje, byl odeslán odkaz pro reset hesla.',

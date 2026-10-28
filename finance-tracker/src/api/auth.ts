@@ -211,10 +211,6 @@ export async function changePassword(currentPassword: string, newPassword: strin
   await apiClient.patch('/api/auth/password', { currentPassword, newPassword })
 }
 
-export async function getAuthMethods(email: string): Promise<{ pin: boolean; google: boolean; password: boolean; passkey: boolean }> {
-  const { data } = await apiClient.get("/api/auth/methods", { params: { email } })
-  return data
-}
 
 export async function updateProfile(fields: { phone?: string; country?: string }): Promise<void> {
   await apiClient.patch('/api/auth/profile', fields)

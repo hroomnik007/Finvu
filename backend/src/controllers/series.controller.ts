@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { and, asc, eq, inArray, lt, or, gte } from "drizzle-orm";
 import { z } from "zod";
+import { zodDetails } from "../lib/validation";
 import { db } from "../db";
 import { transactions, categories, users } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
@@ -31,7 +32,7 @@ function nextMonthStart(month: string): string {
 export async function getMonthlySeries(req: AuthRequest, res: Response): Promise<void> {
   const query = querySchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
+    res.status(400).json({ error: "Invalid query params", details: zodDetails(query.error) });
     return;
   }
   const { from, to, scope, detail } = query.data;

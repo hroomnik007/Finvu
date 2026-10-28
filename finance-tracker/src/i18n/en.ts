@@ -557,7 +557,7 @@ export const en: Translations = {
     verifyingEmail: 'Verifying email...',
     verifyEmailSuccess: 'Email verified successfully! You can now sign in.',
     verifyEmailError: 'Invalid or expired verification link.',
-    verificationSent: 'Registration successful! Check your email and click the verification link before signing in.',
+    verificationSent: "Check your email. We've sent you a link to continue.",
     gdprConsent: 'I agree to the processing of personal data',
     privacyPolicy: 'Privacy policy',
     resetLinkSent: 'If the email exists, a password reset link has been sent.',
