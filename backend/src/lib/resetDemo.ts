@@ -214,10 +214,14 @@ export async function resetDemoAccount(userId: string): Promise<void> {
   const incomeRows: TxRow[] = [];
   for (const m of MONTHS) {
     if (!isFuture(m, 1)) {
-      incomeRows.push(tx("Plat",     "income", "1250", "Výplata",  d(m.year, m.month, 1),  true, P));
-      incomeRows.push(tx("Plat",     "income", "980",  "Výplata",  d(m.year, m.month, 1),  true, L));
-      incomeRows.push(tx("Plat",     "income", "850",  "Výplata",  d(m.year, m.month, 1),  true, T));
-      incomeRows.push(tx("Plat",     "income", "920",  "Výplata",  d(m.year, m.month, 1),  true, A));
+      // One recurring series per member. All rows live under the demo user, so
+      // a shared "Výplata" label made the four salaries one series and every
+      // view picked a different one of them (dashboard 1600 € vs household
+      // 1530 €). A missing helper account gets no salary instead of a duplicate.
+      incomeRows.push(tx("Plat", "income", "1250", "Výplata", d(m.year, m.month, 1), true, P));
+      if (lucia) incomeRows.push(tx("Plat", "income", "980", "Výplata (Demo 1)", d(m.year, m.month, 1), true, L));
+      if (tomas) incomeRows.push(tx("Plat", "income", "850", "Výplata (Demo 2)", d(m.year, m.month, 1), true, T));
+      if (adam)  incomeRows.push(tx("Plat", "income", "920", "Výplata (Demo 3)", d(m.year, m.month, 1), true, A));
     }
     if (!isFuture(m, 15)) {
       incomeRows.push(tx("Freelance", "income", "400",  "Freelance", d(m.year, m.month, 15), false, P));

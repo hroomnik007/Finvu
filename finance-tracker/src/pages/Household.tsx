@@ -165,8 +165,11 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
     return groups
   }, [visibleActivity, ht])
 
-  const totalIncome = stats?.total_income ?? 0
-  const totalExpenses = stats?.total_expenses ?? 0
+  // Hero totals come from the same summary-cards call as the Dashboard family
+  // view, so both pages always show identical numbers; the per-member stats
+  // (same backend rules) are only the fallback and feed the member cards.
+  const totalIncome = summaryCards?.income ?? stats?.total_income ?? 0
+  const totalExpenses = summaryCards?.expenses ?? stats?.total_expenses ?? 0
   // Zostatok sa kumuluje naprieč mesiacmi (rovnaká logika ako Dashboard Rodinné) —
   // fallback na mesačný rozdiel kým sa summary-cards nenačíta / pri chybe.
   const balance = summaryCards?.balance ?? (totalIncome - totalExpenses)

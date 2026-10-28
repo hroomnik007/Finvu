@@ -339,7 +339,9 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
       eq(transactions.isFixed, true),
       sql`${transactions.date} < ${nextMonth}`,
     ))
-    .orderBy(transactions.date);
+    // Last row per series wins below; createdAt/id make same-date ties
+    // deterministic and identical to the dashboard cards (summary-cards).
+    .orderBy(transactions.date, transactions.createdAt, transactions.id);
 
   const latest = new Map<string, (typeof fixedRows)[number]>();
   for (const row of fixedRows) latest.set(`${row.userId}|${row.type}|${row.description ?? ""}`, row);

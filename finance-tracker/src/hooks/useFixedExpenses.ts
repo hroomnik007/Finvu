@@ -61,6 +61,14 @@ export function isEndedInMonth(endedOn: string | null | undefined, ym: string): 
   return !!endedOn && ym >= endedOn.substring(0, 7)
 }
 
+// Latest row of a recurring series: later date wins, and of two rows on the
+// same date the later-created one — the same order the backend uses, so every
+// view counts the same row of a series.
+export function isNewerRow(a: Pick<ApiTransaction, 'date' | 'createdAt'>, b: Pick<ApiTransaction, 'date' | 'createdAt'>): boolean {
+  if (a.date !== b.date) return a.date > b.date
+  return (a.createdAt ?? '') > (b.createdAt ?? '')
+}
+
 export function fixedExpenseQueryKey(month: number | undefined, year: number | undefined, trackingStart: string | null | undefined, scope: DataScope = 'personal', includeEnded = false) {
   const monthStr = month !== undefined && year !== undefined
     ? `${year}-${String(month).padStart(2, '0')}`
@@ -100,7 +108,7 @@ export async function fetchFixedExpenses(
       }
       const result: FixedExpense[] = []
       for (const rows of bySeries.values()) {
-        rows.sort((a, b) => a.date.localeCompare(b.date))
+        rows.sort((a, b) => a.date.localeCompare(b.date) || (a.createdAt ?? '').localeCompare(b.createdAt ?? ''))
         const current = [...rows].reverse().find(r => r.date.substring(0, 7) <= nowYM) ?? rows[0]
         if (!includeEnded && isEndedInMonth(current.endedOn, nowYM)) continue
         result.push({ ...toFixedExpense(current), history: rows.map(r => ({ from: r.date.substring(0, 7), amount: r.amount })) })
@@ -122,7 +130,7 @@ export async function fetchFixedExpenses(
       // Per owner: two members can both have a bill with the same label.
       const key = `${t.userId}|${t.description ?? ''}`
       const existing = latestByIdentity.get(key)
-      if (!existing || t.date > existing.date) latestByIdentity.set(key, t)
+      if (!existing || isNewerRow(t, existing)) latestByIdentity.set(key, t)
     }
     return [...latestByIdentity.values()].filter(t => !isEndedInMonth(t.endedOn, monthStr)).map(toFixedExpense)
   } catch {
