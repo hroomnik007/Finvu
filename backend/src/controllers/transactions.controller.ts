@@ -23,7 +23,7 @@ const isoDate = z
   }, "Invalid calendar date");
 
 const createSchema = z.object({
-  categoryId: z.string().uuid().nullable().optional(),
+  categoryId: z.guid().nullable().optional(),
   type: z.enum(["income", "expense"]),
   // numeric(12,2) overflows above this
   amount: z.number().positive().max(9_999_999_999.99),
@@ -131,7 +131,7 @@ function buildFilters(
 export async function listTransactions(req: AuthRequest, res: Response): Promise<void> {
   const query = listQuerySchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.errors });
+    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
     return;
   }
 
@@ -201,7 +201,7 @@ async function ownsCategory(categoryId: string | null | undefined, userId: strin
 export async function createTransaction(req: AuthRequest, res: Response): Promise<void> {
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
   if (!(await ownsCategory(body.data.categoryId, req.userId!))) {
@@ -257,7 +257,7 @@ const bulkSchema = z.object({
 export async function createTransactionsBulk(req: AuthRequest, res: Response): Promise<void> {
   const body = bulkSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 
@@ -327,8 +327,8 @@ export async function findDuplicateTransactions(req: AuthRequest, res: Response)
   res.json({ duplicates });
 }
 
-const bulkIdsSchema = z.object({ ids: z.array(z.string().uuid()).min(1).max(500) });
-const bulkCategorySchema = bulkIdsSchema.extend({ categoryId: z.string().uuid().nullable() });
+const bulkIdsSchema = z.object({ ids: z.array(z.guid()).min(1).max(500) });
+const bulkCategorySchema = bulkIdsSchema.extend({ categoryId: z.guid().nullable() });
 
 // Bulk edit/delete are limited to the caller's one-off rows; fixed items change
 // the auto-limit and are managed individually.
@@ -394,7 +394,7 @@ export async function updateTransaction(req: AuthRequest, res: Response): Promis
 
   const body = updateSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
   if (!(await ownsCategory(body.data.categoryId, req.userId!))) {
@@ -582,7 +582,7 @@ export async function endFixedSeries(req: AuthRequest, res: Response): Promise<v
 export async function getSummary(req: AuthRequest, res: Response): Promise<void> {
   const query = summaryQuerySchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.errors });
+    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
     return;
   }
 
@@ -709,7 +709,7 @@ async function cumulativeBalance(
 export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promise<void> {
   const query = balanceAtMonthSchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.errors });
+    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
     return;
   }
 
@@ -744,7 +744,7 @@ export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promis
 export async function getSummaryCards(req: AuthRequest, res: Response): Promise<void> {
   const query = balanceAtMonthSchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.errors });
+    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
     return;
   }
 

@@ -274,7 +274,7 @@ export async function issueTokens(res: Response, userId: string, email: string, 
 export async function register(req: Request, res: Response): Promise<void> {
   const body = registerSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 
@@ -311,7 +311,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 export async function login(req: Request, res: Response): Promise<void> {
   const body = loginSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 

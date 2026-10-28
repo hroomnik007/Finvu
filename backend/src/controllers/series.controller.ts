@@ -31,7 +31,7 @@ function nextMonthStart(month: string): string {
 export async function getMonthlySeries(req: AuthRequest, res: Response): Promise<void> {
   const query = querySchema.safeParse(req.query);
   if (!query.success) {
-    res.status(400).json({ error: "Invalid query params", details: query.error.errors });
+    res.status(400).json({ error: "Invalid query params", details: query.error.issues });
     return;
   }
   const { from, to, scope, detail } = query.data;
