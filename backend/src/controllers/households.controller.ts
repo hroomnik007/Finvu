@@ -71,7 +71,7 @@ export async function createHousehold(req: AuthRequest, res: Response): Promise<
   if (rejectDemo(req, res)) return;
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 
@@ -103,7 +103,7 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
   if (rejectDemo(req, res)) return;
   const body = joinSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 

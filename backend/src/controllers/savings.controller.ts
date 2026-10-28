@@ -48,7 +48,7 @@ export async function listSavingsGoals(req: AuthRequest, res: Response): Promise
 export async function createSavingsGoal(req: AuthRequest, res: Response): Promise<void> {
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 
@@ -92,7 +92,7 @@ export async function updateSavingsGoal(req: AuthRequest, res: Response): Promis
 
   const body = updateSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 

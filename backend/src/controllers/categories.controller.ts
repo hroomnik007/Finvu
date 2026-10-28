@@ -115,7 +115,7 @@ export async function listCategories(req: AuthRequest, res: Response): Promise<v
 export async function createCategory(req: AuthRequest, res: Response): Promise<void> {
   const body = createSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 
@@ -154,7 +154,7 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
 
   const body = updateSchema.safeParse(req.body);
   if (!body.success) {
-    res.status(400).json({ error: "Validation error", details: body.error.errors });
+    res.status(400).json({ error: "Validation error", details: body.error.issues });
     return;
   }
 
@@ -222,7 +222,7 @@ export async function deleteAllCategories(req: AuthRequest, res: Response): Prom
 }
 
 const shareSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(200),
+  ids: z.array(z.guid()).min(1).max(200),
   shared: z.boolean(),
 });
 
@@ -246,7 +246,7 @@ export async function setCategoriesShared(req: AuthRequest, res: Response): Prom
 }
 
 const reorderSchema = z.object({
-  items: z.array(z.object({ id: z.string().uuid(), order: z.number().int().min(0) })).min(1),
+  items: z.array(z.object({ id: z.guid(), order: z.number().int().min(0) })).min(1),
 });
 
 export async function reorderCategories(req: AuthRequest, res: Response): Promise<void> {

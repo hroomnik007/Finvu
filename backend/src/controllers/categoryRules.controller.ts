@@ -8,7 +8,7 @@ import { normalizeKeyword } from "../lib/importRules";
 
 const saveSchema = z.object({
   keyword: z.string().min(1).max(100),
-  categoryId: z.string().uuid(),
+  categoryId: z.guid(),
 });
 
 export async function listRules(req: AuthRequest, res: Response): Promise<void> {
