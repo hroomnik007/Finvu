@@ -8,6 +8,7 @@ import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/brow
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
 import { PinKeypad } from '../components/PinKeypad'
+import { authErrorMessage } from '../utils/authError'
 
 interface LoginPageProps {
   onNavigateRegister: () => void
@@ -87,7 +88,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       }
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { error?: string; code?: string } } })?.response?.data
-      setError(data?.error ?? t.auth.loginFailed)
+      setError(authErrorMessage(err, t.auth.loginFailed, t.auth.tooManyAttempts))
       setNeedsVerification(data?.code === 'EMAIL_NOT_VERIFIED')
     } finally {
       setIsLoading(false)
@@ -131,13 +132,12 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       await loginWithPin(email, pin)
       setPinModalOpen(false)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setPinError(msg ?? t.auth.wrongPin)
+      setPinError(authErrorMessage(err, t.auth.wrongPin, t.auth.tooManyAttempts))
       setPinValue('')
     } finally {
       setPinLoading(false)
     }
-  }, [email, loginWithPin, t.auth.wrongPin])
+  }, [email, loginWithPin, t.auth.wrongPin, t.auth.tooManyAttempts])
 
   // Trigger verification once 4 digits have actually committed to state —
   // never inside the setPinValue updater itself. React 18 StrictMode
