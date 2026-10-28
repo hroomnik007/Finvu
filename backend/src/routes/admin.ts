@@ -17,11 +17,9 @@ function authenticateAdmin(req: Request, res: Response, next: NextFunction): voi
   }
 }
 
-// The admin cookies use sameSite: "none" (required for the cross-subdomain
-// finvu.pedani.eu → api.pedani.eu setup), so the browser will attach them on
-// cross-site requests too. Double-submit CSRF check: a cross-site attacker
-// can trigger the request but can't read our cookies, so they can't produce
-// a header value that matches ADMIN_CSRF_COOKIE.
+// Double-submit CSRF check, on top of the admin cookies being SameSite=Lax:
+// a cross-site attacker can't read our cookies, so they can't produce a header
+// value that matches ADMIN_CSRF_COOKIE.
 function requireAdminCsrf(req: Request, res: Response, next: NextFunction): void {
   if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
     next();
