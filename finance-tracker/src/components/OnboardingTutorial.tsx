@@ -75,7 +75,6 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
       await webauthnRegisterVerify(response)
       setWebauthnDone(true)
       setWebauthnSecret('')
-      if (user?.email) localStorage.setItem(`webauthn_enabled_${user.email}`, '1')
     } catch (e: unknown) {
       const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       setWebauthnError(serverMsg ?? (e as Error)?.message ?? t.auth.registerFailed)
@@ -342,7 +341,6 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
         identityCheck={user?.has_password ? 'password' : null}
         onSetPin={async (pin, identity) => {
           await setupPin(pin, identity?.currentPassword, identity?.currentPin)
-          if (user?.email) localStorage.setItem(`pin_enabled_${user.email}`, '1')
           setPinDone(true)
         }}
       />

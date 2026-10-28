@@ -23,6 +23,7 @@ import {
 } from '../api/auth'
 import { applyLanguageSetting } from './SettingsContext'
 import type { AuthUser } from '../types'
+import { clearUserData, noteSignedInUser } from '../lib/userDataReset'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -76,9 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsGuest(false)
     try {
       sessionStorage.removeItem('auth_guest')
-      localStorage.removeItem('auth_remember')
-      localStorage.removeItem('category_budget_limits')
     } catch { /* ignore */ }
+    clearUserData()
   }, [isGuest])
 
   useEffect(() => {
@@ -109,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setAccessToken(accessToken)
         const { user: me } = await getMe()
+        noteSignedInUser(me.id)
         setUser(me)
         if (me.theme) {
           try {
@@ -137,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string, rememberMe = false) => {
     const { user: me, accessToken, sessionId } = await apiLogin(email, password) as { user: AuthUser; accessToken: string; sessionId?: string }
     setAccessToken(accessToken)
+    noteSignedInUser(me.id)
     setUser(me)
     setIsGuest(false)
     try {
@@ -158,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginDemo = useCallback(async () => {
     const { user: me, accessToken, sessionId } = await apiDemoLogin() as { user: AuthUser; accessToken: string; sessionId?: string }
     setAccessToken(accessToken)
+    noteSignedInUser(me.id)
     setUser({ ...me, onboardingComplete: false, isDemo: true })
     setIsGuest(false)
     try {
@@ -173,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = useCallback(async (googleAccessToken: string) => {
     const { user: me, accessToken, sessionId } = await apiGoogleLogin(googleAccessToken) as { user: AuthUser; accessToken: string; sessionId?: string }
     setAccessToken(accessToken)
+    noteSignedInUser(me.id)
     setUser(me)
     setIsGuest(false)
     try {
@@ -189,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithPin = useCallback(async (email: string, pin: string) => {
     const { user: me, accessToken, sessionId } = await apiPinLogin(email, pin) as { user: AuthUser; accessToken: string; sessionId?: string }
     setAccessToken(accessToken)
+    noteSignedInUser(me.id)
     setUser(me)
     setIsGuest(false)
     try {
@@ -204,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithToken = useCallback((me: AuthUser, accessToken: string, sessionId?: string) => {
     setAccessToken(accessToken)
+    noteSignedInUser(me.id)
     setUser(me)
     setIsGuest(false)
     try {
@@ -220,6 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       const { user: me } = await getMe()
+      noteSignedInUser(me.id)
       setUser(me)
     } catch { /* ignore */ }
   }, [])
@@ -230,6 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginAsGuest = useCallback(() => {
+    clearUserData()
     setIsGuest(true)
     setUser(null)
     try { sessionStorage.setItem('auth_guest', 'true') } catch { /* ignore */ }
