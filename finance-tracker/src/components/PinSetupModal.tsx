@@ -82,7 +82,7 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
       if (identityCheck) {
         // Most likely cause: wrong current password/PIN — send the user back
         // to re-enter it rather than silently failing on the new-PIN screen.
-        setIdentityError(identityCheck === 'password' ? 'Nesprávne heslo.' : t.profile.incorrectPin)
+        setIdentityError(identityCheck === 'password' ? t.auth.wrongPassword : t.profile.incorrectPin)
         setIdentityPin('')
         setStep('identity')
       } else {
@@ -165,14 +165,14 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
           borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>Overenie totožnosti</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{t.pin.identityTitle}</h2>
             <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={18} /></button>
           </div>
 
           <div style={{ padding: '32px 24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
             {identityCheck === 'password' ? (
               <>
-                <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>Pre nastavenie PIN kódu najprv zadaj svoje heslo.</p>
+                <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>{t.pin.identityPasswordHint}</p>
                 {identityError && <p style={{ fontSize: 12, color: '#f87171', margin: 0, textAlign: 'center' }}>{identityError}</p>}
                 <input
                   type="password"
@@ -188,12 +188,12 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
                   disabled={!identityPassword}
                   style={{ height: 44, width: '100%', borderRadius: 10, fontSize: 14, fontWeight: 600, background: 'var(--violet)', color: 'white', border: 'none', cursor: identityPassword ? 'pointer' : 'not-allowed', opacity: identityPassword ? 1 : 0.5, fontFamily: 'inherit' }}
                 >
-                  Pokračovať
+                  {t.common.continue}
                 </button>
               </>
             ) : (
               <>
-                <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>Pre zmenu PIN kódu najprv zadaj aktuálny PIN.</p>
+                <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>{t.pin.identityPinHint}</p>
                 {identityError && <p style={{ fontSize: 12, color: '#f87171', margin: 0, textAlign: 'center' }}>{identityError}</p>}
                 <div style={{ display: 'flex', gap: 16 }} className={shake ? 'pin-shake' : ''}>
                   {[0,1,2,3].map(i => (

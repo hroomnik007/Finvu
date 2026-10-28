@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { FixedExpense } from '../types'
 import { toLocalISO } from '../utils/format'
+import { useTranslation } from '../i18n'
+import { useFormatters } from './useFormatters'
 
 const STORAGE_KEY = 'fixed_expense_notified'
 const SETTINGS_KEY = 'fixed_expense_notifications_enabled'
@@ -37,6 +39,12 @@ export function setNotificationsEnabled(enabled: boolean) {
 }
 
 export function useFixedExpenseNotifications(fixedExpenses: FixedExpense[], isAuthenticated = false) {
+  const { t } = useTranslation()
+  const { formatAmount } = useFormatters()
+  // Latest translations/formatter without re-running the notification effect on every render.
+  const textRef = useRef({ t, formatAmount })
+  useEffect(() => { textRef.current = { t, formatAmount } })
+
   useEffect(() => {
     if (!isAuthenticated) return
     if (!getNotificationsEnabled()) return
@@ -59,8 +67,11 @@ export function useFixedExpenseNotifications(fixedExpenses: FixedExpense[], isAu
         if (expense.dayOfMonth !== todayDay) continue
         if (notified[expense.id!] === todayStr) continue
 
-        new Notification('Finvu — Pripomienka', {
-          body: `Dnes je splatný fixný výdavok: ${expense.label} — ${expense.amount} €`,
+        const { t: tr, formatAmount: fmt } = textRef.current
+        new Notification(tr.notifications.fixedDueTitle, {
+          body: tr.notifications.fixedDueBody
+            .replace('{label}', expense.label)
+            .replace('{amount}', fmt(Number(expense.amount))),
           icon: '/logo.svg',
         })
 

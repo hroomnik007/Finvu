@@ -72,7 +72,7 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
             <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 27, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>{t.auth.forgotPasswordTitle}</h1>
             {!sent && (
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', margin: 0 }}>
-                Zadaj email a pošleme ti odkaz na obnovu hesla.
+                {t.auth.forgotPasswordDesc}
               </p>
             )}
           </div>
@@ -101,7 +101,7 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
               <label style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
               <input
                 type="email"
-                placeholder="vas@email.com"
+                placeholder={t.auth.emailPlaceholder}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 onFocus={() => setFocused(true)}

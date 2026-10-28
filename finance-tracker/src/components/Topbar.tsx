@@ -158,8 +158,8 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
         alignItems: 'center', justifyContent: 'center',
         color: 'var(--aurora-lo)', flexShrink: 0,
       }}
-      title={theme === 'dark' ? 'Svetlý režim' : 'Tmavý režim'}
-      aria-label={theme === 'dark' ? 'Prepnúť na svetlý režim' : 'Prepnúť na tmavý režim'}
+      title={theme === 'dark' ? t.auth.lightMode : t.auth.darkMode}
+      aria-label={theme === 'dark' ? t.auth.switchToLight : t.auth.switchToDark}
     >
       {theme === 'dark' ? <Sun size={16} strokeWidth={1.8} /> : <Moon size={16} strokeWidth={1.8} />}
     </button>
@@ -205,7 +205,7 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              Pridať
+              {t.common.add}
             </button>
           )}
           {themeToggleBtn}

@@ -257,7 +257,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           <label style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
           <input
             type="email"
-            placeholder="vas@email.com"
+            placeholder={t.auth.emailPlaceholder}
             value={email}
             onChange={e => setEmail(e.target.value)}
             onFocus={() => setFocused('email')}
@@ -426,7 +426,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
               <button
                 type="button"
                 onClick={() => setPinModalOpen(false)}
-                aria-label="Zavrieť"
+                aria-label={t.common.close}
                 style={{ position: 'absolute', top: 24, right: 24, width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer' }}
               >
                 <X size={14} />

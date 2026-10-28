@@ -67,7 +67,7 @@ export function PinLock({ onVerify, onFallbackToLogin }: PinLockProps) {
             onClick={onFallbackToLogin}
             style={{ marginTop: 28, fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-lo)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            Prihlásiť sa inak
+            {t.auth.signInAnotherWay}
           </button>
         )}
       </div>

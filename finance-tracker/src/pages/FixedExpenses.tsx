@@ -473,10 +473,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               })}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 6, flexWrap: 'wrap' as const }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />malé</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.55)', display: 'inline-block' }} />stredné</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />veľké (≥100€)</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'transparent', border: '1.5px solid var(--aurora-violet)', display: 'inline-block' }} />dnes</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.55)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(100))}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'transparent', border: '1.5px solid var(--aurora-violet)', display: 'inline-block' }} />{t.dashboard.heatmapToday}</span>
             </div>
           </GlassCard>
           </div>
@@ -574,7 +574,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       {!isPast && <span style={{ fontSize: 10, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20 }}>{badge.text}</span>}
                       {isPast && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: 'var(--aurora-emerald)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '2px 8px', borderRadius: 20 }}>
-                          <CheckCircle2 size={11} /> Zaplatené
+                          <CheckCircle2 size={11} /> {t.expenses.paid}
                         </span>
                       )}
                     </div>
@@ -602,7 +602,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                 {pastList.length > 0 && (
                   <>
                     <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', marginBottom: 2, marginTop: 8 }}>
-                      Zaplatené tento mesiac
+                      {t.expenses.paidThisMonth}
                     </div>
                     {pastList.map(e => renderCard(e, true))}
                   </>

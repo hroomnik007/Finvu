@@ -1,4 +1,5 @@
 import { Flame } from 'lucide-react'
+import { useTranslation } from '../i18n'
 
 interface StreakBadgeProps {
   count: number
@@ -8,6 +9,7 @@ interface StreakBadgeProps {
 }
 
 export function StreakBadge({ count, size = 'lg', onClick, variant = 'default' }: StreakBadgeProps) {
+  const { t } = useTranslation()
   if (count <= 0) return null
   const isLg = size === 'lg'
   const interactive = !!onClick
@@ -16,7 +18,7 @@ export function StreakBadge({ count, size = 'lg', onClick, variant = 'default' }
     <button
       type="button"
       onClick={onClick}
-      title={interactive ? `Séria ${count} dní — klikni pre detail` : `Sledujete financie ${count} dní v rade!`}
+      title={(interactive ? t.streak.badgeTitleInteractive : t.streak.badgeTitle).replace('{n}', String(count))}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         padding: isLg ? '4px 9px' : '2px 6px',

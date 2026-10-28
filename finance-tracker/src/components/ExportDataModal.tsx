@@ -72,7 +72,7 @@ function MonthPicker({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Zavrieť"
+            aria-label={t.common.close}
             style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer' }}
           >
             <X size={13} />
@@ -83,7 +83,7 @@ function MonthPicker({
           <button
             type="button"
             onClick={() => setCursorYear(y => y - 1)}
-            aria-label="Predchádzajúci rok"
+            aria-label={t.common.prevYear}
             style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer' }}
           >
             <ChevronLeft size={15} />
@@ -92,7 +92,7 @@ function MonthPicker({
           <button
             type="button"
             onClick={() => setCursorYear(y => y + 1)}
-            aria-label="Nasledujúci rok"
+            aria-label={t.common.nextYear}
             style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer' }}
           >
             <ChevronRight size={15} />
@@ -234,7 +234,7 @@ export function ExportDataModal({ open, onClose, onGenerate, generating }: Expor
             <button
               type="button"
               onClick={onClose}
-              aria-label="Zavrieť"
+              aria-label={t.common.close}
               style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer' }}
             >
               <X size={14} />

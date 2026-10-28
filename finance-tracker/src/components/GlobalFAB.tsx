@@ -299,7 +299,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
       {isMobile && currentPage === 'dashboard' && (
         <button
           onClick={handleFABClick}
-          aria-label="Pridať záznam"
+          aria-label={t.fab.title}
           className="fixed right-4 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl cursor-pointer"
           style={{
             bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))',
@@ -327,7 +327,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ flex: 1, fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)' }}>{t.fab.title}</div>
               <button
-                type="button" onClick={() => setShowTypeSelector(false)} aria-label="Zavrieť"
+                type="button" onClick={() => setShowTypeSelector(false)} aria-label={t.common.close}
                 style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}
               >
                 <X size={14} />

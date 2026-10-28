@@ -557,7 +557,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
       setError(null)
       let limited = parsed
       if (parsed.length > 500) {
-        setWarning('CSV obsahuje viac ako 500 riadkov. Importuje sa prvých 500.')
+        setWarning(t.csv.tooManyRows)
         limited = parsed.slice(0, 500)
       } else {
         setWarning(null)
@@ -603,7 +603,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--aurora-gline)' }}>
           <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.csv.title}</h2>
-          <button onClick={onClose} aria-label="Zavrieť" style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}>
+          <button onClick={onClose} aria-label={t.common.close} style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}>
             <X size={14} />
           </button>
         </div>
@@ -622,7 +622,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
               <div style={{ marginBottom: 14 }}>
                 <SettingsDropdown
                   value={format}
-                  options={BANK_FORMAT_OPTIONS}
+                  options={BANK_FORMAT_OPTIONS.map(o => o.value === 'custom' ? { ...o, label: t.csv.customCsv } : o)}
                   onChange={v => setFormat(v as BankFormat)}
                   size="sm"
                 />

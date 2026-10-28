@@ -561,7 +561,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
           {/* Hero wallet card */}
           <HeroCard variant="neutral">
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
-              {t.expenses.categories.title} · {heroCatCount} aktívnych
+              {t.expenses.categories.title} · {t.expenses.activeCount.replace('{n}', String(heroCatCount))}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'baseline' }}>
@@ -1002,10 +1002,10 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             style={{ width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
             onClick={e => e.stopPropagation()}
           >
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 10px' }}>Prepísať limit?</p>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 10px' }}>{t.expenses.overrideLimitTitle}</p>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.5, margin: '0 0 18px' }}>
-              Táto kategória má manuálne nastavený limit <strong style={{ color: 'var(--aurora-hi)' }}>{editing?.budgetLimit} €</strong>.
-              Prepísať automatickým výpočtom zo súčtu fixných výdavkov?
+              {t.expenses.overrideLimitManual} <strong style={{ color: 'var(--aurora-hi)' }}>{formatAmount(Number(editing?.budgetLimit ?? 0))}</strong>.
+              {t.expenses.overrideLimitQuestion}
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
@@ -1013,14 +1013,14 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                 onClick={async () => { setAutoLimitWarning(false); await doSave(false) }}
                 style={{ flex: 1, height: 44, borderRadius: 14, background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', fontSize: 12.5, fontWeight: 600, border: '1px solid var(--aurora-gline)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
               >
-                Nie — ponechať
+                {t.expenses.overrideLimitKeep}
               </button>
               <button
                 type="button"
                 onClick={async () => { setAutoLimitWarning(false); await doSave() }}
                 style={{ flex: 1, height: 44, borderRadius: 14, background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', fontSize: 12.5, fontWeight: 700, color: 'white', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
               >
-                Áno — prepísať
+                {t.expenses.overrideLimitReplace}
               </button>
             </div>
           </div>

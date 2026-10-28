@@ -111,10 +111,21 @@ function AchievementsTab() {
 
 type Tab = 'profile' | 'account' | 'achievements'
 
+const COUNTRY_OPTIONS = [
+  { code: 'SK', flag: '🇸🇰' },
+  { code: 'CZ', flag: '🇨🇿' },
+  { code: 'HU', flag: '🇭🇺' },
+  { code: 'PL', flag: '🇵🇱' },
+  { code: 'GB', flag: '🇬🇧' },
+]
+
 export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLogout?: () => void }) {
   const { profileName: ctxName, profileAvatar: ctxAvatar, setProfile } = useSettingsContext()
   const { user, refreshUser } = useAuth()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
+  const regionName = (code: string) => {
+    try { return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? code } catch { return code }
+  }
 
   const [tab, setTab] = useState<Tab>('profile')
   const [editMode, setEditMode] = useState(false)
@@ -434,11 +445,9 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                       }}
                       style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', fontFamily: 'inherit', padding: 0, cursor: 'pointer', appearance: 'none' as const }}
                     >
-                      <option value="SK">🇸🇰 Slovensko</option>
-                      <option value="CZ">🇨🇿 Česko</option>
-                      <option value="HU">🇭🇺 Maďarsko</option>
-                      <option value="PL">🇵🇱 Poľsko</option>
-                      <option value="GB">🇬🇧 Veľká Británia</option>
+                      {COUNTRY_OPTIONS.map(c => (
+                        <option key={c.code} value={c.code}>{c.flag} {regionName(c.code)}</option>
+                      ))}
                     </select>
                   </div>
                 </GlassCard>
@@ -465,7 +474,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 {defaultPageSaveOk ? (
                   <div style={{ flex: 2, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, fontSize: 14, fontWeight: 600, color: 'var(--aurora-emerald)', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>
-                    <Check size={15} /> Uložené
+                    <Check size={15} /> {t.profile.saved}
                   </div>
                 ) : (
                   <button

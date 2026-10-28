@@ -345,7 +345,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         {/* Hero wallet card */}
         <HeroCard variant="income" style={{ marginBottom: 20 }}>
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
-            {t.savings.totalSavingsLabel} · {goalCount} aktívnych cieľov
+            {t.savings.totalSavingsLabel} · {t.savings.activeGoals.replace('{n}', String(goalCount))}
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'baseline' }}>
@@ -381,7 +381,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(Math.max(0, totalTarget - totalSaved))}</div>
             </div>
             <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>% Z PRÍJMOV</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.savings.percentOfIncome}</div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>
                 {incomePercent !== null ? `${incomePercent}%` : '—'}
               </div>

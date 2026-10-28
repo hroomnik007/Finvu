@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { X, Check, FileUp } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { useTranslation } from '../i18n'
 
 interface CompactModalProps {
   open: boolean
@@ -22,6 +23,7 @@ export function CompactModal({
   open, onClose, icon: Icon, iconColor, iconBg, title,
   accent, accent2, onSubmit, submitDisabled, onImportCsv, children, maxWidth = 420,
 }: CompactModalProps) {
+  const { t } = useTranslation()
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
@@ -73,8 +75,8 @@ export function CompactModal({
             <button
               type="button"
               onClick={onImportCsv}
-              aria-label="Import výpisu"
-              title="Import výpisu"
+              aria-label={t.settings.importStatement}
+              title={t.settings.importStatement}
               style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}
             >
               <FileUp size={13} />
@@ -83,7 +85,7 @@ export function CompactModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Zavrieť"
+            aria-label={t.common.close}
             style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}
           >
             <X size={14} />
@@ -99,7 +101,7 @@ export function CompactModal({
             type="button"
             onClick={onSubmit}
             disabled={submitDisabled}
-            aria-label="Uložiť"
+            aria-label={t.common.save}
             style={{
               width: 44, height: 44, borderRadius: '50%',
               background: `linear-gradient(135deg,${accent},${accent2})`,

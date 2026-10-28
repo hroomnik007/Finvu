@@ -205,8 +205,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
     setSheetOpen(false)
   }
 
-  const MONTH_NAMES_VAR = ['Január','Február','Marec','Apríl','Máj','Jún','Júl','August','September','Október','November','December']
-  const MONTH_NAME_VAR = MONTH_NAMES_VAR[month - 1] ?? ''
+  const monthNameRaw = getLocalizedMonthNames(locale)[month - 1] ?? ''
+  const MONTH_NAME_VAR = monthNameRaw.charAt(0).toUpperCase() + monthNameRaw.slice(1)
 
   const filteredTotal = useMemo(() =>
     (activeCategory
@@ -281,7 +281,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
               </span>
             </div>
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 12 }}>
-              {filteredSorted.length} transakcií tento mesiac
+              {t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length))}
             </div>
           </HeroCard>
 

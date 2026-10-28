@@ -602,6 +602,13 @@ function getReportToken(): string | null {
 
 function Root() {
   const [routeKey, setRouteKey] = useState(() => window.location.hash)
+  const { lang } = useTranslation()
+
+  // Keep <html lang> in sync with the UI language (screen readers, hyphenation,
+  // and the browser's "translate this page?" prompt rely on it).
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
 
   useEffect(() => {
     const handler = () => setRouteKey(window.location.hash)

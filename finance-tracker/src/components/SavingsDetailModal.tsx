@@ -124,7 +124,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
         {saving ? '...' : t.common.save}
       </button>
       <button onClick={() => { setDepositMode(false); setDepositInput('') }}
-        aria-label="Zavrieť"
+        aria-label={t.common.close}
         style={{ width: 44, height: 44, borderRadius: 14, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <X size={16} />
       </button>
@@ -153,14 +153,14 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
           </span>
           {confirmDeleteId === d.id ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>Zmazať {formatAmount(d.amount)} €?</span>
+              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>{t.savings.deleteDepositConfirm.replace('{amount}', formatAmount(d.amount))}</span>
               <button onClick={async () => { if (!onDeleteDeposit) return; setDeleting(true); try { await onDeleteDeposit(d.id) } finally { setDeleting(false); setConfirmDeleteId(null) } }} disabled={deleting}
                 style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--aurora-rose)', background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}>
-                Áno
+                {t.common.yes}
               </button>
               <button onClick={() => setConfirmDeleteId(null)}
                 style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-lo)', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer' }}>
-                Nie
+                {t.common.no}
               </button>
             </div>
           ) : (
@@ -169,7 +169,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
               {onDeleteDeposit && (
                 <button onClick={() => setConfirmDeleteId(d.id)}
                   style={{ width: 26, height: 26, borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                  title="Zmazať vklad">
+                  title={t.savings.deleteDeposit} aria-label={t.savings.deleteDeposit}>
                   <Trash2 size={13} />
                 </button>
               )}
@@ -211,7 +211,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
               {goal.note ? goal.note : goal.deadline ? `${t.savings.goalUntil} ${new Date(goal.deadline).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' })}` : `${pctStr} ${t.savings.filled}`}
             </p>
           </div>
-          <button onClick={onClose} aria-label="Zavrieť"
+          <button onClick={onClose} aria-label={t.common.close}
             style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}>
             <X size={14} />
           </button>

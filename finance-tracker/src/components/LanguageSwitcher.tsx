@@ -6,9 +6,9 @@ import { useSettingsContext } from '../context/SettingsContext'
 const LANGS = [
   { code: 'sk', flag: '🇸🇰', label: 'SK', name: 'Slovenčina' },
   { code: 'cs', flag: '🇨🇿', label: 'CS', name: 'Čeština' },
-  { code: 'pl', flag: '🇵🇱', label: 'PL', name: 'Poľština' },
-  { code: 'hu', flag: '🇭🇺', label: 'HU', name: 'Maďarčina' },
-  { code: 'en', flag: '🇬🇧', label: 'EN', name: 'Angličtina' },
+  { code: 'pl', flag: '🇵🇱', label: 'PL', name: 'Polski' },
+  { code: 'hu', flag: '🇭🇺', label: 'HU', name: 'Magyar' },
+  { code: 'en', flag: '🇬🇧', label: 'EN', name: 'English' },
 ] as const
 
 interface LanguageSwitcherProps {

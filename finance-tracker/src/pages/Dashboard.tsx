@@ -649,7 +649,7 @@ const upcomingFixed = useMemo(() => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
             <CalendarClock size={18} strokeWidth={1.8} color="var(--aurora-violet)" style={{ flexShrink: 0 }} />
             <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.4 }}>
-              Nastav počiatočný dátum sledovania financií
+              {t.dashboard.trackingBannerText}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -661,7 +661,7 @@ const upcomingFixed = useMemo(() => {
                 fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
               }}
             >
-              Nastaviť
+              {t.settings.setup}
             </button>
             <button
               onClick={handleDismissBanner}
@@ -672,7 +672,8 @@ const upcomingFixed = useMemo(() => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
               }}
-              title="Zavrieť natrvalo"
+              title={t.common.closePermanently}
+              aria-label={t.common.closePermanently}
             >
               <X size={14} strokeWidth={2} />
             </button>
@@ -723,7 +724,7 @@ const upcomingFixed = useMemo(() => {
                   color: 'var(--aurora-lo)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
                 }}
               >
-                Zrušiť
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleSaveTrackingDate}

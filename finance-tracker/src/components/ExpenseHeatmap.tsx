@@ -161,10 +161,10 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
 
       {/* Legend */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 12, flexWrap: 'wrap' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />malé</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.55)', display: 'inline-block' }} />stredné</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />veľké (≥100€)</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'transparent', border: '1.5px solid var(--aurora-violet)', display: 'inline-block' }} />dnes</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.55)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(100))}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'transparent', border: '1.5px solid var(--aurora-violet)', display: 'inline-block' }} />{t.dashboard.heatmapToday}</span>
       </div>
 
       {/* Tooltip — portaled to <body> because GlassCard's backdrop-filter
@@ -213,7 +213,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
           })}
           {tooltip.dayExpenses.length > 3 && (
             <div style={{ color: 'var(--aurora-faint)', fontSize: 10, marginTop: 4 }}>
-              + {tooltip.dayExpenses.length - 3} ďalších
+              {t.dashboard.heatmapMoreItems.replace('{n}', String(tooltip.dayExpenses.length - 3))}
             </div>
           )}
         </div>,
