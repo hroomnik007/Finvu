@@ -340,6 +340,7 @@ export const pl: Translations = {
     overrideLimitQuestion: 'Zastąpić automatycznym wyliczeniem z sumy wydatków stałych?',
     overrideLimitKeep: 'Nie — zachowaj',
     overrideLimitReplace: 'Tak — nadpisz',
+    perMonthSuffix: '/mies.',
   },
   settings: {
     title: 'Ustawienia',
@@ -542,6 +543,13 @@ export const pl: Translations = {
     colorOrange: 'Pomarańczowy',
     colorPink: 'Różowy',
     colorRed: 'Czerwony',
+    pdfColDate: 'Data',
+    pdfColType: 'Typ',
+    pdfColCategory: 'Kategoria',
+    pdfColNote: 'Notatka',
+    pdfColAmount: 'Kwota',
+    pdfEmpty: 'Brak transakcji w wybranym okresie.',
+    pdfGeneratedOn: 'Wygenerowano w Finvu · {date}',
   },
   profile: {
     personalData: 'Dane osobowe',

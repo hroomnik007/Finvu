@@ -113,7 +113,7 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     [budgetStatuses, allVariableExpenses]
   )
   const { goals: savingsGoals } = useSavings()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatAmountParts, formatLongDate } = useFormatters()
   const { t } = useTranslation()
   const { profileName } = useSettingsContext()
   const { user, refreshUser } = useAuth()
@@ -198,7 +198,7 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     enabled: !!user,
   })
 
-  const todayStr = new Date().toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' })
+  const todayStr = formatLongDate(new Date())
 
   const now = new Date()
   const daysInMonth = new Date(year, month, 0).getDate()
@@ -335,7 +335,8 @@ const upcomingFixed = useMemo(() => {
   // satisfy a strict === check and leave the gradient span permanently unmounted.
   const balanceSettled = Math.abs(animatedBalance - heroBalance) < 0.005
   const balanceSign = heroBalance >= 0 ? '+' : '−'
-  const balanceText = Math.floor(Math.abs(balanceSettled ? heroBalance : animatedBalance)).toLocaleString('sk-SK')
+  const balanceParts = formatAmountParts(Math.abs(balanceSettled ? heroBalance : animatedBalance))
+  const balanceText = balanceParts.main
   const balanceFontStyle = {
     fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
   } as const
@@ -359,7 +360,7 @@ const upcomingFixed = useMemo(() => {
           </span>
         )}
         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-          ,{String(Math.round((Math.abs(animatedBalance) % 1) * 100)).padStart(2, '0')}&nbsp;€
+          {balanceParts.rest}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>

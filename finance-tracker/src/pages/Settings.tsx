@@ -25,6 +25,7 @@ import { useSettingsContext } from '../context/SettingsContext'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { SettingsDropdown } from '../components/SettingsDropdown'
 import { useTranslation } from '../i18n'
+import { formatDateLocale } from '../utils/format'
 import { useAuth } from '../context/AuthContext'
 import { usePinLockContext } from '../context/PinLockContext'
 import { PinSetupModal } from '../components/PinSetupModal'
@@ -610,6 +611,17 @@ export function SettingsPage() {
       incomeLabel: t.expenses.categories.typeIncome,
       expenseLabel: t.expenses.categories.typeExpense,
       fileName: `finvu-export-${fromISO}_${toISO}.pdf`,
+      locale,
+      currency: settings.currency || 'EUR',
+      labels: {
+        date: t.settings.pdfColDate,
+        type: t.settings.pdfColType,
+        category: t.settings.pdfColCategory,
+        note: t.settings.pdfColNote,
+        amount: t.settings.pdfColAmount,
+        empty: t.settings.pdfEmpty,
+        generatedOn: t.settings.pdfGeneratedOn,
+      },
     })
   }
 
@@ -1113,7 +1125,7 @@ export function SettingsPage() {
                   iconColor="var(--aurora-violet)"
                   iconBg="rgba(139,92,246,0.12)"
                   label={t.settings.trackingStartLabel}
-                  sublabel={user?.tracking_start_date ? new Date(user.tracking_start_date).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' }) : t.common.notSet}
+                  sublabel={user?.tracking_start_date ? formatDateLocale(user.tracking_start_date, locale, { day: 'numeric', month: 'long', year: 'numeric' }) : t.common.notSet}
                   onClick={() => setTrackingModalOpen(true)}
                 />
               </SectionCard>
@@ -1660,7 +1672,7 @@ export function SettingsPage() {
                           {session.browser ?? ''}{session.location ? ` · ${session.location}` : ''}{session.ip ? ` · ${session.ip}` : ''}
                         </p>
                         <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>
-                          {new Date(session.createdAt).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {formatDateLocale(session.createdAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                       {!isCurrent && (
@@ -1714,10 +1726,10 @@ export function SettingsPage() {
                               {device.label ? browser : ''}
                             </p>
                             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
-                              {t.settings.pinDeviceLastUsed}: {new Date(device.lastUsedAt).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {t.settings.pinDeviceLastUsed}: {formatDateLocale(device.lastUsedAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
                             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>
-                              {t.settings.pinDeviceExpires}: {new Date(device.expiresAt).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {t.settings.pinDeviceExpires}: {formatDateLocale(device.expiresAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
                           </div>
                           <button

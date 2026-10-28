@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { getSharedReport } from '../api/auth'
 import { useTranslation } from '../i18n'
+import { formatDateLocale, formatMoney } from '../utils/format'
 
 interface SharedReportProps {
   token: string
 }
 
 export function SharedReportPage({ token }: SharedReportProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [data, setData] = useState<Record<string, unknown> | null>(null)
   // Store the error kind (or a server-provided message) and translate at
   // render time so the message follows the active language.
@@ -36,7 +37,7 @@ export function SharedReportPage({ token }: SharedReportProps) {
     : errorKind.msg
 
   const formatAmount = (n: number) =>
-    new Intl.NumberFormat('sk-SK', { style: 'currency', currency: 'EUR' }).format(n)
+    formatMoney(n, locale, 'EUR')
 
   if (loading) {
     return (
@@ -112,7 +113,7 @@ export function SharedReportPage({ token }: SharedReportProps) {
 
       <p style={{ fontSize: 11, color: '#4C3A8A', textAlign: 'center' }}>
         {t.sharedReport.createdVia} <strong style={{ color: '#7C3AED' }}>{t.nav.appName}</strong>
-        {report.generatedAt && ` · ${new Date(report.generatedAt).toLocaleDateString('sk-SK')}`}
+        {report.generatedAt && ` · ${formatDateLocale(report.generatedAt, locale)}`}
       </p>
     </div>
   )

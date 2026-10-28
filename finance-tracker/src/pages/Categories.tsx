@@ -287,7 +287,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
 
 export function CategoriesPage({ showToast }: { showToast: (msg: string) => void }) {
   const { categories, addCategory, updateCategory, deleteCategory, reload } = useCategories()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { t } = useTranslation()
   const now = new Date()
   const { variableExpenses } = useVariableExpenses(now.getMonth() + 1, now.getFullYear())
@@ -570,10 +570,10 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                   background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-violet))',
                   WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
                 }}>
-                  {Math.floor(animatedHeroSpent).toLocaleString('sk-SK')}
+                  {formatAmountParts(animatedHeroSpent).main}
                 </span>
                 <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                  ,{String(Math.round((animatedHeroSpent % 1) * 100)).padStart(2, '0')}&nbsp;€
+                  {formatAmountParts(animatedHeroSpent).rest}
                 </span>
               </div>
               {heroTotalLimit > 0 && (

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { formatDateLocale } from '../utils/format'
 
 interface AchievementDetailModalProps {
   emoji: string
@@ -14,7 +15,7 @@ interface AchievementDetailModalProps {
 }
 
 export function AchievementDetailModal({ emoji, color, name, desc, hint, unlocked, unlockedAt, onClose }: AchievementDetailModalProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -23,7 +24,7 @@ export function AchievementDetailModal({ emoji, color, name, desc, hint, unlocke
   }, [onClose])
 
   const unlockedDateStr = unlockedAt
-    ? new Date(unlockedAt).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? formatDateLocale(unlockedAt, locale, { day: 'numeric', month: 'long', year: 'numeric' })
     : null
 
   return (

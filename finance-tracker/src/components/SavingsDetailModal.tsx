@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Pencil, Pause, Play, Plus, Trash2, Calendar, Target, Bell, PiggyBank } from 'lucide-react'
 import type { SavingsGoal, Deposit } from '../types'
 import { useTranslation } from '../i18n'
+import { formatDateLocale } from '../utils/format'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 
 interface SavingsDetailModalProps {
@@ -36,7 +37,7 @@ function calcMonthsLeft(deadline: string | null | undefined): number {
 const R_SIZE = 104, R_SW = 10, R_R = (R_SIZE - R_SW * 2) / 2, R_CIRC = 2 * Math.PI * R_R
 
 export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDelete, onDeposit, onDeleteDeposit, onPause, onResume, formatAmount }: SavingsDetailModalProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [depositMode, setDepositMode] = useState(false)
   const [depositInput, setDepositInput] = useState('')
   const [saving, setSaving] = useState(false)
@@ -149,7 +150,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
       {deposits.slice(0, 10).map((d, i) => (
         <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 0', borderTop: i > 0 ? '1px solid var(--aurora-gline)' : 'none' }}>
           <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', flex: 1 }}>
-            {new Date(d.date).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {formatDateLocale(d.date, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
           {confirmDeleteId === d.id ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -208,7 +209,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
               {goal.paused && <span style={pausedBadge}>{t.savings.pausedBadge}</span>}
             </div>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {goal.note ? goal.note : goal.deadline ? `${t.savings.goalUntil} ${new Date(goal.deadline).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' })}` : `${pctStr} ${t.savings.filled}`}
+              {goal.note ? goal.note : goal.deadline ? `${t.savings.goalUntil} ${formatDateLocale(goal.deadline, locale, { day: 'numeric', month: 'long', year: 'numeric' })}` : `${pctStr} ${t.savings.filled}`}
             </p>
           </div>
           <button onClick={onClose} aria-label={t.common.close}

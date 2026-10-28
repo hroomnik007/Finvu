@@ -340,6 +340,7 @@ export const en: Translations = {
     overrideLimitQuestion: 'Replace it with the automatic total of fixed expenses?',
     overrideLimitKeep: 'No — keep it',
     overrideLimitReplace: 'Yes — overwrite',
+    perMonthSuffix: '/mo',
   },
   settings: {
     title: 'Settings',
@@ -542,6 +543,13 @@ export const en: Translations = {
     colorOrange: 'Orange',
     colorPink: 'Pink',
     colorRed: 'Red',
+    pdfColDate: 'Date',
+    pdfColType: 'Type',
+    pdfColCategory: 'Category',
+    pdfColNote: 'Note',
+    pdfColAmount: 'Amount',
+    pdfEmpty: 'No transactions in the selected period.',
+    pdfGeneratedOn: 'Generated with Finvu · {date}',
   },
   profile: {
     personalData: 'Personal data',

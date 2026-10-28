@@ -338,6 +338,7 @@ export const sk = {
     overrideLimitQuestion: 'Prepísať automatickým výpočtom zo súčtu fixných výdavkov?',
     overrideLimitKeep: 'Nie — ponechať',
     overrideLimitReplace: 'Áno — prepísať',
+    perMonthSuffix: '/mes.',
   },
   settings: {
     title: 'Nastavenia',
@@ -540,6 +541,13 @@ export const sk = {
     colorOrange: 'Oranžová',
     colorPink: 'Ružová',
     colorRed: 'Červená',
+    pdfColDate: 'Dátum',
+    pdfColType: 'Typ',
+    pdfColCategory: 'Kategória',
+    pdfColNote: 'Poznámka',
+    pdfColAmount: 'Suma',
+    pdfEmpty: 'Žiadne transakcie v zvolenom období.',
+    pdfGeneratedOn: 'Vygenerované cez Finvu · {date}',
   },
   profile: {
     personalData: 'Osobné údaje',

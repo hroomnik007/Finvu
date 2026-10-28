@@ -70,7 +70,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const endedExpenses = useMemo(() => allFixed.filter(e => isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
   const { variableExpenses } = useVariableExpenses(month, year)
   const { categories } = useCategories()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { t } = useTranslation()
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
@@ -315,10 +315,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-amber))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                {Math.floor(animatedFilteredTotal).toLocaleString('sk-SK')}
+                {formatAmountParts(animatedFilteredTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                ,{String(Math.round((animatedFilteredTotal % 1) * 100)).padStart(2, '0')}&nbsp;€/mes.
+                {formatAmountParts(animatedFilteredTotal).rest}{t.expenses.perMonthSuffix}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>

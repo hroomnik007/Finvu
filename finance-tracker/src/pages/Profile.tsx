@@ -5,6 +5,8 @@ import {
   Target, Flame, PiggyBank, BarChart3, Trophy, Zap, Users, Gem,
 } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { formatDateLocale } from '../utils/format'
+import { useFormatters } from '../hooks/useFormatters'
 import { updateAvatar, updateUserSettings, updateProfile } from '../api/auth'
 import { getTransactions } from '../api/transactions'
 import { getSavingsGoals } from '../api/savings'
@@ -123,6 +125,8 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
   const { profileName: ctxName, profileAvatar: ctxAvatar, setProfile } = useSettingsContext()
   const { user, refreshUser } = useAuth()
   const { t, locale } = useTranslation()
+  const { formatNumber, currency } = useFormatters()
+  const formatMoneyRounded = (n: number) => formatNumber(n, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 })
   const regionName = (code: string) => {
     try { return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? code } catch { return code }
   }
@@ -311,7 +315,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
                 <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(251,191,36,0.18)', color: '#fde68a', border: '1px solid rgba(251,191,36,0.3)', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 3 }}><Crown size={10} /> Pro</span>
                 {user?.createdAt && (
-                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-faint)' }}>{t.profile.memberSince.replace('{date}', new Date(user.createdAt).toLocaleDateString('sk-SK', { month: 'long', year: 'numeric' }))}</span>
+                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-faint)' }}>{t.profile.memberSince.replace('{date}', formatDateLocale(user.createdAt, locale, { month: 'long', year: 'numeric' }))}</span>
                 )}
               </div>
             </div>
@@ -352,7 +356,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', borderTop: '1px solid var(--aurora-gline)', background: 'rgba(0,0,0,0.15)' }}>
             {[
               { label: t.profile.transactionsStat, value: txnCount !== null ? String(txnCount) : '—', color: 'var(--aurora-hi)', icon: null },
-              { label: t.profile.savingsStat, value: savingsTotal !== null ? `${savingsTotal.toLocaleString('sk-SK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €` : '—', color: 'var(--aurora-emerald)', icon: null },
+              { label: t.profile.savingsStat, value: savingsTotal !== null ? formatMoneyRounded(savingsTotal) : '—', color: 'var(--aurora-emerald)', icon: null },
               { label: t.profile.streakStat, value: String(user?.currentStreak ?? 0), color: '#FB923C', icon: Flame },
               { label: t.profile.trackingStat, value: trackingDays !== null ? `${trackingDays} ${t.profile.days}` : '—', color: 'var(--aurora-violet)', icon: null },
             ].map((stat, i) => (
@@ -512,7 +516,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>Finvu Pro</div>
                   <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
-                    {user?.createdAt ? t.profile.memberSince.replace('{date}', new Date(user.createdAt).toLocaleDateString('sk-SK', { month: 'long', year: 'numeric' })) : t.profile.allFeaturesUnlocked}
+                    {user?.createdAt ? t.profile.memberSince.replace('{date}', formatDateLocale(user.createdAt, locale, { month: 'long', year: 'numeric' })) : t.profile.allFeaturesUnlocked}
                   </div>
                 </div>
                 <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,215,100,0.15)', color: '#fde68a', border: '1px solid rgba(255,215,100,0.3)', letterSpacing: '0.06em', flexShrink: 0 }}>{t.profile.active.toUpperCase()}</span>

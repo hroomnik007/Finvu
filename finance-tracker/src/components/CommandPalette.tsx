@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
+import { useFormatters } from '../hooks/useFormatters'
 
 interface TxnSearchItem {
   id: string
@@ -33,14 +34,10 @@ interface PaletteItem extends PaletteAction {
   _i: number
 }
 
-function formatAmt(amount: number): string {
-  const abs = Math.abs(amount)
-  const sign = amount >= 0 ? '+' : '-'
-  return `${sign}${abs.toLocaleString('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
-}
 
 export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme, transactions = [], onTransactionNavigate }: CommandPaletteProps) {
   const { t } = useTranslation()
+  const { formatAmount, formatDate } = useFormatters()
   const [query, setQuery] = useState('')
   const [selIdx, setSelIdx] = useState(0)
   const inpRef = useRef<HTMLInputElement>(null)
@@ -149,8 +146,8 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
       const globalIdx = allItems.length + ti
       const sel = selIdx === globalIdx
       const isIncome = txnItem.type === 'income'
-      const amtStr = formatAmt(txnItem.amount)
-      const dateStr = txnItem.date ? txnItem.date.slice(0, 10).split('-').reverse().join('.') : ''
+      const amtStr = `${txnItem.amount >= 0 ? '+' : '−'}${formatAmount(Math.abs(txnItem.amount))}`
+      const dateStr = txnItem.date ? formatDate(txnItem.date.slice(0, 10)) : ''
       rows.push(
         <div
           key={'txn-' + txnItem.id}

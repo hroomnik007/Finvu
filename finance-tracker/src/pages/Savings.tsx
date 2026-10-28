@@ -62,7 +62,7 @@ function goalMonthly(goal: SavingsGoal): number {
 
 export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   const { goals, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal } = useSavings()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { t } = useTranslation()
 
   const [view, setView] = useState<'list' | 'detail' | 'edit'>('list')
@@ -354,10 +354,10 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-emerald))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                {Math.floor(animatedTotalSaved).toLocaleString('sk-SK')}
+                {formatAmountParts(animatedTotalSaved).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                ,{String(Math.round((animatedTotalSaved % 1) * 100)).padStart(2, '0')}&nbsp;€
+                {formatAmountParts(animatedTotalSaved).rest}
               </span>
             </div>
             {totalTarget > 0 && (

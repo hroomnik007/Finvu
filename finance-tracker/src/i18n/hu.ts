@@ -340,6 +340,7 @@ export const hu: Translations = {
     overrideLimitQuestion: 'Felülírja a fix kiadások összegéből számolt értékkel?',
     overrideLimitKeep: 'Nem — megtartom',
     overrideLimitReplace: 'Igen — felülírom',
+    perMonthSuffix: '/hó',
   },
   settings: {
     title: 'Beállítások',
@@ -542,6 +543,13 @@ export const hu: Translations = {
     colorOrange: 'Narancs',
     colorPink: 'Rózsaszín',
     colorRed: 'Piros',
+    pdfColDate: 'Dátum',
+    pdfColType: 'Típus',
+    pdfColCategory: 'Kategória',
+    pdfColNote: 'Megjegyzés',
+    pdfColAmount: 'Összeg',
+    pdfEmpty: 'Nincs tranzakció a kiválasztott időszakban.',
+    pdfGeneratedOn: 'Készült a Finvu-val · {date}',
   },
   profile: {
     personalData: 'Személyes adatok',

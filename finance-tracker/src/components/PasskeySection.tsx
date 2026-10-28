@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from '../i18n'
+import { formatDateLocale } from '../utils/format'
 import { useAuth } from '../context/AuthContext'
 import { ConfirmDialog } from './ConfirmDialog'
 import { GlassCard } from './GlassCard'
@@ -10,7 +11,7 @@ const labelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeigh
 const textStyle = { fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 } as const
 
 export function PasskeySection() {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { user } = useAuth()
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -89,7 +90,7 @@ export function PasskeySection() {
                   {p.name}{p.backedUp ? ` · ${t.settings.passkeySynced}` : ''}
                 </p>
                 <p style={textStyle}>
-                  {t.settings.passkeyCreated}: {new Date(p.createdAt).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {t.settings.passkeyCreated}: {formatDateLocale(p.createdAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
               </div>
               <button

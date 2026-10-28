@@ -96,7 +96,7 @@ function FormBody({ form, setForm, t }: FormBodyProps) {
 
 export function IncomePage({ month, year }: IncomePageProps) {
   const { incomes, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
-  const { formatAmount, formatDate } = useFormatters()
+  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<Income | null>(null)
@@ -198,10 +198,10 @@ export function IncomePage({ month, year }: IncomePageProps) {
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-emerald))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                +{Math.floor(animatedTotal).toLocaleString('sk-SK')}
+                +{formatAmountParts(animatedTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                ,{String(Math.round((animatedTotal % 1) * 100)).padStart(2, '0')}&nbsp;€
+                {formatAmountParts(animatedTotal).rest}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>

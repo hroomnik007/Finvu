@@ -51,7 +51,7 @@ interface HouseholdPageProps {
 
 export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   const { user, refreshUser } = useAuth()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { categories, reload: reloadCategories } = useCategories()
   const { t } = useTranslation()
   const { household: ht } = t
@@ -255,10 +255,10 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
               background: `linear-gradient(120deg, var(--aurora-hi), ${balance < 0 ? 'var(--aurora-rose)' : 'var(--aurora-cyan)'})`,
               WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
             }}>
-              {balance >= 0 ? '+' : '−'}{Math.floor(Math.abs(animatedBalance)).toLocaleString('sk-SK')}
+              {balance >= 0 ? '+' : '−'}{formatAmountParts(Math.abs(animatedBalance)).main}
             </span>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-              ,{String(Math.round((Math.abs(animatedBalance) % 1) * 100)).padStart(2, '0')}&nbsp;€
+              {formatAmountParts(Math.abs(animatedBalance)).rest}
             </span>
           </div>
           <span style={{

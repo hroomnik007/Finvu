@@ -85,7 +85,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const { fixedExpenses } = useFixedExpenses(month, year)
   const { categories, addCategory } = useCategories()
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
-  const { formatAmount, formatDate } = useFormatters()
+  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
 
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -274,10 +274,10 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-rose))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                −{Math.floor(animatedFilteredTotal).toLocaleString('sk-SK')}
+                −{formatAmountParts(animatedFilteredTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                ,{String(Math.round((animatedFilteredTotal % 1) * 100)).padStart(2, '0')}&nbsp;€
+                {formatAmountParts(animatedFilteredTotal).rest}
               </span>
             </div>
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 12 }}>
