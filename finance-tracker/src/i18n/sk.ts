@@ -1059,6 +1059,15 @@ export const sk = {
     badgeTitleInteractive: 'Séria {n} dní — klikni pre detail',
     badgeTitle: 'Sledujete financie {n} dní v rade!',
   },
+  subscriptions: {
+    title: 'Vyzerá to na predplatné',
+    perMonth: 'mesačne',
+    detail: '{n}× za sebou, zvyčajne okolo {day}. dňa v mesiaci',
+    add: 'Pridať ako fixný',
+    hide: 'Skryť',
+    startLabel: 'Začína od',
+    startHint: 'Ďalšia platba podľa tvojich výdavkov: {date}',
+  },
   backup: {
     sectionTitle: 'Záloha',
     downloadTitle: 'Stiahnuť zálohu',

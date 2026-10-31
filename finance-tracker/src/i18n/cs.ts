@@ -1061,6 +1061,15 @@ export const cs: Translations = {
     badgeTitleInteractive: 'Série {n} dní — klikni pro detail',
     badgeTitle: 'Sledujete finance {n} dní v řadě!',
   },
+  subscriptions: {
+    title: 'Vypadá to na předplatné',
+    perMonth: 'měsíčně',
+    detail: '{n}× po sobě, obvykle kolem {day}. dne v měsíci',
+    add: 'Přidat jako fixní',
+    hide: 'Skrýt',
+    startLabel: 'Začíná od',
+    startHint: 'Další platba podle tvých výdajů: {date}',
+  },
   backup: {
     sectionTitle: 'Záloha',
     downloadTitle: 'Stáhnout zálohu',

@@ -153,10 +153,12 @@ export function useFixedExpenses(month?: number, year?: number, scope: DataScope
     qc.invalidateQueries({ queryKey: ['fixedExpenses'] }),
     qc.invalidateQueries({ queryKey: ['summaryCards'] }),
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+    qc.invalidateQueries({ queryKey: ['subscriptionSuggestions'] }),
   ]), [qc])
 
-  const addFixedExpense = useCallback(async (expense: Omit<FixedExpense, 'id'>): Promise<void> => {
-    const today = todayISO()
+  // `startDate` (YYYY-MM-DD) is the first month it applies; today when not given
+  const addFixedExpense = useCallback(async (expense: Omit<FixedExpense, 'id'>, startDate?: string): Promise<void> => {
+    const today = startDate ?? todayISO()
     await createTransaction({
       type: 'expense',
       amount: expense.amount,

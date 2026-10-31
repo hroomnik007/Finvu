@@ -2,14 +2,15 @@
 //
 // The backup holds only what the user entered: transactions (with recurring
 // series, their ends and price changes, which are just more rows), categories
-// with limits, import rules, savings goals with deposits and a few settings.
+// with limits, import rules, savings goals with deposits, hidden subscription
+// suggestions and a few settings.
 // Never credentials, sessions, tokens, passkeys or other household members' rows.
 // The browser encrypts the JSON before it is saved, so the server only ever sees
 // it in the clear over the authenticated API, like any other request.
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
-import { users, categories, categoryRules, transactions, savingsGoals, savingsDeposits } from "../db/schema";
+import { users, categories, categoryRules, transactions, savingsGoals, savingsDeposits, subscriptionDismissals } from "../db/schema";
 
 export const BACKUP_FORMAT = "finvu-backup";
 export const BACKUP_VERSION = 1;
@@ -87,6 +88,8 @@ export const backupSchema = z.object({
     transactions: z.array(transactionSchema).max(200_000),
     savingsGoals: z.array(goalSchema).max(1_000),
     savingsDeposits: z.array(depositSchema).max(50_000),
+    // Hidden subscription suggestions (normalized merchant names); missing in older files
+    subscriptionDismissals: z.array(z.string().min(1).max(120)).max(5_000).default([]),
   }),
 });
 export type Backup = z.infer<typeof backupSchema>;
@@ -115,6 +118,8 @@ export async function buildBackup(userId: string, now = new Date()): Promise<Bac
     goalId: savingsDeposits.goalId, amount: savingsDeposits.amount,
     createdAt: sql<string>`to_char(${savingsDeposits.createdAt}, 'YYYY-MM-DD"T"HH24:MI:SS.US')`,
   }).from(savingsDeposits).where(eq(savingsDeposits.userId, userId)).orderBy(savingsDeposits.createdAt);
+  const dismissals = await db.select({ key: subscriptionDismissals.patternKey }).from(subscriptionDismissals)
+    .where(eq(subscriptionDismissals.userId, userId)).orderBy(subscriptionDismissals.patternKey);
   const ownCats = new Set(cats.map(c => c.id));
 
   return {
@@ -138,13 +143,14 @@ export async function buildBackup(userId: string, now = new Date()): Promise<Bac
         icon: g.icon, color: g.color, note: g.note, paused: g.paused,
       })),
       savingsDeposits: deposits.map(d => ({ goalId: d.goalId, amount: d.amount, createdAt: d.createdAt })),
+      subscriptionDismissals: dismissals.map(d => d.key),
     },
   };
 }
 
 export type RestoreCounts = {
   categories: number; categoryRules: number; transactions: number; savingsGoals: number; savingsDeposits: number;
-  skippedTransactions: number;
+  subscriptionDismissals: number; skippedTransactions: number;
 };
 
 const txKey = (t: { type: string; amount: string; date: string; description: string | null; isFixed: boolean }) =>
@@ -175,6 +181,7 @@ export async function restoreBackup(userId: string, backup: Backup, mode: "repla
       await tx.delete(transactions).where(eq(transactions.userId, userId));
       await tx.delete(categoryRules).where(eq(categoryRules.userId, userId));
       await tx.delete(categories).where(eq(categories.userId, userId));
+      await tx.delete(subscriptionDismissals).where(eq(subscriptionDismissals.userId, userId));
       const s = d.settings;
       await tx.update(users).set({
         ...(s.theme ? { theme: s.theme } : {}),
@@ -187,7 +194,7 @@ export async function restoreBackup(userId: string, backup: Backup, mode: "repla
       }).where(eq(users.id, userId));
     }
 
-    const counts: RestoreCounts = { categories: 0, categoryRules: 0, transactions: 0, savingsGoals: 0, savingsDeposits: 0, skippedTransactions: 0 };
+    const counts: RestoreCounts = { categories: 0, categoryRules: 0, transactions: 0, savingsGoals: 0, savingsDeposits: 0, subscriptionDismissals: 0, skippedTransactions: 0 };
 
     // Categories: backup id -> id in this account
     const catMap = new Map<string, string>();
@@ -265,6 +272,14 @@ export async function restoreBackup(userId: string, backup: Backup, mode: "repla
     for (const part of chunks(deposits)) {
       await tx.insert(savingsDeposits).values(part);
       counts.savingsDeposits += part.length;
+    }
+
+    // Hidden subscription suggestions; one already hidden stays as is
+    const keys = [...new Set(d.subscriptionDismissals)].map(patternKey => ({ userId, patternKey }));
+    for (const part of chunks(keys)) {
+      const inserted = await tx.insert(subscriptionDismissals).values(part).onConflictDoNothing()
+        .returning({ key: subscriptionDismissals.patternKey });
+      counts.subscriptionDismissals += inserted.length;
     }
 
     return counts;
