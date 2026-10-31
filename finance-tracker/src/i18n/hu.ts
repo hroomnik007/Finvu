@@ -720,6 +720,8 @@ export const hu: Translations = {
     loadFailed: 'Nem sikerült betölteni az adatokat.',
     loadFailedHint: 'Ellenőrizd a kapcsolatot, és próbáld újra.',
     retry: 'Újrapróbálás',
+    deletedItem: 'Törölve',
+    deleteItemFailed: 'Nem sikerült törölni. A tétel megmaradt.',
     notSet: 'Nincs beállítva',
     unknownDevice: 'Ismeretlen eszköz',
     prevYear: 'Előző év',

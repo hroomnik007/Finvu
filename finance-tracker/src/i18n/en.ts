@@ -720,6 +720,8 @@ export const en: Translations = {
     loadFailed: "Couldn't load your data.",
     loadFailedHint: 'Check your connection and try again.',
     retry: 'Try again',
+    deletedItem: 'Deleted',
+    deleteItemFailed: "Couldn't delete. The item was kept.",
     notSet: 'Not set',
     unknownDevice: 'Unknown device',
     prevYear: 'Previous year',

@@ -720,6 +720,8 @@ export const pl: Translations = {
     loadFailed: 'Nie udało się wczytać danych.',
     loadFailedHint: 'Sprawdź połączenie i spróbuj ponownie.',
     retry: 'Spróbuj ponownie',
+    deletedItem: 'Usunięto',
+    deleteItemFailed: 'Nie udało się usunąć. Pozycja została zachowana.',
     notSet: 'Nie ustawiono',
     unknownDevice: 'Nieznane urządzenie',
     prevYear: 'Poprzedni rok',

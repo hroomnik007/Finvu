@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
+import { usePendingDeleteIds } from './useUndoableDelete'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTransaction, updateTransaction, deleteTransaction } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
@@ -42,11 +43,18 @@ export function useVariableExpenses(month?: number, year?: number, scope: DataSc
   const { user } = useAuth()
   const qc = useQueryClient()
 
-  const { data: variableExpenses = [], isLoading, isError, refetch } = useQuery({
+  const { data: variableExpensesAll, isLoading, isError, refetch } = useQuery({
     queryKey: variableExpenseQueryKey(month, year, scope),
     queryFn: () => fetchVariableExpenses(month, year, scope),
     enabled: !!user,
   })
+  // Rows waiting in the delete-undo window are hidden (lib/pendingDelete).
+  const hidden = usePendingDeleteIds()
+  const variableExpenses = useMemo(
+    () => (variableExpensesAll ?? []).filter(r => !r.id || !hidden.has(r.id)),
+    [variableExpensesAll, hidden],
+  )
+
 
   const invalidate = useCallback(() => Promise.all([
     qc.invalidateQueries({ queryKey: ['variableExpenses'] }),

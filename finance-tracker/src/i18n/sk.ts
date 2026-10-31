@@ -718,6 +718,8 @@ export const sk = {
     loadFailed: 'Nepodarilo sa načítať údaje.',
     loadFailedHint: 'Skontroluj pripojenie a skús to znova.',
     retry: 'Skúsiť znova',
+    deletedItem: 'Zmazané',
+    deleteItemFailed: 'Nepodarilo sa zmazať. Položka zostala uložená.',
     notSet: 'Nenastavené',
     unknownDevice: 'Neznáme zariadenie',
     prevYear: 'Predchádzajúci rok',

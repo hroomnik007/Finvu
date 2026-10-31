@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
+import { usePendingDeleteIds } from './useUndoableDelete'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
@@ -88,11 +89,18 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
   const qc = useQueryClient()
   const qKey = incomeQueryKey(month, year, user?.tracking_start_date, scope)
 
-  const { data: incomes = [], isLoading, isError, refetch } = useQuery({
+  const { data: incomesAll, isLoading, isError, refetch } = useQuery({
     queryKey: qKey,
     queryFn: () => fetchIncomes(month, year, user?.tracking_start_date, scope),
     enabled: !!user,
   })
+  // Rows waiting in the delete-undo window are hidden (lib/pendingDelete).
+  const hidden = usePendingDeleteIds()
+  const incomes = useMemo(
+    () => (incomesAll ?? []).filter(r => !r.id || !hidden.has(r.id)),
+    [incomesAll, hidden],
+  )
+
 
   const invalidate = useCallback(() => Promise.all([
     qc.invalidateQueries({ queryKey: ['incomes'] }),

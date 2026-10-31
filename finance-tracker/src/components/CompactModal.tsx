@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { X, Check, FileUp, Loader2 } from 'lucide-react'
+import { X, Check, FileUp, Loader2, Trash2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
@@ -24,11 +24,13 @@ interface CompactModalProps {
   maxWidth?: number
   /** Focus the first amount field when the modal opens (add forms). */
   autoFocusAmount?: boolean
+  /** Shows a visible "Zmazať" button next to save (edit forms). */
+  onDelete?: () => void
 }
 
 export function CompactModal({
   open, onClose, icon: Icon, iconColor, iconBg, title,
-  accent, accent2, onSubmit, submitDisabled, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount,
+  accent, accent2, onSubmit, submitDisabled, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount, onDelete,
 }: CompactModalProps) {
   const { t } = useTranslation()
   const guard = useSubmitGuard()
@@ -136,7 +138,23 @@ export function CompactModal({
           {children}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: onDelete ? 'space-between' : 'flex-end', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={busy}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 44, padding: '0 14px',
+                borderRadius: 14, background: 'rgba(251,113,133,.10)', border: '1px solid rgba(251,113,133,.35)',
+                color: 'var(--aurora-rose, #FB7185)', fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 700,
+                cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1,
+              }}
+            >
+              <Trash2 size={15} strokeWidth={2.2} aria-hidden />
+              {t.common.delete}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleSubmit}

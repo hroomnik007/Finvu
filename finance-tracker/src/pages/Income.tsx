@@ -16,6 +16,7 @@ import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '..
 import type { Translations } from '../i18n'
 import { todayISO } from '../utils/format'
 import { defaultEntryDate } from '../utils/entryDefaults'
+import { useUndoableDelete } from '../hooks/useUndoableDelete'
 import { getAllTransactions } from '../api/allTransactions'
 import type { Income } from '../types'
 import { SwipeableRow } from '../components/SwipeableRow'
@@ -152,6 +153,17 @@ export function IncomePage({ month, year }: IncomePageProps) {
     }
   }
 
+  // One-time income: delayed delete with "Späť". A recurring one is a whole
+  // series on the server, so it keeps the explicit confirmation instead.
+  const undoableDelete = useUndoableDelete()
+  const requestDelete = (income: Income) => {
+    if (!income.id) return
+    if (income.recurring) { setConfirmId(income.id); return }
+    setOpenSwipeId(null)
+    const id = income.id
+    undoableDelete(id, () => deleteIncome(id))
+  }
+
   const handleDelete = async () => {
     if (confirmId !== null) { await deleteIncome(confirmId); setConfirmId(null) }
   }
@@ -257,7 +269,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {items.map(income => (
-                        <SwipeableRow key={income.id} onDelete={() => setConfirmId(income.id!)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
+                        <SwipeableRow key={income.id} onDelete={() => requestDelete(income)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
                           <GlassCard radius={18} onClick={() => openEdit(income)} style={{ cursor: 'pointer' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                               <div style={{ width: 38, height: 38, borderRadius: 13, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -316,7 +328,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', marginRight: 8 }}>+{formatAmount(income.amount)}</span>
                               <button onClick={() => openEdit(income)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
-                              <button onClick={() => setConfirmId(income.id!)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
+                              <button onClick={() => requestDelete(income)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
                             </div>
                           </div>
                         </GlassCard>
@@ -352,6 +364,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
         accent="#34D399" accent2="#22D3EE"
         onSubmit={handleSave}
         autoFocusAmount={!editing}
+        onDelete={editing?.id ? () => { const inc = editing; setSheetOpen(false); requestDelete(inc) } : undefined}
         submitDisabled={!form.label.trim() || !form.amount}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >

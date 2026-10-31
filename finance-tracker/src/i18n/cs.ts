@@ -720,6 +720,8 @@ export const cs: Translations = {
     loadFailed: 'Nepodařilo se načíst data.',
     loadFailedHint: 'Zkontroluj připojení a zkus to znovu.',
     retry: 'Zkusit znovu',
+    deletedItem: 'Smazáno',
+    deleteItemFailed: 'Nepodařilo se smazat. Položka zůstala uložená.',
     notSet: 'Nenastaveno',
     unknownDevice: 'Neznámé zařízení',
     prevYear: 'Předchozí rok',

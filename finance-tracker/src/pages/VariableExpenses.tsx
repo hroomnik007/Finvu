@@ -22,6 +22,7 @@ import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
 import { defaultEntryDate } from '../utils/entryDefaults'
 import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
+import { useUndoableDelete } from '../hooks/useUndoableDelete'
 import type { VariableExpense, BudgetStatus } from '../types'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
@@ -99,7 +100,6 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<VariableExpense | null>(null)
   const [form, setForm] = useState<VarForm>(() => emptyForm(month, year))
-  const [confirmId, setConfirmId] = useState<string | null>(null)
   const [newCatMode, setNewCatMode] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [csvOpen, setCsvOpen] = useState(false)
@@ -182,6 +182,13 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
     setForm({ amount: formatAmountInput(e.amount, decimalSeparator(locale)), categoryId: String(e.categoryId), note: e.note, date: e.date })
     setNewCatMode(false)
     setSheetOpen(true)
+  }
+
+  // Single delete = delayed delete with a 5 s "Späť" (lib/pendingDelete), no confirm.
+  const undoableDelete = useUndoableDelete()
+  const removeWithUndo = (id: string) => {
+    setOpenSwipeId(null)
+    undoableDelete(id, () => deleteVariableExpense(id))
   }
 
   const handleSave = async () => {
@@ -357,7 +364,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                         const name = e.note || cat?.name || t.expenses.variable.defaultExpense
                         const subtitle = e.note ? `${cat?.name ?? '—'} · ${formatDate(e.date)}` : formatDate(e.date)
                         return (
-                          <SwipeableRow key={e.id} onDelete={() => setConfirmId(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
+                          <SwipeableRow key={e.id} onDelete={() => removeWithUndo(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
                             <GlassCard radius={18} onClick={() => rowClick(e)} style={{ cursor: 'pointer', outline: selectedIds.has(e.id!) ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <div style={{ width: 38, height: 38, borderRadius: 13, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -417,8 +424,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
                               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>-{formatAmount(e.amount)}</span>
-                              {!selectMode && <button onClick={() => openEdit(e)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
-                              {!selectMode && <button onClick={() => setConfirmId(e.id!)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
+                              {!selectMode && <button onClick={() => openEdit(e)} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
+                              {!selectMode && <button onClick={() => removeWithUndo(e.id!)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
                             </div>
                           </div>
                         </GlassCard>
@@ -473,7 +480,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
       </div>
 
       {/* FAB — mobile only */}
-      {!sheetOpen && confirmId === null && !selectMode && (
+      {!sheetOpen && !selectMode && (
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
@@ -491,6 +498,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         accent="#FB7185" accent2="#f43f5e"
         onSubmit={handleSave}
         autoFocusAmount={!editing}
+        onDelete={editing?.id ? () => { const id = editing.id!; setSheetOpen(false); removeWithUndo(id) } : undefined}
         submitDisabled={newCatMode ? !newCatName.trim() || !form.amount : !form.categoryId || !form.amount}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
@@ -614,12 +622,6 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         onCancel={() => setBulkDeleteOpen(false)}
       />
 
-      <ConfirmDialog
-        open={confirmId !== null}
-        message={t.expenses.variable.deleteConfirm}
-        onConfirm={async () => { if (confirmId !== null) { await deleteVariableExpense(confirmId); setConfirmId(null) } }}
-        onCancel={() => { setConfirmId(null); setOpenSwipeId(null) }}
-      />
     </div>
   )
 }

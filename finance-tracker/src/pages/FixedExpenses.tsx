@@ -672,6 +672,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={handleSave}
         autoFocusAmount={!editing}
+        onDelete={editing?.id ? () => { const id = editing.id!; closeSheet(); setDeleteId(id) } : undefined}
         submitDisabled={!label.trim() || !amount}
         onImportCsv={editing ? undefined : () => { closeSheet(); setTimeout(() => setCsvOpen(true), 150) }}
       >

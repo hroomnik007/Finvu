@@ -1,3 +1,4 @@
+import { flushPendingDeletes, resetPendingDeletes } from '../lib/pendingDelete'
 import {
   createContext,
   useContext,
@@ -70,6 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isGuest, setIsGuest] = useState(false)
 
   const doLogout = useCallback(async (callApi = true) => {
+    // Deletes still inside their undo window go out while the session is valid.
+    if (callApi) await flushPendingDeletes().catch(() => {})
+    else resetPendingDeletes()
     try {
       if (callApi && !isGuest) await apiLogout()
     } catch { /* ignore */ }

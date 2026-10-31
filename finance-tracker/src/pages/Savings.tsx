@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Plus, PiggyBank, Target } from 'lucide-react'
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
@@ -218,11 +219,16 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
     }
   }, [formName, formTarget, formSaved, formDeadline, formIcon, formColor, formNote, selectedGoal, addGoal, updateGoal, feedback])
 
-  const handleDelete = useCallback(async (goal: SavingsGoal) => {
-    if (!goal.id) return
-    if (!window.confirm(t.savings.deleteConfirm)) return
+  // Deleting a goal removes its deposits too, so it asks first (Finvu dialog,
+  // not window.confirm). No undo: the server can't restore the deposits.
+  const [goalToDelete, setGoalToDelete] = useState<SavingsGoal | null>(null)
+  const confirmDeleteGoal = useCallback(async () => {
+    const goal = goalToDelete
+    if (!goal?.id) return
     await deleteGoal(goal.id)
-  }, [deleteGoal, t.savings.deleteConfirm])
+    setGoalToDelete(null)
+    if (selectedGoal?.id === goal.id) { setSelectedGoal(null); setView('list'); window.location.hash = 'savings' }
+  }, [goalToDelete, deleteGoal, selectedGoal])
 
   const handlePause = useCallback(async () => {
     if (!selectedGoal?.id) return
@@ -407,7 +413,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
             {/* Mobile: vertical list with swipe-to-delete */}
             <div className="flex flex-col gap-4 lg:hidden">
               {goals.map(goal => (
-                <SwipeableRow key={goal.id} onDelete={() => deleteGoal(goal.id!)}>
+                <SwipeableRow key={goal.id} onDelete={() => setGoalToDelete(goal)}>
                   <GoalCard
                     goal={goal}
                     formatAmount={formatAmount}
@@ -453,12 +459,20 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         </button>
       )}
 
+      <ConfirmDialog
+        open={goalToDelete !== null}
+        message={t.savings.deleteConfirm}
+        detail={goalToDelete?.name}
+        onConfirm={confirmDeleteGoal}
+        onCancel={() => setGoalToDelete(null)}
+      />
+
       <SavingsDetailModal
         goal={view === 'detail' ? selectedGoal : null}
         deposits={deposits}
         onClose={closeDetail}
         onEdit={() => { if (selectedGoal) openEdit(selectedGoal) }}
-        onDelete={selectedGoal ? async () => { await handleDelete(selectedGoal); closeDetail() } : undefined}
+        onDelete={selectedGoal ? () => setGoalToDelete(selectedGoal) : undefined}
         onDeposit={handleDeposit}
         onDeleteDeposit={handleDeleteDeposit}
         onPause={handlePause}
