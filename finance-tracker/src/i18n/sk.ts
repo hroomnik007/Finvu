@@ -160,6 +160,7 @@ export const sk = {
       note: 'Poznámka',
       date: 'Dátum',
       notePlaceholder: 'Nepovinná poznámka...',
+      suggestedCategory: 'Navrhnutá kategória: {name}',
       noteLabelOptional: 'Poznámka (nepovinná)',
       selectCategory: '-- Vybrať kategóriu --',
       newCategory: '+ Nová kategória',

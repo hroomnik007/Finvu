@@ -18,6 +18,7 @@ import {
   getSummaryCards,
 } from "../controllers/transactions.controller";
 import { getMonthlySeries } from "../controllers/series.controller";
+import { suggestTransactionCategory } from "../controllers/categorySuggest.controller";
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.get("/summary",          getSummary);
 router.get("/balance-at-month", getBalanceAtMonth);
 router.get("/summary-cards",    getSummaryCards);
 router.get("/monthly-series",   getMonthlySeries);
+router.get("/suggest-category", suggestTransactionCategory);
 router.get("/",        listTransactions);
 router.post("/bulk",   idempotent, createTransactionsBulk);
 router.post("/duplicates", findDuplicateTransactions);

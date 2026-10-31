@@ -162,6 +162,7 @@ export const en: Translations = {
       note: 'Note',
       date: 'Date',
       notePlaceholder: 'Optional note...',
+      suggestedCategory: 'Suggested category: {name}',
       noteLabelOptional: 'Note (optional)',
       selectCategory: '-- Select category --',
       newCategory: '+ New category',

@@ -162,6 +162,7 @@ export const pl: Translations = {
       note: 'Notatka',
       date: 'Data',
       notePlaceholder: 'Opcjonalna notatka...',
+      suggestedCategory: 'Sugerowana kategoria: {name}',
       noteLabelOptional: 'Notatka (opcjonalna)',
       selectCategory: '-- Wybierz kategorię --',
       newCategory: '+ Nowa kategoria',

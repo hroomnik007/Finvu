@@ -162,6 +162,7 @@ export const cs: Translations = {
       note: 'Poznámka',
       date: 'Datum',
       notePlaceholder: 'Volitelná poznámka...',
+      suggestedCategory: 'Navržená kategorie: {name}',
       noteLabelOptional: 'Poznámka (volitelná)',
       selectCategory: '-- Vyber kategorii --',
       newCategory: '+ Nová kategorie',

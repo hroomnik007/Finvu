@@ -152,3 +152,19 @@ export async function getMonthlySeries(
   const { data } = await apiClient.get('/api/transactions/monthly-series', { params: { from, to, scope, detail } })
   return data
 }
+
+export interface CategorySuggestion {
+  categoryId: string
+  source: 'rule' | 'history'
+  matches?: number
+}
+
+/** Category for a typed description, from the user's rules or history (null = no idea). */
+export async function fetchCategorySuggestion(
+  q: string,
+  type: 'expense' | 'income' = 'expense',
+  signal?: AbortSignal,
+): Promise<CategorySuggestion | null> {
+  const { data } = await apiClient.get('/api/transactions/suggest-category', { params: { q, type }, signal })
+  return (data as { data: CategorySuggestion | null }).data
+}

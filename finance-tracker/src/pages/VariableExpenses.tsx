@@ -26,6 +26,8 @@ import { pluralCount } from '../utils/plural'
 import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import { defaultEntryDate } from '../utils/entryDefaults'
 import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
+import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
+import { SuggestedCategoryHint } from '../components/SuggestedCategoryHint'
 import { useUndoableDelete } from '../hooks/useUndoableDelete'
 import type { VariableExpense, BudgetStatus } from '../types'
 import { SwipeableRow } from '../components/SwipeableRow'
@@ -109,6 +111,13 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const [csvOpen, setCsvOpen] = useState(false)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
+  const suggestion = useCategorySuggestion({
+    text: form.note,
+    active: sheetOpen && !editing && !newCatMode,
+    currentId: form.categoryId,
+    validIds: quickCategories.map(c => c.id ?? ''),
+    select: id => setForm(f => ({ ...f, categoryId: id })),
+  })
 
   // Bulk edit: in selection mode a tap on a row toggles it instead of opening the editor
   const qc = useQueryClient()
@@ -522,7 +531,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 label={c.name}
                 selected={form.categoryId === c.id}
                 accent={c.color}
-                onClick={() => setForm(f => ({ ...f, categoryId: c.id ?? '' }))}
+                onClick={() => { suggestion.pickedManually(); setForm(f => ({ ...f, categoryId: c.id ?? '' })) }}
               />
             ))}
             <CategoryCircle
@@ -560,6 +569,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
             style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '8px 12px', color: 'var(--aurora-hi)', fontSize: 12, fontFamily: "'Manrope', sans-serif", outline: 'none', minWidth: 100 }}
           />
         </div>
+        <SuggestedCategoryHint name={quickCategories.find(c => c.id === suggestion.suggestedId)?.name} />
       </CompactModal>
 
       {selectMode && (

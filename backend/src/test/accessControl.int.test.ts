@@ -124,7 +124,7 @@ const goalRow = (id: string) => row(db.select().from(savingsGoals).where(eq(savi
 
 describe("unauthenticated requests", () => {
   const protectedRoutes: [string, string][] = [
-    ["GET", "/api/transactions"], ["POST", "/api/transactions"], ["PUT", "/api/transactions/00000000-0000-0000-0000-000000000000"],
+    ["GET", "/api/transactions"], ["POST", "/api/transactions"], ["GET", "/api/transactions/suggest-category?q=obed"], ["PUT", "/api/transactions/00000000-0000-0000-0000-000000000000"],
     ["DELETE", "/api/transactions/00000000-0000-0000-0000-000000000000"], ["GET", `/api/transactions/summary?month=${MONTH}`],
     ["GET", "/api/categories"], ["DELETE", "/api/categories"], ["GET", "/api/category-rules"],
     ["GET", "/api/savings"], ["GET", "/api/households/me"], ["GET", "/api/households/1/members"],

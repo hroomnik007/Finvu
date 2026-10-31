@@ -20,6 +20,8 @@ import { dateForRecurringToggle, defaultEntryDate } from '../utils/entryDefaults
 import { ValidFromHint } from './ValidFromHint'
 import { todayISO } from '../utils/format'
 import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
+import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
+import { SuggestedCategoryHint } from './SuggestedCategoryHint'
 import AmountInput from './AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
 
@@ -168,6 +170,18 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   const [fixAmt, setFixAmt] = useState('')
   const [fixDay, setFixDay] = useState('1')
   const [fixCatId, setFixCatId] = useState('')
+
+  // ── Category suggestions from the typed note / label ──────────────────────
+  const quickIds = quickCategories.map(c => c.id ?? '')
+  const varSuggestion = useCategorySuggestion({
+    text: varNote, active: activeModal === 'variable' && !varNewCatMode,
+    currentId: varCatId, validIds: quickIds, select: setVarCatId,
+  })
+  const fixSuggestion = useCategorySuggestion({
+    text: fixLabel, active: activeModal === 'fixed',
+    currentId: fixCatId, validIds: quickIds, select: setFixCatId,
+  })
+  const categoryName = (id: string | null) => (id ? quickCategories.find(c => c.id === id)?.name : undefined)
 
   // ── Category form state ───────────────────────────────────────────────────
   const [catName, setCatName] = useState('')
@@ -466,7 +480,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
                 label={c.name}
                 selected={varCatId === c.id}
                 accent={c.color} accent2={c.color}
-                onClick={() => setVarCatId(c.id ?? '')}
+                onClick={() => { varSuggestion.pickedManually(); setVarCatId(c.id ?? '') }}
               />
             ))}
             <CategoryCircle
@@ -502,6 +516,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
             style={{ ...finputStyle, flex: 1, width: 'auto', padding: '8px 12px', borderRadius: 12, fontSize: 12 }}
           />
         </div>
+        <SuggestedCategoryHint name={categoryName(varSuggestion.suggestedId)} />
       </CompactModal>
 
       {/* ── ADD FIXED EXPENSE modal ───────────────────────────────────────── */}
@@ -530,11 +545,12 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
                 label={c.name}
                 selected={fixCatId === c.id}
                 accent={c.color} accent2={c.color}
-                onClick={() => setFixCatId(prev => prev === c.id ? '' : (c.id ?? ''))}
+                onClick={() => { fixSuggestion.pickedManually(); setFixCatId(prev => prev === c.id ? '' : (c.id ?? '')) }}
               />
             ))}
           </div>
         )}
+        <SuggestedCategoryHint name={categoryName(fixSuggestion.suggestedId)} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
             <button

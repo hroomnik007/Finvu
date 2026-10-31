@@ -27,6 +27,8 @@ import AmountInput from '../components/AmountInput'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 import { ValidFromHint } from '../components/ValidFromHint'
 import { todayISO } from '../utils/format'
+import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
+import { SuggestedCategoryHint } from '../components/SuggestedCategoryHint'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -109,6 +111,14 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const [amount, setAmount] = useState('')
   const [dayOfMonth, setDayOfMonth] = useState('1')
   const [categoryId, setCategoryId] = useState<string>('')
+  const suggestion = useCategorySuggestion({
+    text: label,
+    active: sheetOpen && !editing,
+    currentId: categoryId,
+    validIds: expenseCategories.map(c => c.id ?? ''),
+    select: setCategoryId,
+    defaultId: expenseCategories[0]?.id,
+  })
   const [note, setNote] = useState('')
   // Editing an existing item: a changed amount is a price change from `priceFrom`
   // (YYYY-MM) unless it is ticked as a correction of a typo
@@ -704,11 +714,12 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                 label={c.name}
                 selected={categoryId === c.id}
                 accent={c.color}
-                onClick={() => setCategoryId(prev => prev === c.id ? '' : (c.id ?? ''))}
+                onClick={() => { suggestion.pickedManually(); setCategoryId(prev => prev === c.id ? '' : (c.id ?? '')) }}
               />
             ))}
           </div>
         )}
+        <SuggestedCategoryHint name={expenseCategories.find(c => c.id === suggestion.suggestedId)?.name} />
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>

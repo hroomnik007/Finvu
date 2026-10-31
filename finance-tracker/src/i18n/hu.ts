@@ -162,6 +162,7 @@ export const hu: Translations = {
       note: 'Megjegyzés',
       date: 'Dátum',
       notePlaceholder: 'Opcionális megjegyzés...',
+      suggestedCategory: 'Javasolt kategória: {name}',
       noteLabelOptional: 'Megjegyzés (opcionális)',
       selectCategory: '-- Válasszon kategóriát --',
       newCategory: '+ Új kategória',
