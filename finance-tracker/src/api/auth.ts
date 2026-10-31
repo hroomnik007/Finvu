@@ -1,7 +1,6 @@
 import { apiClient, refreshAccessToken } from './client'
 import { announceAchievementUnlocks } from '../utils/achievementEvents'
 import type { AuthUser, UserSession } from '../types'
-import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 
 export async function login(email: string, password: string): Promise<{ user: AuthUser; accessToken: string }> {
   const { data } = await apiClient.post('/api/auth/login', { email, password })
@@ -163,20 +162,8 @@ export async function deletePinDevice(id: string): Promise<void> {
   await apiClient.delete(`/api/auth/pin-devices/${id}`)
 }
 
-export async function webauthnRegisterOptions(
-  creds: { currentPassword?: string; currentPin?: string } = {},
-): Promise<PublicKeyCredentialCreationOptionsJSON> {
-  const { data } = await apiClient.post('/api/auth/webauthn/register-options', creds)
-  return data
-}
-
 export async function webauthnRegisterVerify(body: object): Promise<{ success: boolean }> {
   const { data } = await apiClient.post('/api/auth/webauthn/register-verify', body)
-  return data
-}
-
-export async function webauthnAuthenticateOptions(email?: string): Promise<object> {
-  const { data } = await apiClient.get('/api/auth/webauthn/authenticate-options', { params: email ? { email } : {} })
   return data
 }
 

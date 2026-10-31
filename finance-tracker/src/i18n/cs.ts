@@ -487,6 +487,8 @@ export const cs: Translations = {
     passkeyDeleteConfirm: 'Opravdu odebrat tento passkey? Už se jím nebudete moci přihlásit.',
     passkeyCreated: 'Vytvořen',
     passkeySynced: 'Synchronizován',
+    passkeyCancelled: 'Přidání passkey bylo zrušeno.',
+    passkeyExists: 'Tento passkey už máte přidaný.',
     pinDevicesSubtitle: 'Zařízení s nastaveným PIN přístupem',
     pinDeviceRevoke: 'Odvolat přístup',
     pinDeviceCurrentBadge: 'TOTO ZAŘÍZENÍ',

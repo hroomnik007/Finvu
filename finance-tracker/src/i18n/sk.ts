@@ -485,6 +485,8 @@ export const sk = {
     passkeyDeleteConfirm: 'Naozaj odstrániť tento passkey? Týmto zariadením sa už nebudete môcť prihlásiť.',
     passkeyCreated: 'Vytvorený',
     passkeySynced: 'Synchronizovaný',
+    passkeyCancelled: 'Pridanie passkey bolo zrušené.',
+    passkeyExists: 'Tento passkey už máte pridaný.',
     pinDevicesSubtitle: 'Zariadenia s nastaveným PIN prístupom',
     pinDeviceRevoke: 'Odvolať prístup',
     pinDeviceCurrentBadge: 'TOTO ZARIADENIE',

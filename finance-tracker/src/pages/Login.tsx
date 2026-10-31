@@ -3,8 +3,10 @@ import { Eye, EyeOff, ArrowRight, X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
-import { getPinDeviceStatus, resendVerification, webauthnAuthenticateOptions, webauthnAuthenticateVerify } from '../api/auth'
-import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
+import { getPinDeviceStatus, resendVerification, webauthnAuthenticateVerify } from '../api/auth'
+import { startAuthentication } from '@simplewebauthn/browser'
+import { ceremonyErrorKind, fetchLoginOptions, PREFETCH_MAX_AGE_MS } from '../lib/webauthnCeremony'
+import type { LoginOptions } from '../lib/webauthnCeremony'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
 import { PinKeypad } from '../components/PinKeypad'
@@ -43,6 +45,9 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   // have an account or which sign-in methods they use.
   const [pinOnThisDevice, setPinOnThisDevice] = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
+  // Usernameless login options fetched ahead of the tap (see lib/webauthnCeremony):
+  // with them ready the tap goes straight into navigator.credentials.get().
+  const loginOptionsRef = useRef<{ options: LoginOptions; at: number } | null>(null)
   const lastPinTapRef = useRef(0)
 
   useEffect(() => {
@@ -95,21 +100,44 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
     }
   }
 
-  // Passkey sign-in: with an e-mail the server restricts the prompt to that
-  // user's credentials, without one the browser offers its discoverable passkeys.
+  // Prefetch on mount and keep it fresh: the server keeps a challenge for 5
+  // minutes, a prefetched one is only used for 4. Options are usernameless
+  // (no e-mail sent), so prefetching reveals nothing and works for any account.
+  const prefetchLoginOptions = useCallback(async () => {
+    try {
+      loginOptionsRef.current = { options: await fetchLoginOptions(), at: Date.now() }
+    } catch {
+      loginOptionsRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!('PublicKeyCredential' in window)) return
+    void prefetchLoginOptions()
+    const id = setInterval(() => void prefetchLoginOptions(), PREFETCH_MAX_AGE_MS)
+    return () => clearInterval(id)
+  }, [prefetchLoginOptions])
+
+  // Passkey sign-in is usernameless: every passkey is a discoverable credential
+  // (residentKey 'required'), so the browser offers the passkeys it holds for
+  // finvu.pedani.eu and the typed e-mail, if any, is not needed.
   const handlePasskeyLogin = async () => {
     setError(null)
     setNeedsVerification(false)
     setPasskeyLoading(true)
+    const cached = loginOptionsRef.current
+    loginOptionsRef.current = null // a challenge is single-use
     try {
-      const { startAuthentication } = await import('@simplewebauthn/browser')
-      const options = await webauthnAuthenticateOptions(email.includes('@') ? email : undefined) as { _challengeKey: string }
-      const assertion = await startAuthentication({ optionsJSON: options as unknown as PublicKeyCredentialRequestOptionsJSON })
+      const options = cached && Date.now() - cached.at < PREFETCH_MAX_AGE_MS
+        ? cached.options
+        : await fetchLoginOptions() // one native fetch is still fine for old Safari
+      const assertion = await startAuthentication({ optionsJSON: options })
       const { user: me, accessToken, sessionId } = await webauthnAuthenticateVerify({ ...assertion, _challengeKey: options._challengeKey })
       loginWithToken(me, accessToken, sessionId)
     } catch (err: unknown) {
+      void prefetchLoginOptions()
       // The user dismissing the browser prompt is not an error worth showing
-      if ((err as { name?: string })?.name === 'NotAllowedError') return
+      if (ceremonyErrorKind(err) === 'cancelled') return
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(msg ?? t.auth.passkeyFailed)
     } finally {

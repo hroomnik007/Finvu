@@ -4,8 +4,10 @@ import { formatDateLocale } from '../utils/format'
 import { useAuth } from '../context/AuthContext'
 import { ConfirmDialog } from './ConfirmDialog'
 import { GlassCard } from './GlassCard'
-import { deletePasskey, getPasskeys, webauthnRegisterOptions, webauthnRegisterVerify } from '../api/auth'
+import { startRegistration } from '@simplewebauthn/browser'
+import { deletePasskey, getPasskeys, webauthnRegisterVerify } from '../api/auth'
 import type { PasskeyInfo } from '../api/auth'
+import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
 
 const labelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', margin: '0 0 6px' } as const
 const textStyle = { fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 } as const
@@ -43,8 +45,10 @@ export function PasskeySection() {
     setBusy(true)
     setError(null)
     try {
-      const { startRegistration } = await import('@simplewebauthn/browser')
-      const options = await webauthnRegisterOptions(
+      // Tap -> one native fetch -> create(): keeps old Safari's user activation
+      // (see lib/webauthnCeremony). The options can't be prefetched: they need
+      // the password/PIN typed just now.
+      const options = await fetchRegisterOptions(
         reauthFactor === 'password' ? { currentPassword: secret }
           : reauthFactor === 'pin' ? { currentPin: secret }
           : {},
@@ -56,7 +60,10 @@ export function PasskeySection() {
       await load()
     } catch (e: unknown) {
       const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setError(serverMsg ?? (e as Error)?.message ?? t.auth.registerFailed)
+      const kind = serverMsg ? 'other' : ceremonyErrorKind(e)
+      setError(kind === 'cancelled' ? t.settings.passkeyCancelled
+        : kind === 'exists' ? t.settings.passkeyExists
+        : serverMsg ?? t.auth.registerFailed)
     } finally {
       setBusy(false)
     }

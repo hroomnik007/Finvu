@@ -3,7 +3,9 @@ import { X, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { usePinLock } from '../hooks/usePinLock'
 import { PinSetupModal } from './PinSetupModal'
-import { webauthnRegisterOptions, webauthnRegisterVerify } from '../api/auth'
+import { startRegistration } from '@simplewebauthn/browser'
+import { webauthnRegisterVerify } from '../api/auth'
+import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
 import { useTranslation } from '../i18n'
 
 const STEP_EMOJIS = ['🎉', '💰', '📊', '🐷', '🏠', '⚙️', '🔐']
@@ -65,8 +67,8 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
     setWebauthnLoading(true)
     setWebauthnError(null)
     try {
-      const { startRegistration } = await import('@simplewebauthn/browser')
-      const options = await webauthnRegisterOptions(
+      // Tap -> one native fetch -> create() (see lib/webauthnCeremony).
+      const options = await fetchRegisterOptions(
         reauthFactor === 'password' ? { currentPassword: webauthnSecret }
           : reauthFactor === 'pin' ? { currentPin: webauthnSecret }
           : {},
@@ -77,7 +79,10 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
       setWebauthnSecret('')
     } catch (e: unknown) {
       const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setWebauthnError(serverMsg ?? (e as Error)?.message ?? t.auth.registerFailed)
+      const kind = serverMsg ? 'other' : ceremonyErrorKind(e)
+      setWebauthnError(kind === 'cancelled' ? t.settings.passkeyCancelled
+        : kind === 'exists' ? t.settings.passkeyExists
+        : serverMsg ?? t.auth.registerFailed)
     } finally {
       setWebauthnLoading(false)
     }

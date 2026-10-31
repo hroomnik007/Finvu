@@ -487,6 +487,8 @@ export const hu: Translations = {
     passkeyDeleteConfirm: 'Biztosan eltávolítja ezt a passkey-t? Többé nem fog tudni vele bejelentkezni.',
     passkeyCreated: 'Létrehozva',
     passkeySynced: 'Szinkronizálva',
+    passkeyCancelled: 'A passkey hozzáadása megszakadt.',
+    passkeyExists: 'Ez a passkey már hozzá van adva.',
     pinDevicesSubtitle: 'PIN-hozzáféréssel rendelkező eszközök',
     pinDeviceRevoke: 'Hozzáférés visszavonása',
     pinDeviceCurrentBadge: 'EZ AZ ESZKÖZ',

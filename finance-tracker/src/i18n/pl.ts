@@ -487,6 +487,8 @@ export const pl: Translations = {
     passkeyDeleteConfirm: 'Na pewno usunąć ten passkey? Nie będzie można się nim już logować.',
     passkeyCreated: 'Utworzono',
     passkeySynced: 'Zsynchronizowany',
+    passkeyCancelled: 'Dodawanie passkey zostało anulowane.',
+    passkeyExists: 'Ten passkey jest już dodany.',
     pinDevicesSubtitle: 'Urządzenia z ustawionym dostępem PIN',
     pinDeviceRevoke: 'Odwołaj dostęp',
     pinDeviceCurrentBadge: 'TO URZĄDZENIE',
