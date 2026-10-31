@@ -6,7 +6,7 @@
 // Here we build a real PDF file with jsPDF instead — everything (jsPDF, the
 // embedded Unicode font, the logo raster) is lazy-loaded so the main bundle
 // stays small, exactly like the pdfjs-dist / xlsx import-on-demand pattern.
-import { formatCurrency } from '../utils/format'
+import { formatMoney, formatDateLocale } from '../utils/format'
 
 export interface PdfExportTransaction {
   date: string
@@ -23,6 +23,17 @@ export interface PdfExportOptions {
   incomeLabel: string // localized type label, e.g. "Príjem"
   expenseLabel: string
   fileName: string
+  locale: string      // active UI locale, e.g. "sk-SK"
+  currency: string    // user's currency, e.g. "EUR"
+  labels: {
+    date: string
+    type: string
+    category: string
+    note: string
+    amount: string
+    empty: string
+    generatedOn: string // contains "{date}"
+  }
 }
 
 // Brand violet accent used for headings + table header fill.
@@ -121,11 +132,11 @@ export async function generateTransactionsPdf(opts: PdfExportOptions): Promise<v
     doc.setFontSize(9)
     doc.setTextColor(255, 255, 255)
     const ty = y + headerH / 2 + 3
-    doc.text('Dátum', col.date + 8, ty)
-    doc.text('Typ', col.type + 4, ty)
-    doc.text('Kategória', col.cat + 4, ty)
-    doc.text('Poznámka', col.note + 4, ty)
-    doc.text('Suma', col.amountRight - 8, ty, { align: 'right' })
+    doc.text(opts.labels.date, col.date + 8, ty)
+    doc.text(opts.labels.type, col.type + 4, ty)
+    doc.text(opts.labels.category, col.cat + 4, ty)
+    doc.text(opts.labels.note, col.note + 4, ty)
+    doc.text(opts.labels.amount, col.amountRight - 8, ty, { align: 'right' })
     y += headerH + 4
   }
 
@@ -137,7 +148,7 @@ export async function generateTransactionsPdf(opts: PdfExportOptions): Promise<v
 
   if (opts.transactions.length === 0) {
     doc.setTextColor(...MUTED)
-    doc.text('Žiadne transakcie v zvolenom období.', M, y + 14)
+    doc.text(opts.labels.empty, M, y + 14)
     y += rowH
   }
 
@@ -155,7 +166,7 @@ export async function generateTransactionsPdf(opts: PdfExportOptions): Promise<v
     const baseY = y + 14
 
     doc.setTextColor(...INK)
-    doc.text(fit(formatDateShort(tx.date), col.type - col.date - 10), col.date + 8, baseY)
+    doc.text(fit(formatDateLocale(tx.date, opts.locale, { day: '2-digit', month: '2-digit', year: 'numeric' }), col.type - col.date - 10), col.date + 8, baseY)
 
     doc.setTextColor(...(isIncome ? GREEN : RED))
     doc.text(isIncome ? opts.incomeLabel : opts.expenseLabel, col.type + 4, baseY)
@@ -165,7 +176,7 @@ export async function generateTransactionsPdf(opts: PdfExportOptions): Promise<v
     doc.setTextColor(...MUTED)
     doc.text(fit(tx.description ?? '', col.amountLeft - col.note - 8), col.note + 4, baseY)
 
-    const amount = `${isIncome ? '+' : '−'}${formatCurrency(Math.abs(tx.amount))}`
+    const amount = `${isIncome ? '+' : '−'}${formatMoney(Math.abs(tx.amount), opts.locale, opts.currency)}`
     doc.setFont('Roboto', 'bold')
     doc.setTextColor(...(isIncome ? GREEN : RED))
     doc.text(amount, col.amountRight - 8, baseY, { align: 'right' })
@@ -181,22 +192,15 @@ export async function generateTransactionsPdf(opts: PdfExportOptions): Promise<v
 
   // ── Footer on every page (app-defined — no browser artifacts) ──
   const totalPages = doc.getNumberOfPages()
-  const generatedOn = new Date().toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' })
+  const generatedOn = formatDateLocale(new Date(), opts.locale)
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p)
     doc.setFont('Roboto', 'normal')
     doc.setFontSize(8)
     doc.setTextColor(...MUTED)
-    doc.text(`Vygenerované cez Finvu · ${generatedOn}`, M, pageH - 28)
+    doc.text(opts.labels.generatedOn.replace('{date}', generatedOn), M, pageH - 28)
     doc.text(`Strana ${p}/${totalPages}`, contentR, pageH - 28, { align: 'right' })
   }
 
   doc.save(opts.fileName)
-}
-
-function formatDateShort(dateStr: string): string {
-  // Keep the ISO date compact & unambiguous in the document (dd.mm.yyyy).
-  const [y, m, d] = dateStr.split('-')
-  if (!y || !m || !d) return dateStr
-  return `${d}.${m}.${y}`
 }

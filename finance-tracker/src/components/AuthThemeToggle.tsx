@@ -38,7 +38,7 @@ export function AuthThemeToggle() {
               width: 32, height: 32, borderRadius: 10, cursor: 'pointer',
               border: active ? '1px solid var(--aurora-violet)' : '1px solid transparent',
               background: active ? 'rgba(139,92,246,0.16)' : 'transparent',
-              color: active ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+              color: active ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)',
               transition: 'all 0.15s',
             }}
           >

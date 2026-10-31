@@ -702,7 +702,9 @@ async function cumulativeBalance(
     })
     .from(transactions)
     .where(and(baseFilter, eq(transactions.isFixed, true), lt(transactions.date, end)))
-    .orderBy(transactions.date);
+    // Same tie-break as the cards and the household stats: of two rows of one
+    // series on the same date, the later-created one wins.
+    .orderBy(transactions.date, transactions.createdAt, transactions.id);
 
   return cumulativeBalanceFromRows(oneOffByMonth, fixedRows, firstMonth, target, new Date());
 }
@@ -819,7 +821,7 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
       eq(transactions.isFixed, true),
       lt(transactions.date, monthEnd),
     ))
-    .orderBy(transactions.userId, transactions.description, sql`${transactions.date} DESC`);
+    .orderBy(transactions.userId, transactions.description, sql`${transactions.date} DESC`, sql`${transactions.createdAt} DESC`, sql`${transactions.id} DESC`);
 
   const recurringIncome = latestRecurringIncomeRows
     .filter(r => isActiveInMonth(r.endedOn, year, month))
@@ -845,7 +847,7 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
       eq(transactions.isFixed, true),
       lt(transactions.date, monthEnd),
     ))
-    .orderBy(transactions.userId, transactions.description, sql`${transactions.date} DESC`);
+    .orderBy(transactions.userId, transactions.description, sql`${transactions.date} DESC`, sql`${transactions.createdAt} DESC`, sql`${transactions.id} DESC`);
 
   // A fixed expense only becomes "spent" once its due day in the requested
   // month has actually arrived — mirrors the frontend's isFixedExpenseDue

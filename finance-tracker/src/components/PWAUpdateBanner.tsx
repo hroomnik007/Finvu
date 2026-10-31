@@ -31,7 +31,7 @@ export function PWAUpdateBanner() {
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 99999,
       background: 'var(--violet)', color: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: 12, padding: '10px 16px', fontSize: 14, fontWeight: 500,
+      gap: 12, padding: '10px 16px', paddingTop: 'calc(10px + var(--safe-top))', fontSize: 14, fontWeight: 500,
     }}>
       <span>{t.common.updateAvailable}</span>
       <button

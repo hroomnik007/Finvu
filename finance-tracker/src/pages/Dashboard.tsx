@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, CalendarRange, X, Tag, Target } from 'lucide-react'
+import { CalendarClock, CalendarRange, X, Tag, Target, LayoutTemplate } from 'lucide-react'
 import { ExpenseHeatmap } from '../components/ExpenseHeatmap'
 import { CategoryDonutCard } from '../components/CategoryDonutCard'
 import { ForecastCard } from '../components/ForecastCard'
@@ -81,9 +81,11 @@ interface DashboardProps {
   year: number
   onNavigate: (page: Page) => void
   dashView: 'personal' | 'family'
+  /** Present while a new account is offered a budget template (see App). */
+  budgetTemplateOffer?: { onOpen: () => void; onDismiss: () => void }
 }
 
-export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps) {
+export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOffer }: DashboardProps) {
   const [showTrackingModal, setShowTrackingModal] = useState(false)
   const [streakModalOpen, setStreakModalOpen] = useState(false)
   const [trackingDate, setTrackingDate] = useState(() => todayISO())
@@ -111,7 +113,7 @@ export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps)
     [budgetStatuses, allVariableExpenses]
   )
   const { goals: savingsGoals } = useSavings()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatAmountParts, formatLongDate } = useFormatters()
   const { t } = useTranslation()
   const { profileName } = useSettingsContext()
   const { user, refreshUser } = useAuth()
@@ -196,7 +198,7 @@ export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps)
     enabled: !!user,
   })
 
-  const todayStr = new Date().toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' })
+  const todayStr = formatLongDate(new Date())
 
   const now = new Date()
   const daysInMonth = new Date(year, month, 0).getDate()
@@ -208,9 +210,9 @@ export function Dashboard({ month, year, onNavigate, dashView }: DashboardProps)
   const challengeProgress = monthChallengeTarget > 0 ? Math.min(totalExpenses / monthChallengeTarget, 1) : 0
 
   function countdownBadge(daysUntil: number) {
-    if (daysUntil === 0) return { text: t.expenses.fixed.countdown.today, color: 'var(--aurora-violet)', bg: 'rgba(139,92,246,0.15)' }
+    if (daysUntil === 0) return { text: t.expenses.fixed.countdown.today, color: 'var(--aurora-violet-text)', bg: 'rgba(139,92,246,0.15)' }
     const text = t.expenses.fixed.countdown.days.replace('{n}', String(daysUntil))
-    if (daysUntil <= 3) return { text, color: 'var(--aurora-rose)', bg: 'rgba(251,113,133,0.15)' }
+    if (daysUntil <= 3) return { text, color: 'var(--aurora-rose)', bg: 'rgba(251,113,133,0.1)' }
     if (daysUntil <= 7) return { text, color: 'var(--aurora-amber)', bg: 'rgba(251,191,36,0.15)' }
     return { text, color: 'var(--aurora-emerald)', bg: 'rgba(52,211,153,0.15)' }
   }
@@ -225,7 +227,7 @@ const upcomingFixed = useMemo(() => {
 
   const motivationalMsg = (() => {
     if (totalIncome < 0.01) {
-      if (totalExpenses > 0) return { msg: t.dashboard.motivationalNoIncome, color: 'var(--aurora-violet)' }
+      if (totalExpenses > 0) return { msg: t.dashboard.motivationalNoIncome, color: 'var(--aurora-violet-text)' }
       return null
     }
     if (balance > 0 && balance > totalIncome * 0.3) {
@@ -234,7 +236,7 @@ const upcomingFixed = useMemo(() => {
       return { msg: t.dashboard.motivationalGood.replace('{pct}', String(pct)), color: 'var(--aurora-emerald)' }
     }
     if (balance < 0) return { msg: t.dashboard.motivationalBad, color: 'var(--aurora-rose)' }
-    if (totalExpenses > 0 && dailyAvgExpense < 20) return { msg: t.dashboard.motivationalAvg, color: 'var(--aurora-violet)' }
+    if (totalExpenses > 0 && dailyAvgExpense < 20) return { msg: t.dashboard.motivationalAvg, color: 'var(--aurora-violet-text)' }
     return null
   })()
 
@@ -293,7 +295,7 @@ const upcomingFixed = useMemo(() => {
         <StreakBadge count={user?.currentStreak ?? 0} size="lg" variant="aurora" onClick={() => setStreakModalOpen(true)} />
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-faint)', marginBottom: 4 }}>{t.dashboard.today}</p>
+        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-faint)', marginBottom: 4 }}>{t.dashboard.today}</p>
         <p style={{ fontSize: 13, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", margin: 0 }}>{todayStr}</p>
       </div>
     </div>
@@ -333,13 +335,14 @@ const upcomingFixed = useMemo(() => {
   // satisfy a strict === check and leave the gradient span permanently unmounted.
   const balanceSettled = Math.abs(animatedBalance - heroBalance) < 0.005
   const balanceSign = heroBalance >= 0 ? '+' : '−'
-  const balanceText = Math.floor(Math.abs(balanceSettled ? heroBalance : animatedBalance)).toLocaleString('sk-SK')
+  const balanceParts = formatAmountParts(Math.abs(balanceSettled ? heroBalance : animatedBalance))
+  const balanceText = balanceParts.main
   const balanceFontStyle = {
     fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
   } as const
   const heroSection = (
     <HeroCard variant="neutral">
-      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
         {t.dashboard.balance} · {t.months[month - 1]} {year}
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
@@ -357,7 +360,7 @@ const upcomingFixed = useMemo(() => {
           </span>
         )}
         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-          ,{String(Math.round((Math.abs(animatedBalance) % 1) * 100)).padStart(2, '0')}&nbsp;€
+          {balanceParts.rest}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
@@ -367,7 +370,7 @@ const upcomingFixed = useMemo(() => {
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--aurora-glass)' }}
           style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         >
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.income}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.income}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{formatAmount(animatedIncome)}</div>
         </div>
         <div
@@ -376,11 +379,11 @@ const upcomingFixed = useMemo(() => {
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--aurora-glass)' }}
           style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         >
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.expenses}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.expenses}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', lineHeight: 1.15, wordBreak: 'break-word' }}>{formatAmount(animatedExpenses)}</div>
         </div>
         <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.savingsRate}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.savingsRate}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{savRate}%</div>
         </div>
       </div>
@@ -431,7 +434,7 @@ const upcomingFixed = useMemo(() => {
           {upcomingFixed.length > 0 && !familyView && (
             <button
               onClick={() => onNavigate('fixed-expenses')}
-              style={{ fontSize: 11, fontWeight: 600, color: 'var(--aurora-cyan)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
+              style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-cyan)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
             >
               {t.dashboard.showAll} →
             </button>
@@ -453,7 +456,7 @@ const upcomingFixed = useMemo(() => {
                     <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{fe.label}</div>
                     {/* One non-wrapping row: the owner tag (family view) must never push the badge text or the card onto extra lines */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.text}</span>
+                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.text}</span>
                       {familyView && ownerOf(fe.ownerId) && (
                         // Avatar instead of a name tag: always fits, the name is in the tooltip
                         <span title={ownerOf(fe.ownerId)!.name} aria-label={ownerOf(fe.ownerId)!.name} style={{ display: 'flex', flexShrink: 0 }}>
@@ -498,7 +501,7 @@ const upcomingFixed = useMemo(() => {
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.noLimits}</p>
             <button
               onClick={() => onNavigate('categories')}
-              style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet)', background: 'rgba(139,92,246,.14)', border: '1px solid rgba(139,92,246,0.25)', padding: '4px 8px', borderRadius: 8, cursor: 'pointer' }}
+              style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)', background: 'rgba(139,92,246,.14)', border: '1px solid rgba(139,92,246,0.25)', padding: '4px 8px', borderRadius: 8, cursor: 'pointer' }}
             >
               {t.dashboard.setLimits}
             </button>
@@ -507,7 +510,7 @@ const upcomingFixed = useMemo(() => {
         {sortedBudgetStatuses.length > 0 && (
           <button
             onClick={() => onNavigate('categories')}
-            style={{ marginTop: 4, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet)', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}
+            style={{ marginTop: 4, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}
           >
             {t.dashboard.showMore}
           </button>
@@ -572,7 +575,7 @@ const upcomingFixed = useMemo(() => {
                       {(() => { const Icon = SAVINGS_ICON_MAP[goal.icon ?? ''] ?? Target; return <Icon size={13} color={goal.color ?? 'var(--aurora-violet)'} strokeWidth={1.8} style={{ flexShrink: 0 }} /> })()}
                       {goal.name}
                     </span>
-                    <span style={{ fontSize: 11, fontFamily: "'Outfit', sans-serif", color: 'var(--aurora-faint)', flexShrink: 0, marginLeft: 8 }}>{pctLabel}</span>
+                    <span style={{ fontSize: 12, fontFamily: "'Outfit', sans-serif", color: 'var(--aurora-faint)', flexShrink: 0, marginLeft: 8 }}>{pctLabel}</span>
                   </div>
                   <div style={{ height: 6, borderRadius: 99, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', borderRadius: 99, width: `${pct}%`, background: goal.color ?? 'var(--aurora-violet)', transition: 'width 0.4s' }} />
@@ -591,6 +594,50 @@ const upcomingFixed = useMemo(() => {
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
     <div style={{ padding: '20px' }} className="flex flex-col gap-4 lg:gap-0 pb-4 w-full">
 
+      {/* Budget template offer: non-blocking replacement for the old modal */}
+      {budgetTemplateOffer && (
+        <GlassCard radius={14} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, padding: '12px 16px',
+          background: 'rgba(139,92,246,0.1)',
+          border: '1px solid rgba(139,92,246,0.3)',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+            <LayoutTemplate size={18} strokeWidth={1.8} color="var(--aurora-violet)" style={{ flexShrink: 0 }} />
+            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.4 }}>
+              {t.budgetTemplate.bannerText}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={budgetTemplateOffer.onOpen}
+              style={{
+                padding: '6px 14px', borderRadius: 10,
+                background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white',
+                fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+              }}
+            >
+              {t.budgetTemplate.bannerCta}
+            </button>
+            <button
+              onClick={budgetTemplateOffer.onDismiss}
+              style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: 'transparent', border: '1px solid var(--aurora-gline)',
+                color: 'var(--aurora-faint)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}
+              title={t.budgetTemplate.bannerDismiss}
+              aria-label={t.budgetTemplate.bannerDismiss}
+            >
+              <X size={14} strokeWidth={2} />
+            </button>
+          </div>
+        </GlassCard>
+      )}
+
       {/* Tracking start date banner */}
       {showTrackingBanner && (
         <GlassCard radius={14} style={{
@@ -603,7 +650,7 @@ const upcomingFixed = useMemo(() => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
             <CalendarClock size={18} strokeWidth={1.8} color="var(--aurora-violet)" style={{ flexShrink: 0 }} />
             <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.4 }}>
-              Nastav počiatočný dátum sledovania financií
+              {t.dashboard.trackingBannerText}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -615,7 +662,7 @@ const upcomingFixed = useMemo(() => {
                 fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
               }}
             >
-              Nastaviť
+              {t.settings.setup}
             </button>
             <button
               onClick={handleDismissBanner}
@@ -626,7 +673,8 @@ const upcomingFixed = useMemo(() => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
               }}
-              title="Zavrieť natrvalo"
+              title={t.common.closePermanently}
+              aria-label={t.common.closePermanently}
             >
               <X size={14} strokeWidth={2} />
             </button>
@@ -655,7 +703,7 @@ const upcomingFixed = useMemo(() => {
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.trackingFromNote}</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--aurora-lo)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t.onboarding.trackingLabel}</label>
+              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-lo)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t.onboarding.trackingLabel}</label>
               <input
                 type="date"
                 value={trackingDate}
@@ -677,7 +725,7 @@ const upcomingFixed = useMemo(() => {
                   color: 'var(--aurora-lo)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
                 }}
               >
-                Zrušiť
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleSaveTrackingDate}
@@ -700,7 +748,7 @@ const upcomingFixed = useMemo(() => {
       {/* ════════════════════════════════════════
           MOBILE LAYOUT
       ════════════════════════════════════════ */}
-      <div className="flex flex-col gap-4 lg:hidden" style={{ paddingBottom: 'calc(156px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex flex-col gap-4 lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }}>
         <div>{greetingRow}</div>
         {heroSection}
         {dailyBudgetCard}

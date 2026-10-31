@@ -1,35 +1,26 @@
 import { useSettingsContext } from '../context/SettingsContext'
+import { useTranslation } from '../i18n'
+import { formatMoney, formatMoneyParts, formatNumber, formatDateLocale } from '../utils/format'
 
+// One place for UI formatting: amounts use the active language's number
+// conventions (Intl) and the user's currency; dates use the active language.
 export function useFormatters() {
   const { settings } = useSettingsContext()
+  const { locale } = useTranslation()
+  const currency = settings.currency || 'EUR'
 
-  const formatAmount = (amount: number): string => {
-    const symbols: Record<string, string> = { EUR: '€', USD: '$', GBP: '£', CZK: 'Kč' }
-    const symbol = symbols[settings.currency] ?? settings.currency
-    const normalized = Object.is(amount, -0) ? 0 : amount
-    const rounded = parseFloat(normalized.toFixed(2))
-    const abs = Math.abs(rounded)
-    const sign = rounded < 0 ? '-' : ''
-    const fmt = settings.currencyFormat ?? 'sk'
-    if (fmt === 'en') {
-      const intPart = Math.floor(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-      const decPart = (abs % 1).toFixed(2).slice(2)
-      return `${sign}${symbol}${intPart}.${decPart}`
-    }
-    if (fmt === 'de') {
-      const intPart = Math.floor(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-      const decPart = (abs % 1).toFixed(2).slice(2)
-      return `${sign}${intPart},${decPart}\u00A0${symbol}`
-    }
-    const intPart = Math.floor(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
-    const decPart = (abs % 1).toFixed(2).slice(2)
-    return `${sign}${intPart},${decPart}\u00A0${symbol}`
-  }
+  const formatAmount = (amount: number): string => formatMoney(amount, locale, currency)
 
+  const formatAmountParts = (amount: number) => formatMoneyParts(amount, locale, currency)
+
+  const formatNum = (value: number, options?: Intl.NumberFormatOptions): string => formatNumber(value, locale, options)
+
+  // Numeric date following the user's explicit date-format preference (Settings).
   const formatDate = (dateStr: string): string => {
     if (!dateStr) return ''
     try {
       const d = new Date(dateStr + 'T00:00:00')
+      if (Number.isNaN(d.getTime())) return dateStr
       const day   = String(d.getDate()).padStart(2, '0')
       const month = String(d.getMonth() + 1).padStart(2, '0')
       const year  = d.getFullYear()
@@ -43,5 +34,9 @@ export function useFormatters() {
     }
   }
 
-  return { formatAmount, formatDate }
+  // Date with month names etc. in the active language.
+  const formatLongDate = (value: string | Date, options?: Intl.DateTimeFormatOptions): string =>
+    formatDateLocale(value, locale, options)
+
+  return { formatAmount, formatAmountParts, formatNumber: formatNum, formatDate, formatLongDate, locale, currency }
 }

@@ -129,7 +129,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
             <label className="form-label">MENO</label>
             <input
               type="text"
-              placeholder="Vaše meno"
+              placeholder={t.auth.namePlaceholder}
               value={name}
               onChange={e => setName(e.target.value)}
               onFocus={() => setFocused('name')}
@@ -143,7 +143,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
             <label className="form-label">{t.auth.email}</label>
             <input
               type="email"
-              placeholder="vas@email.com"
+              placeholder={t.auth.emailPlaceholder}
               value={email}
               onChange={e => setEmail(e.target.value)}
               onFocus={() => setFocused('email')}
@@ -158,7 +158,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
             <div style={{ position: 'relative' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="min. 8 znakov"
+                placeholder={t.auth.minChars}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 onFocus={() => setFocused('password')}
@@ -199,7 +199,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
                 type="button"
                 tabIndex={-1}
                 onClick={() => setShowConfirm(v => !v)}
-                aria-label={showConfirm ? 'Skryť heslo' : 'Zobraziť heslo'}
+                aria-label={showConfirm ? t.auth.hidePasswordLabel : t.auth.showPasswordLabel}
                 style={{
                   position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
                   background: 'none', border: 'none', cursor: 'pointer',
@@ -260,7 +260,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
 
           {/* Login link */}
           <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)', margin: 0 }}>
-            Máte účet?{' '}
+            {t.auth.hasAccount}{' '}
             <button
               type="button"
               onClick={onNavigateLogin}

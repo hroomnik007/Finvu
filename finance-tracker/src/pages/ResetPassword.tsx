@@ -69,7 +69,7 @@ export function ResetPasswordPage({ token, onNavigateLogin }: ResetPasswordPageP
   })
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     color: LABEL_COLOR,
     letterSpacing: '0.08em',
@@ -89,7 +89,7 @@ export function ResetPasswordPage({ token, onNavigateLogin }: ResetPasswordPageP
           alignItems: 'center', justifyContent: 'center',
           fontSize: 16, zIndex: 100,
         }}
-        title={theme === 'dark' ? 'Svetlý režim' : 'Tmavý režim'}
+        title={theme === 'dark' ? t.auth.lightMode : t.auth.darkMode}
       >
         {theme === 'dark' ? '☀️' : '🌙'}
       </button>

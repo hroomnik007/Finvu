@@ -23,10 +23,12 @@
   --aurora-lo:      #A79FC9;
   --aurora-faint:   #B5AECF;
   --aurora-violet:  #8B5CF6;
+  /* accent for small text — AA variant of the chosen accent, see utils/theme.ts readableAccent */
+  --aurora-violet-text: var(--accent-text-dark, #A580F8);
   --aurora-fuchsia: #EC4899;
   --aurora-cyan:    #22D3EE;
-  --aurora-emerald: #34D399;
-  --aurora-rose:    #FB7185;
+  --aurora-emerald: #6FE0B6; /* was #34D399 — AA on emerald-tinted chips */
+  --aurora-rose:    #FC94A3; /* was #FB7185 — AA on glass + rose-tinted chips */
   --aurora-amber:   #FBBF24;
   --aurora-glass:   rgba(255,255,255,.06);
   --aurora-gline:   rgba(255,255,255,.12);
@@ -53,15 +55,18 @@
 [data-theme="light"] {
   --aurora-bg:       #DAEAFA;
   --aurora-bg-image: radial-gradient(1400px circle at 0% 0%, #F1F8FE 0%, #DAEAFA 70%);
+  /* text + accent colours reach WCAG AA (4.5:1) on --aurora-bg #DAEAFA,
+     the darkest surface text sits on in the light theme */
   --aurora-hi:      #221A2E;
-  --aurora-lo:      #6E6580;
-  --aurora-faint:   #9A93AC;
+  --aurora-lo:      #554D66;
+  --aurora-faint:   #645C78;
   --aurora-violet:  #7C5CE0;
-  --aurora-fuchsia: #DB2777;
-  --aurora-cyan:    #0891A8;
-  --aurora-emerald: #059669;
-  --aurora-rose:    #E11D48;
-  --aurora-amber:   #B45309;
+  --aurora-violet-text: var(--accent-text-light, #6742DB);
+  --aurora-fuchsia: #B61E62;
+  --aurora-cyan:    #06697A;
+  --aurora-emerald: #046F4D;
+  --aurora-rose:    #BD183C;
+  --aurora-amber:   #9C4808;
   --aurora-glass:   rgba(255,255,255,.72);
   --aurora-gline:   rgba(34,26,46,.09);
   --aurora-hover:   rgba(34,26,46,.05);
@@ -95,7 +100,8 @@
   --border2:   rgba(255,255,255,0.12);
   --text:      #f0eeff;
   --text2:     #a89ec9;
-  --text3:     #6b6387;
+  --text3:     #9790AE; /* was #6b6387 (2.5:1) — AA 4.5:1 on the dark surfaces */
+  --heat-ink:  #ffffff; /* text on the semi-transparent heatmap / calendar cells */
   --violet:    #8B5CF6;
   --violet2:   #7C3AED;
   --violet-glow: rgba(139,92,246,0.2);
@@ -166,14 +172,15 @@
   --border2:   rgba(0,0,0,0.10);
   --text:      #1a1535;
   --text2:     #4a4270;
-  --text3:     #8b82b0;
+  --text3:     #645A8E; /* was #8b82b0 (2.9:1) */
+  --heat-ink:  #1A1535;
   --violet:    #7C3AED;
   --violet2:   #6D28D9;
   --violet-glow: rgba(124,58,237,0.12);
-  --green:     #059669;
-  --red:       #dc2626;
-  --warning:   #D97706;
-  --orange:    #EA580C;
+  --green:     #046F4D;
+  --red:       #BD1F1F;
+  --warning:   #915004;
+  --orange:    #A63E09;
   --card-shadow:     0 2px 16px rgba(124,58,237,0.08), 0 1px 4px rgba(0,0,0,0.06);
   --shadow-elevated: 0 4px 20px rgba(0,0,0,0.12);
   --toggle-inactive: #d1d5db;
@@ -210,11 +217,11 @@
   --text-hint: var(--text3);
   --positive: var(--green);
   --negative: var(--red);
-  --warning: #D97706;
+  --warning: #915004;
   --color-income: var(--green);
   --color-expense: var(--red);
   --color-neutral: var(--text3);
-  --color-warning: #D97706;
+  --color-warning: #915004;
   --shadow-card: var(--card-shadow);
   --border-radius-card: 16px;
   --font-size-hero: clamp(24px, 4vw, 36px);
@@ -272,7 +279,7 @@ body {
 /* Labels */
 .label-mono {
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 2px;
   color: var(--text3);
@@ -301,7 +308,7 @@ body {
 }
 .t-label {
   font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -309,7 +316,7 @@ body {
 }
 .t-label-mono {
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -640,7 +647,7 @@ input[type=number] { -moz-appearance: textfield; }
 /* Form label */
 .form-label {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -713,7 +720,7 @@ input[type=number] { -moz-appearance: textfield; }
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 5px;
   background: var(--bg4); border: 1px solid var(--border2);
-  color: var(--text2); font-size: 10.5px; font-family: 'DM Mono', monospace;
+  color: var(--text2); font-size: 12px; font-family: 'DM Mono', monospace;
   font-weight: 500; line-height: 1;
 }
 .skel {
@@ -773,12 +780,40 @@ html.compact {
 html.compact body { font-size: 13px; }
 html.compact .card { padding: var(--card-padding); }
 
-/* === MOBILE CONTENT AREA === */
-.content-main {
-  padding-bottom: calc(88px + env(safe-area-inset-bottom, 20px));
+/* === MOBILE CHROME: tab bar, FAB, safe areas ===
+   One set of numbers for everything pinned to the bottom of the screen, so
+   the FAB, the tab bar, its sub-menus and the page padding stay in step.
+   The env() insets are only non-zero with viewport-fit=cover (index.html):
+   iPhone home indicator, notch/status bar in the installed PWA, landscape. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --nav-h: 86px;      /* tab bar pill, expanded */
+  --nav-gap: 12px;    /* pill to the bottom edge / home indicator */
+  --fab-size: 56px;
+  /* distance from the bottom of the viewport to the top of the tab bar */
+  --nav-clearance: calc(var(--nav-gap) + var(--nav-h) + var(--safe-bottom));
+  --fab-bottom: calc(var(--nav-clearance) + 12px);
+  --fab-right: calc(16px + var(--safe-right));
+  /* bottom padding of a scrolling page: its last row ends above the FAB */
+  --page-pad-bottom: calc(var(--fab-bottom) + var(--fab-size) + 16px);
+  /* pages without a FAB only need to clear the tab bar */
+  --page-pad-bottom-nofab: calc(var(--nav-clearance) + 24px);
 }
 @media (min-width: 1024px) {
-  .content-main { padding-bottom: 0; }
+  /* desktop: no tab bar and no FAB */
+  :root {
+    --nav-clearance: 0px;
+    --page-pad-bottom: 32px;
+    --page-pad-bottom-nofab: 32px;
+  }
+}
+.fab-pos {
+  position: fixed;
+  right: var(--fab-right);
+  bottom: var(--fab-bottom);
 }
 
 /* === SETTINGS === */

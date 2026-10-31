@@ -62,7 +62,7 @@ function goalMonthly(goal: SavingsGoal): number {
 
 export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   const { goals, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal } = useSavings()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { t } = useTranslation()
 
   const [view, setView] = useState<'list' | 'detail' | 'edit'>('list')
@@ -339,13 +339,13 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(116px + env(safe-area-inset-bottom, 0px))' }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'var(--page-pad-bottom)' }}>
       <div style={{ padding: 20, minHeight: '100%' }}>
 
         {/* Hero wallet card */}
         <HeroCard variant="income" style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
-            {t.savings.totalSavingsLabel} · {goalCount} aktívnych cieľov
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+            {t.savings.totalSavingsLabel} · {t.savings.activeGoals.replace('{n}', String(goalCount))}
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'baseline' }}>
@@ -354,14 +354,14 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-emerald))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                {Math.floor(animatedTotalSaved).toLocaleString('sk-SK')}
+                {formatAmountParts(animatedTotalSaved).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                ,{String(Math.round((animatedTotalSaved % 1) * 100)).padStart(2, '0')}&nbsp;€
+                {formatAmountParts(animatedTotalSaved).rest}
               </span>
             </div>
             {totalTarget > 0 && (
-              <span style={{ marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', border: '1px solid rgba(52,211,153,0.3)' }}>
+              <span style={{ marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', border: '1px solid rgba(52,211,153,0.3)' }}>
                 {overallPct}% z {Math.round(totalTarget)} €
               </span>
             )}
@@ -373,15 +373,15 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
           )}
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.savings.monthlyLabel}</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.savings.monthlyLabel}</div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)' }}>+{formatAmount(monthlyAmount)}</div>
             </div>
             <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.savings.remainingTotal}</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.savings.remainingTotal}</div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(Math.max(0, totalTarget - totalSaved))}</div>
             </div>
             <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>% Z PRÍJMOV</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.savings.percentOfIncome}</div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>
                 {incomePercent !== null ? `${incomePercent}%` : '—'}
               </div>
@@ -435,9 +435,8 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         <button
           onClick={openAdd}
           aria-label={t.savings.addTitle}
-          className="lg:hidden fixed right-4 w-14 h-14 rounded-full flex items-center justify-center text-white cursor-pointer"
+          className="lg:hidden fab-pos w-14 h-14 rounded-full flex items-center justify-center text-white cursor-pointer"
           style={{
-            bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))',
             zIndex: 40,
             background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
             border: 'none',
@@ -533,7 +532,7 @@ function GoalCard({
     const days = daysUntil(goal.deadline)
     if (days < 0) {
       deadlineEl = (
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--aurora-rose)', background: 'rgba(251,113,133,0.12)', padding: '2px 6px', borderRadius: 20 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-rose)', background: 'rgba(251,113,133,0.12)', padding: '2px 6px', borderRadius: 20 }}>
           {t.overdue}
         </span>
       )
@@ -577,7 +576,7 @@ function GoalCard({
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</p>
               {goal.paused && (
-                <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.35)', color: '#fb923c', letterSpacing: '0.05em', flexShrink: 0 }}>{t.pausedBadge}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.35)', color: '#fb923c', letterSpacing: '0.05em', flexShrink: 0 }}>{t.pausedBadge}</span>
               )}
             </div>
             {isCompleted ? (

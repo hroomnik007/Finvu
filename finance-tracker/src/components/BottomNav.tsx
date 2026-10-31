@@ -31,7 +31,7 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
 
   const submenuCardStyle: React.CSSProperties = {
     position: 'fixed',
-    bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+    bottom: 'calc(var(--nav-clearance) + 8px)',
     left: '20px',
     right: '20px',
     background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 40%), var(--aurora-panel)',
@@ -177,12 +177,13 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             border: '1px solid var(--aurora-gline)',
-            padding: collapsed ? '6px 10px' : '8px 10px',
-            paddingBottom: 'max(10px, env(safe-area-inset-bottom, 10px))',
+            // Fixed inner padding: the home indicator inset goes into the
+            // margin below, so the pill keeps its shape on iPhone.
+            padding: collapsed ? '6px 10px 10px' : '8px 10px 10px',
             width: collapsed ? 'auto' : 'calc(100% - 32px)',
             maxWidth: collapsed ? 320 : 480,
             borderRadius: 999,
-            marginBottom: 12,
+            marginBottom: 'calc(var(--nav-gap) + var(--safe-bottom))',
             boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
             gap: collapsed ? 0 : 4,
             transition: 'width 0.35s cubic-bezier(0.4,0,0.2,1), max-width 0.35s cubic-bezier(0.4,0,0.2,1), padding 0.35s cubic-bezier(0.4,0,0.2,1), gap 0.3s ease',
@@ -289,7 +290,7 @@ function NavTab({
         gap: collapsed ? 0 : 4,
         padding: collapsed ? '8px' : '7px 6px 9px',
         borderRadius: collapsed ? 999 : 16,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 500,
         color: active ? '#fff' : 'var(--aurora-faint)',
         cursor: 'pointer',

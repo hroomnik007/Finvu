@@ -43,7 +43,7 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
   }
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -72,7 +72,7 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
             <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 27, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>{t.auth.forgotPasswordTitle}</h1>
             {!sent && (
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', margin: 0 }}>
-                Zadaj email a pošleme ti odkaz na obnovu hesla.
+                {t.auth.forgotPasswordDesc}
               </p>
             )}
           </div>
@@ -101,7 +101,7 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
               <label style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
               <input
                 type="email"
-                placeholder="vas@email.com"
+                placeholder={t.auth.emailPlaceholder}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 onFocus={() => setFocused(true)}
@@ -141,7 +141,7 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
           <button
             type="button"
             onClick={onNavigateLogin}
-            style={{ color: 'var(--aurora-violet)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5 }}
+            style={{ color: 'var(--aurora-violet-text)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5 }}
           >
             ← {t.auth.backToLogin}
           </button>

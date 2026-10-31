@@ -55,7 +55,7 @@ export function TrackingDateOnboarding({ onDone }: Props) {
         </div>
 
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             {t.onboarding.trackingLabel}
           </label>
           <input

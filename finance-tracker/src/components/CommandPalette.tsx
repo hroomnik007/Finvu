@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
+import { useFormatters } from '../hooks/useFormatters'
 
 interface TxnSearchItem {
   id: string
@@ -33,14 +34,10 @@ interface PaletteItem extends PaletteAction {
   _i: number
 }
 
-function formatAmt(amount: number): string {
-  const abs = Math.abs(amount)
-  const sign = amount >= 0 ? '+' : '-'
-  return `${sign}${abs.toLocaleString('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
-}
 
 export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme, transactions = [], onTransactionNavigate }: CommandPaletteProps) {
   const { t } = useTranslation()
+  const { formatAmount, formatDate } = useFormatters()
   const [query, setQuery] = useState('')
   const [selIdx, setSelIdx] = useState(0)
   const inpRef = useRef<HTMLInputElement>(null)
@@ -111,7 +108,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
   if (!open) return null
 
   const sectionTitle = (label: string) => (
-    <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', padding: '10px 16px 4px' }}>{label}</div>
+    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', padding: '10px 16px 4px' }}>{label}</div>
   )
 
   let curSection: string | null = null
@@ -137,7 +134,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
       >
         <span style={{ fontSize: 15, width: 22, display: 'flex', justifyContent: 'center' }}>{item.icon}</span>
         <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text)', fontWeight: sel ? 500 : 400 }}>{item.label}</span>
-        <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: "'DM Mono',monospace" }}>{item.hint}</span>
+        <span style={{ fontSize: 12, color: 'var(--text3)', fontFamily: "'DM Mono',monospace" }}>{item.hint}</span>
         {sel && <KbdKey label="↵" />}
       </div>
     )
@@ -149,8 +146,8 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
       const globalIdx = allItems.length + ti
       const sel = selIdx === globalIdx
       const isIncome = txnItem.type === 'income'
-      const amtStr = formatAmt(txnItem.amount)
-      const dateStr = txnItem.date ? txnItem.date.slice(0, 10).split('-').reverse().join('.') : ''
+      const amtStr = `${txnItem.amount >= 0 ? '+' : '−'}${formatAmount(Math.abs(txnItem.amount))}`
+      const dateStr = txnItem.date ? formatDate(txnItem.date.slice(0, 10)) : ''
       rows.push(
         <div
           key={'txn-' + txnItem.id}
@@ -166,7 +163,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
           <span style={{ fontSize: 15, width: 22, display: 'flex', justifyContent: 'center' }}>{isIncome ? '💰' : '🧾'}</span>
           <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text)', fontWeight: sel ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{txnItem.label}</span>
           <span style={{ fontSize: 12, fontFamily: "'DM Mono',monospace", color: 'var(--text3)', flexShrink: 0 }}>{amtStr}</span>
-          <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: "'DM Mono',monospace", flexShrink: 0 }}>{dateStr}</span>
+          <span style={{ fontSize: 12, color: 'var(--text3)', fontFamily: "'DM Mono',monospace", flexShrink: 0 }}>{dateStr}</span>
           {sel && <KbdKey label="↵" />}
         </div>
       )
@@ -209,7 +206,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg)', fontSize: 11, color: 'var(--text3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg)', fontSize: 12, color: 'var(--text3)' }}>
           <div style={{ display: 'flex', gap: 14 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><KbdKey label="↑↓" /> {t.palette.moveHint}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><KbdKey label="↵" /> {t.palette.selectHint}</span>
@@ -225,7 +222,7 @@ function KbdKey({ label }: { label: string }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      padding: '1px 5px', borderRadius: 4, fontSize: 10, fontFamily: "'DM Mono', monospace",
+      padding: '1px 5px', borderRadius: 4, fontSize: 12, fontFamily: "'DM Mono', monospace",
       background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text3)',
     }}>{label}</span>
   )

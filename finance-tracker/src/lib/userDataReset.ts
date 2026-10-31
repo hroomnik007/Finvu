@@ -4,6 +4,7 @@ import { queryClient } from './queryClient'
 // lock_method) stay; anything tied to the signed-in person goes on logout.
 const USER_KEYS = [
   'auth_remember',
+  'budget_template_dismissed',
   'category_budget_limits',
   'fixed_expense_notified',
   'finvu_read_notifications',

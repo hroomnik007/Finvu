@@ -56,7 +56,7 @@ export function PrivacyPolicyPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--aurora-violet)', fontFamily: "'Manrope', sans-serif",
+            color: 'var(--aurora-violet-text)', fontFamily: "'Manrope', sans-serif",
             fontSize: 13, fontWeight: 600, padding: 0, marginBottom: 24,
           }}
         >

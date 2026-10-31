@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   X, Palette, Bell, Shield, Database, User, Monitor, Laptop, Smartphone, Tablet,
@@ -25,6 +25,7 @@ import { useSettingsContext } from '../context/SettingsContext'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { SettingsDropdown } from '../components/SettingsDropdown'
 import { useTranslation } from '../i18n'
+import { formatDateLocale } from '../utils/format'
 import { useAuth } from '../context/AuthContext'
 import { usePinLockContext } from '../context/PinLockContext'
 import { PinSetupModal } from '../components/PinSetupModal'
@@ -35,14 +36,23 @@ import type { ApiTransaction, UserSession } from '../types'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CURRENCIES = [
-  { value: 'EUR', label: '€ Euro' },
-  { value: 'USD', label: '$ US Dollar' },
-  { value: 'GBP', label: '£ Libra' },
-  { value: 'CZK', label: 'Kč Česká koruna' },
-  { value: 'HUF', label: 'Ft Forint' },
-  { value: 'PLN', label: 'zł Złoty' },
+const CURRENCY_OPTIONS = [
+  { value: 'EUR', symbol: '€' },
+  { value: 'USD', symbol: '$' },
+  { value: 'GBP', symbol: '£' },
+  { value: 'CZK', symbol: 'Kč' },
+  { value: 'HUF', symbol: 'Ft' },
+  { value: 'PLN', symbol: 'zł' },
 ]
+
+function currencyOptions(locale: string) {
+  let names: Intl.DisplayNames | null = null
+  try { names = new Intl.DisplayNames([locale], { type: 'currency' }) } catch { names = null }
+  return CURRENCY_OPTIONS.map(c => {
+    const name = names?.of(c.value) ?? c.value
+    return { value: c.value, label: `${c.symbol} ${name.charAt(0).toUpperCase()}${name.slice(1)}` }
+  })
+}
 
 const DATE_FORMATS = [
   { value: 'DD.MM.YYYY', label: 'DD.MM.YYYY' },
@@ -51,13 +61,13 @@ const DATE_FORMATS = [
 ]
 
 const ACCENT_COLORS = [
-  { name: 'Violet', value: '#7C3AED' },
-  { name: 'Modrá', value: '#3B82F6' },
-  { name: 'Zelená', value: '#10B981' },
-  { name: 'Oranžová', value: '#F59E0B' },
-  { name: 'Ružová', value: '#EC4899' },
-  { name: 'Červená', value: '#EF4444' },
-]
+  { name: 'colorViolet', value: '#7C3AED' },
+  { name: 'colorBlue', value: '#3B82F6' },
+  { name: 'colorGreen', value: '#10B981' },
+  { name: 'colorOrange', value: '#F59E0B' },
+  { name: 'colorPink', value: '#EC4899' },
+  { name: 'colorRed', value: '#EF4444' },
+] as const
 
 // Revolut-style page background tints — separate palette per theme since a
 // color tuned for a dark page reads muddy/washed-out on a light one. Each
@@ -96,7 +106,7 @@ function SectionHeader({ icon: Icon, label }: { icon: LucideIcon; label: string 
   return (
     <div style={{ borderBottom: '1px solid var(--aurora-gline)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
       <Icon size={13} color="var(--aurora-hi)" />
-      <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--aurora-hi)', fontWeight: 700, margin: 0 }}>
+      <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--aurora-hi)', fontWeight: 700, margin: 0 }}>
         {label}
       </p>
     </div>
@@ -120,7 +130,7 @@ function SettingRow({ label, sublabel, children }: { label: string; sublabel?: R
 function CompactSettingCell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--aurora-faint)', margin: 0 }}>{label}</p>
+      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--aurora-faint)', margin: 0 }}>{label}</p>
       <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '10px 12px' }}>{children}</div>
     </div>
   )
@@ -220,7 +230,12 @@ const SECTIONS = [
 
 export function SettingsPage() {
   const { settings, updateSettings } = useSettingsContext()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
+  const CURRENCIES = useMemo(() => currencyOptions(locale), [locale])
+  const pluralForm = (n: number, one: string, few: string, many: string) => {
+    const rule = new Intl.PluralRules(locale).select(n)
+    return rule === 'one' ? one : rule === 'few' ? few : many
+  }
   const { deleteAccount, user, updateMonthlyEmail, refreshUser, logout } = useAuth()
   const { setupPin, hasPin, removePin } = usePinLockContext()
 
@@ -596,6 +611,17 @@ export function SettingsPage() {
       incomeLabel: t.expenses.categories.typeIncome,
       expenseLabel: t.expenses.categories.typeExpense,
       fileName: `finvu-export-${fromISO}_${toISO}.pdf`,
+      locale,
+      currency: settings.currency || 'EUR',
+      labels: {
+        date: t.settings.pdfColDate,
+        type: t.settings.pdfColType,
+        category: t.settings.pdfColCategory,
+        note: t.settings.pdfColNote,
+        amount: t.settings.pdfColAmount,
+        empty: t.settings.pdfEmpty,
+        generatedOn: t.settings.pdfGeneratedOn,
+      },
     })
   }
 
@@ -641,7 +667,7 @@ export function SettingsPage() {
       else await handleExportPDF(fromISO, toISO, period)
       setExportModalOpen(false)
     } catch {
-      setExportError('Export zlyhal. Skúste znova.')
+      setExportError(t.settings.exportFailed)
     } finally {
       setExportGenerating(false)
     }
@@ -803,7 +829,7 @@ export function SettingsPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full" style={{ paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 20px))' }}>
+    <div className="w-full" style={{ paddingBottom: 'var(--page-pad-bottom-nofab)' }}>
 
       {/* Settings page header — desktop: always the plain title.
           Mobile: plain title on the level-1 list, back-arrow + category
@@ -905,12 +931,12 @@ export function SettingsPage() {
                             padding: '8px 12px', borderRadius: 12, cursor: 'pointer',
                             border: theme === id ? '2px solid var(--aurora-violet)' : '1px solid var(--aurora-gline)',
                             background: theme === id ? 'rgba(139,92,246,0.12)' : 'var(--aurora-glass)',
-                            color: theme === id ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+                            color: theme === id ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)',
                             minWidth: 56, transition: 'all 0.15s', fontFamily: "'Manrope', sans-serif",
                           }}
                         >
                           <Icon size={16} />
-                          <span style={{ fontSize: 11, fontWeight: theme === id ? 600 : 400 }}>{label}</span>
+                          <span style={{ fontSize: 12, fontWeight: theme === id ? 600 : 400 }}>{label}</span>
                         </button>
                       ))}
                     </div>
@@ -931,7 +957,8 @@ export function SettingsPage() {
                       <button
                         key={c.value}
                         onClick={() => handleAccentChange(c.value)}
-                        title={c.name}
+                        title={t.settings[c.name]}
+                        aria-label={t.settings[c.name]}
                         style={{
                           width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
                           border: 'none', backgroundColor: c.value, flexShrink: 0,
@@ -1097,8 +1124,8 @@ export function SettingsPage() {
                   icon={CalendarClock}
                   iconColor="var(--aurora-violet)"
                   iconBg="rgba(139,92,246,0.12)"
-                  label="Sledovanie od dátumu"
-                  sublabel={user?.tracking_start_date ? new Date(user.tracking_start_date).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Nenastavené'}
+                  label={t.settings.trackingStartLabel}
+                  sublabel={user?.tracking_start_date ? formatDateLocale(user.tracking_start_date, locale, { day: 'numeric', month: 'long', year: 'numeric' }) : t.common.notSet}
                   onClick={() => setTrackingModalOpen(true)}
                 />
               </SectionCard>
@@ -1265,8 +1292,8 @@ export function SettingsPage() {
                     icon={KeyRound}
                     iconColor="var(--aurora-violet)"
                     iconBg="rgba(139,92,246,0.12)"
-                    label="Zmeniť heslo"
-                    sublabel="Aktualizovať prihlasovacie heslo"
+                    label={t.settings.changePasswordAction}
+                    sublabel={t.settings.changePasswordSub}
                     onClick={() => { setChangePwOpen(true); setChangePwError(null); setChangePwOk(false) }}
                   />
 
@@ -1303,7 +1330,7 @@ export function SettingsPage() {
                         style={{ appearance: 'none' as const, background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', paddingRight: 18, colorScheme: 'var(--aurora-color-scheme)', accentColor: 'var(--accent-color)' }}
                       >
                         <option value="never" style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>{t.settings.autoLockNever}</option>
-                        <option value="0" style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>Ihneď</option>
+                        <option value="0" style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>{t.settings.autoLockImmediately}</option>
                         <option value="1" style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>{t.settings.autoLock1min}</option>
                         <option value="5" style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>{t.settings.autoLock5min}</option>
                         <option value="15" style={{ background: 'var(--aurora-panel)', color: 'var(--aurora-hi)' }}>{t.settings.autoLock15min}</option>
@@ -1325,10 +1352,10 @@ export function SettingsPage() {
                   label={t.settings.devicesAndSessionsTitle}
                   sublabel={
                     sessionsLoading || (hasPin && pinDevicesLoading)
-                      ? 'Načítavam...'
+                      ? t.common.loading
                       : hasPin
-                        ? `${sessions.length} ${sessions.length === 1 ? 'relácia' : sessions.length < 5 ? 'relácie' : 'relácií'} · ${pinDevices.length} ${pinDevices.length === 1 ? 'zariadenie' : pinDevices.length < 5 ? 'zariadenia' : 'zariadení'}`
-                        : `${sessions.length} ${sessions.length === 1 ? 'relácia' : sessions.length < 5 ? 'relácie' : 'relácií'}`
+                        ? `${sessions.length} ${pluralForm(sessions.length, t.settings.sessionOne, t.settings.sessionFew, t.settings.sessionMany)} · ${pinDevices.length} ${pluralForm(pinDevices.length, t.settings.deviceOne, t.settings.deviceFew, t.settings.deviceMany)}`
+                        : `${sessions.length} ${pluralForm(sessions.length, t.settings.sessionOne, t.settings.sessionFew, t.settings.sessionMany)}`
                   }
                   onClick={() => setDevicesModalOpen(true)}
                 />
@@ -1341,7 +1368,7 @@ export function SettingsPage() {
                   iconColor="var(--aurora-rose)"
                   iconBg="rgba(251,113,133,0.12)"
                   label={t.settings.deactivationSection.charAt(0) + t.settings.deactivationSection.slice(1).toLowerCase()}
-                  sublabel="Vymazanie dát, deaktivácia alebo zmazanie účtu"
+                  sublabel={t.settings.dangerZoneSub}
                   onClick={() => setDeactivationModalOpen(true)}
                 />
               </SectionCard>
@@ -1353,9 +1380,9 @@ export function SettingsPage() {
             <>
               <div ref={dataRef} id="data-section">
               <SectionCard>
-                <SectionHeader icon={Database} label="Export a import" />
+                <SectionHeader icon={Database} label={t.settings.exportImportTitle} />
                 <div className="divide-y divide-white/[0.04] lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
-                  <SettingRow label="Exportovať dáta" sublabel="Stiahnuť transakcie a kategórie za zvolené obdobie">
+                  <SettingRow label={t.settings.exportModalTitle} sublabel={t.settings.exportDataSub}>
                     <button
                       onClick={() => setExportModalOpen(true)}
                       style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
@@ -1363,7 +1390,7 @@ export function SettingsPage() {
                       {t.settings.exportModalTitle}
                     </button>
                   </SettingRow>
-                  <SettingRow label={t.settings.importStatement} sublabel="Z banky: Revolut, Tatra, ČSOB, SLSP">
+                  <SettingRow label={t.settings.importStatement} sublabel={t.settings.importStatementSub}>
                     <button
                       onClick={() => setCsvImportOpen(true)}
                       style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
@@ -1415,7 +1442,7 @@ export function SettingsPage() {
           <div style={{ background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>
-                {dangerAction === 'transactions' ? 'Vymazať všetky transakcie' : t.settings.dangerResetTitle}
+                {dangerAction === 'transactions' ? t.settings.deleteAllTransactions : t.settings.dangerResetTitle}
               </h2>
               <button onClick={() => setDangerAction(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}>
                 <X size={16} />
@@ -1426,12 +1453,12 @@ export function SettingsPage() {
             </p>
             {dangerAction === 'reset' && (
               <div className="mb-4">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-red-400 mb-2 block">
+                <label className="text-[12px] font-semibold uppercase tracking-wider text-red-400 mb-2 block">
                   {t.settings.dangerResetConfirmLabel}
                 </label>
                 <input
                   type="text"
-                  placeholder="VYMAZAŤ"
+                  placeholder={t.settings.resetConfirmWord}
                   value={dangerConfirmText}
                   onChange={e => setDangerConfirmText(e.target.value)}
                   style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }}
@@ -1447,7 +1474,7 @@ export function SettingsPage() {
               </button>
               <button
                 onClick={executeDangerAction}
-                disabled={dangerLoading || (dangerAction === 'reset' && dangerConfirmText !== 'VYMAZAŤ')}
+                disabled={dangerLoading || (dangerAction === 'reset' && dangerConfirmText.trim().toUpperCase() !== t.settings.resetConfirmWord)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {dangerLoading ? t.settings.dangerDeleting : t.settings.dangerDeleteBtn}
@@ -1467,12 +1494,12 @@ export function SettingsPage() {
             </div>
             <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deactivateAccountDesc}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
                 {t.settings.deactivateAccountConfirmLabel}
               </label>
               <input
                 type="text"
-                placeholder="DEAKTIVOVAŤ"
+                placeholder={t.settings.deactivateConfirmWord}
                 value={deactivateConfirm}
                 onChange={e => { setDeactivateConfirm(e.target.value); setDeactivateError(null) }}
                 style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }}
@@ -1484,14 +1511,14 @@ export function SettingsPage() {
                 {t.common.cancel}
               </button>
               <button
-                disabled={deactivateConfirm !== 'DEAKTIVOVAŤ' || isDeactivating}
+                disabled={deactivateConfirm.trim().toUpperCase() !== t.settings.deactivateConfirmWord || isDeactivating}
                 onClick={async () => {
                   setIsDeactivating(true)
                   try {
                     await apiDeactivateAccount()
                     await logout()
                   } catch {
-                    setDeactivateError('Nepodarilo sa deaktivovať účet. Skúste znova.')
+                    setDeactivateError(t.settings.deactivateFailed)
                     setIsDeactivating(false)
                   }
                 }}
@@ -1514,24 +1541,24 @@ export function SettingsPage() {
             </div>
             <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deleteAccountDesc}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
-                Aktuálne heslo
+              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
+                {t.settings.currentPassword}
               </label>
               <input
                 type="password"
-                placeholder="Aktuálne heslo"
+                placeholder={t.settings.currentPassword}
                 value={deletePassword}
                 onChange={e => { setDeletePassword(e.target.value); setDeleteError(null) }}
                 style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }}
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
                 {t.settings.deleteAccountConfirmLabel}
               </label>
               <input
                 type="text"
-                placeholder="ZMAZAŤ"
+                placeholder={t.settings.deleteConfirmWord}
                 value={deleteConfirm}
                 onChange={e => { setDeleteConfirm(e.target.value); setDeleteError(null) }}
                 style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }}
@@ -1543,7 +1570,7 @@ export function SettingsPage() {
                 {t.common.cancel}
               </button>
               <button
-                disabled={deleteConfirm !== 'ZMAZAŤ' || isDeleting}
+                disabled={deleteConfirm.trim().toUpperCase() !== t.settings.deleteConfirmWord || isDeleting}
                 onClick={async () => {
                   setIsDeleting(true)
                   try {
@@ -1553,17 +1580,17 @@ export function SettingsPage() {
                     if (status === 502 || status === 501 || status === 404) {
                       setDeleteError(t.settings.deleteAccountUnavailable)
                     } else if (status === 401 || status === 400) {
-                      setDeleteError('Nesprávne aktuálne heslo.')
+                      setDeleteError(t.settings.wrongCurrentPassword)
                     } else {
-                      setDeleteError('Nepodarilo sa zmazať účet. Skúste znova.')
+                      setDeleteError(t.settings.deleteFailed)
                     }
                     setIsDeleting(false)
                   }
                 }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: deleteConfirm === 'ZMAZAŤ' ? '#DC2626' : undefined }}
+                style={{ background: deleteConfirm.trim().toUpperCase() === t.settings.deleteConfirmWord ? '#DC2626' : undefined }}
               >
-                {isDeleting ? 'Mažem...' : t.settings.deleteAccountConfirmBtn}
+                {isDeleting ? t.settings.dangerDeleting : t.settings.deleteAccountConfirmBtn}
               </button>
             </div>
           </div>
@@ -1575,26 +1602,26 @@ export function SettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => setChangePwOpen(false)}>
           <div style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 }} className="modal-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>Zmeniť heslo</h2>
+              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.changePasswordAction}</h2>
               <button onClick={() => setChangePwOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {changePwError && <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-rose)', margin: 0 }}>{changePwError}</p>}
               {changePwOk ? (
                 <div style={{ height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, fontSize: 14, fontWeight: 600, color: 'var(--aurora-emerald)', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>
-                  <Check size={15} /> Heslo zmenené
+                  <Check size={15} /> {t.settings.passwordChanged}
                 </div>
               ) : (
                 <>
-                  <input type="password" placeholder="Aktuálne heslo" value={currentPw} onChange={e => setCurrentPw(e.target.value)} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
-                  <input type="password" placeholder="Nové heslo (min. 8 znakov)" value={newPw} onChange={e => setNewPw(e.target.value)} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
-                  <input type="password" placeholder="Potvrď nové heslo" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChangePassword()} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
+                  <input type="password" placeholder={t.settings.currentPassword} value={currentPw} onChange={e => setCurrentPw(e.target.value)} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
+                  <input type="password" placeholder={t.settings.newPasswordPlaceholder} value={newPw} onChange={e => setNewPw(e.target.value)} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
+                  <input type="password" placeholder={t.settings.confirmNewPassword} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChangePassword()} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
                   <button
                     onClick={handleChangePassword}
                     disabled={changePwLoading}
                     style={{ height: 44, borderRadius: 10, fontSize: 14, fontWeight: 600, background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white', border: 'none', cursor: changePwLoading ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", opacity: changePwLoading ? 0.7 : 1, marginTop: 4 }}
                   >
-                    {changePwLoading ? 'Ukladám...' : 'Uložiť heslo'}
+                    {changePwLoading ? t.common.saving : t.settings.savePassword}
                   </button>
                 </>
               )}
@@ -1615,7 +1642,7 @@ export function SettingsPage() {
             {/* Sekcia 1: Aktívne relácie (userSessions / refreshTokens) */}
             <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', margin: '0 0 10px' }}>{t.settings.activeSessions}</h3>
             {sessionsLoading ? (
-              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>Načítavam...</p>
+              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>{t.common.loading}</p>
             ) : sessions.length === 0 ? (
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>{t.settings.activeSessionsSubtitle}</p>
             ) : (
@@ -1634,9 +1661,9 @@ export function SettingsPage() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--aurora-hi)', margin: 0 }}>{session.deviceName ?? 'Neznáme zariadenie'}</p>
+                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--aurora-hi)', margin: 0 }}>{session.deviceName ?? t.common.unknownDevice}</p>
                           {isCurrent && (
-                            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', letterSpacing: '0.05em' }}>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', letterSpacing: '0.05em' }}>
                               {t.settings.currentSessionBadge}
                             </span>
                           )}
@@ -1644,8 +1671,8 @@ export function SettingsPage() {
                         <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
                           {session.browser ?? ''}{session.location ? ` · ${session.location}` : ''}{session.ip ? ` · ${session.ip}` : ''}
                         </p>
-                        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>
-                          {new Date(session.createdAt).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
+                          {formatDateLocale(session.createdAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                       {!isCurrent && (
@@ -1669,7 +1696,7 @@ export function SettingsPage() {
                 <div style={{ borderTop: '1px solid var(--aurora-gline)', margin: '20px 0 16px' }} />
                 <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', margin: '0 0 10px' }}>{t.settings.pinDevicesTitle}</h3>
                 {pinDevicesLoading ? (
-                  <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>Načítavam...</p>
+                  <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>{t.common.loading}</p>
                 ) : pinDevices.length === 0 ? (
                   <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>{t.settings.pinDeviceNoDevices}</p>
                 ) : (
@@ -1688,9 +1715,9 @@ export function SettingsPage() {
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--aurora-hi)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.label ? deviceName : 'Neznáme zariadenie'}</p>
+                              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--aurora-hi)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.label ? deviceName : t.common.unknownDevice}</p>
                               {device.isCurrentDevice && (
-                                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', letterSpacing: '0.05em', flexShrink: 0 }}>
+                                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', letterSpacing: '0.05em', flexShrink: 0 }}>
                                   {t.settings.pinDeviceCurrentBadge}
                                 </span>
                               )}
@@ -1699,10 +1726,10 @@ export function SettingsPage() {
                               {device.label ? browser : ''}
                             </p>
                             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
-                              {t.settings.pinDeviceLastUsed}: {new Date(device.lastUsedAt).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {t.settings.pinDeviceLastUsed}: {formatDateLocale(device.lastUsedAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
-                            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>
-                              {t.settings.pinDeviceExpires}: {new Date(device.expiresAt).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
+                              {t.settings.pinDeviceExpires}: {formatDateLocale(device.expiresAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
                           </div>
                           <button
@@ -1743,22 +1770,22 @@ export function SettingsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <ChevronRow
                 icon={Trash2} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
-                label="Vymazať všetky transakcie" sublabel="Nevratná operácia — všetky tx budú odstránené"
+                label={t.settings.deleteAllTransactions} sublabel={t.settings.deleteAllTransactionsSub}
                 onClick={() => { setDangerAction('transactions'); setDangerConfirmText('') }}
               />
               <ChevronRow
                 icon={RotateCcw} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
-                label="Resetovať aplikáciu" sublabel="Vymaže všetky dáta a nastavenia"
+                label={t.settings.resetAppLabel} sublabel={t.settings.resetAppSub}
                 onClick={() => { setDangerAction('reset'); setDangerConfirmText('') }}
               />
               <ChevronRow
                 icon={Ban} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
-                label="Deaktivovať účet" sublabel="Účet bude skrytý, dáta zostanú 30 dní"
+                label={t.settings.deactivateAccount} sublabel={t.settings.deactivateSub}
                 onClick={() => { setDeactivateOpen(true); setDeactivateConfirm(''); setDeactivateError(null) }}
               />
               <ChevronRow
                 icon={UserX} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
-                label="Zmazať účet" sublabel="Trvale odstráni účet a všetky dáta — nezvratné"
+                label={t.settings.deleteAccount} sublabel={t.settings.deleteAccountSub}
                 onClick={() => { setDeleteOpen(true); setDeleteConfirm(''); setDeletePassword(''); setDeleteError(null) }}
               />
             </div>
@@ -1771,15 +1798,15 @@ export function SettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => setTrackingModalOpen(false)}>
           <div style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 380 }} className="modal-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>Sledovanie od dátumu</h2>
+              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.trackingStartLabel}</h2>
               <button onClick={() => setTrackingModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
             </div>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: '0 0 16px', lineHeight: 1.5 }}>
-              Nastav dátum, od ktorého chceš sledovať financie. Príjmy a výdavky pred týmto dátumom sa nebudú zobrazovať v histórii.
+              {t.settings.trackingStartDesc}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Sledovanie od
+              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                {t.settings.trackingFromShort}
               </label>
               <input
                 type="date"
@@ -1794,7 +1821,7 @@ export function SettingsPage() {
               />
             </div>
             {trackingOk && (
-              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-emerald)', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 6 }}><Check size={13} /> Dátum bol uložený</p>
+              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-emerald)', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 6 }}><Check size={13} /> {t.settings.trackingSaved}</p>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -1802,7 +1829,7 @@ export function SettingsPage() {
                 disabled={trackingSaving}
                 style={{ flex: 1, height: 44, borderRadius: 10, fontSize: 14, fontWeight: 600, background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", opacity: trackingSaving ? 0.6 : 1 }}
               >
-                {trackingSaving ? 'Ukladám...' : 'Uložiť'}
+                {trackingSaving ? t.common.saving : t.common.save}
               </button>
               {user?.tracking_start_date && (
                 <button
@@ -1810,7 +1837,7 @@ export function SettingsPage() {
                   disabled={trackingSaving}
                   style={{ flex: 1, height: 44, borderRadius: 10, fontSize: 14, fontWeight: 500, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", opacity: trackingSaving ? 0.6 : 1 }}
                 >
-                  Vymazať
+                  {t.settings.trackingClear}
                 </button>
               )}
             </div>

@@ -82,7 +82,7 @@ function pillChipStyle(active: boolean, accent: string, accent2: string): React.
     background: active ? `linear-gradient(135deg,${accent},${accent2})` : 'var(--aurora-glass)',
     border: active ? '1px solid transparent' : '1px solid var(--aurora-gline)',
     borderRadius: 12, padding: '8px 11px',
-    fontSize: 11, color: active ? '#fff' : 'var(--aurora-hi)', fontWeight: 600,
+    fontSize: 12, color: active ? '#fff' : 'var(--aurora-hi)', fontWeight: 600,
     fontFamily: "'Manrope', sans-serif", cursor: 'pointer', flexShrink: 0,
   }
 }
@@ -102,7 +102,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
       }}>
         <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
       </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{label}</span>
+      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{label}</span>
     </button>
   )
 }
@@ -299,10 +299,9 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
       {isMobile && currentPage === 'dashboard' && (
         <button
           onClick={handleFABClick}
-          aria-label="Pridať záznam"
-          className="fixed right-4 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl cursor-pointer"
+          aria-label={t.fab.title}
+          className="fab-pos w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl cursor-pointer"
           style={{
-            bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))',
             zIndex: 40,
             background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
             boxShadow: '0 10px 30px rgba(139,92,246,.5)',
@@ -327,7 +326,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ flex: 1, fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)' }}>{t.fab.title}</div>
               <button
-                type="button" onClick={() => setShowTypeSelector(false)} aria-label="Zavrieť"
+                type="button" onClick={() => setShowTypeSelector(false)} aria-label={t.common.close}
                 style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}
               >
                 <X size={14} />
@@ -402,7 +401,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
 
         {livePct !== null && liveLimit != null && (
           <div style={{ borderRadius: 12, padding: '10px 12px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif" }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif" }}>
               <span>{liveBudget?.categoryName}</span>
               <span>{formatAmount(liveSpent)} / {formatAmount(liveLimit)}</span>
             </div>
@@ -454,7 +453,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
             type="text" placeholder={t.expenses.variable.notePlaceholder}
             value={varNote}
             onChange={e => setVarNote(e.target.value)}
-            style={{ ...finputStyle, flex: 1, width: 'auto', padding: '8px 12px', borderRadius: 12, fontSize: 11.5 }}
+            style={{ ...finputStyle, flex: 1, width: 'auto', padding: '8px 12px', borderRadius: 12, fontSize: 12 }}
           />
         </div>
       </CompactModal>
@@ -496,7 +495,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
               onClick={() => setFixDay(d => String(Math.max(1, parseInt(d || '1') - 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
-            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dayLabel}</span>
+            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dayLabel}</span>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{fixDay}</span>
             <button
               type="button"
@@ -550,7 +549,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
           {PRESET_COLORS.map(c => (
             <button
               key={c}

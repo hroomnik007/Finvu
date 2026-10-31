@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Pencil, Pause, Play, Plus, Trash2, Calendar, Target, Bell, PiggyBank } from 'lucide-react'
 import type { SavingsGoal, Deposit } from '../types'
 import { useTranslation } from '../i18n'
+import { formatDateLocale } from '../utils/format'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 
 interface SavingsDetailModalProps {
@@ -36,7 +37,7 @@ function calcMonthsLeft(deadline: string | null | undefined): number {
 const R_SIZE = 104, R_SW = 10, R_R = (R_SIZE - R_SW * 2) / 2, R_CIRC = 2 * Math.PI * R_R
 
 export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDelete, onDeposit, onDeleteDeposit, onPause, onResume, formatAmount }: SavingsDetailModalProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [depositMode, setDepositMode] = useState(false)
   const [depositInput, setDepositInput] = useState('')
   const [saving, setSaving] = useState(false)
@@ -107,7 +108,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     try { await onResume() } finally { setPauseLoading(false) }
   }
 
-  const pausedBadge = { fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.35)', color: '#fb923c', letterSpacing: '0.05em', flexShrink: 0 } as const
+  const pausedBadge = { fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.35)', color: '#fb923c', letterSpacing: '0.05em', flexShrink: 0 } as const
 
   const glassInputStyle = { flex: 1, padding: '11px 14px', borderRadius: 14, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-hi)', fontSize: 14, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' as const }
 
@@ -124,7 +125,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
         {saving ? '...' : t.common.save}
       </button>
       <button onClick={() => { setDepositMode(false); setDepositInput('') }}
-        aria-label="Zavrieť"
+        aria-label={t.common.close}
         style={{ width: 44, height: 44, borderRadius: 14, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <X size={16} />
       </button>
@@ -137,7 +138,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     { icon: Bell, label: t.savings.reminder, sub: t.savings.reminderSub, val: '—' },
   ]
 
-  const sectionLabelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 10, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, fontWeight: 700, letterSpacing: '0.06em', margin: '0 0 10px 2px' }
+  const sectionLabelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, fontWeight: 700, letterSpacing: '0.06em', margin: '0 0 10px 2px' }
 
   const depositsEl = deposits.length === 0 ? (
     <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '24px 0', textAlign: 'center' }}>
@@ -149,18 +150,18 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
       {deposits.slice(0, 10).map((d, i) => (
         <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 0', borderTop: i > 0 ? '1px solid var(--aurora-gline)' : 'none' }}>
           <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', flex: 1 }}>
-            {new Date(d.date).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {formatDateLocale(d.date, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
           {confirmDeleteId === d.id ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>Zmazať {formatAmount(d.amount)} €?</span>
+              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{t.savings.deleteDepositConfirm.replace('{amount}', formatAmount(d.amount))}</span>
               <button onClick={async () => { if (!onDeleteDeposit) return; setDeleting(true); try { await onDeleteDeposit(d.id) } finally { setDeleting(false); setConfirmDeleteId(null) } }} disabled={deleting}
-                style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--aurora-rose)', background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}>
-                Áno
+                style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)', background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}>
+                {t.common.yes}
               </button>
               <button onClick={() => setConfirmDeleteId(null)}
-                style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-lo)', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer' }}>
-                Nie
+                style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer' }}>
+                {t.common.no}
               </button>
             </div>
           ) : (
@@ -169,7 +170,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
               {onDeleteDeposit && (
                 <button onClick={() => setConfirmDeleteId(d.id)}
                   style={{ width: 26, height: 26, borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                  title="Zmazať vklad">
+                  title={t.savings.deleteDeposit} aria-label={t.savings.deleteDeposit}>
                   <Trash2 size={13} />
                 </button>
               )}
@@ -207,11 +208,11 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</span>
               {goal.paused && <span style={pausedBadge}>{t.savings.pausedBadge}</span>}
             </div>
-            <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {goal.note ? goal.note : goal.deadline ? `${t.savings.goalUntil} ${new Date(goal.deadline).toLocaleDateString('sk-SK', { day: 'numeric', month: 'long', year: 'numeric' })}` : `${pctStr} ${t.savings.filled}`}
+            <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {goal.note ? goal.note : goal.deadline ? `${t.savings.goalUntil} ${formatDateLocale(goal.deadline, locale, { day: 'numeric', month: 'long', year: 'numeric' })}` : `${pctStr} ${t.savings.filled}`}
             </p>
           </div>
-          <button onClick={onClose} aria-label="Zavrieť"
+          <button onClick={onClose} aria-label={t.common.close}
             style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}>
             <X size={14} />
           </button>
@@ -238,7 +239,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
             </svg>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 20, color: 'var(--aurora-hi)' }}>{pctStr}</span>
-              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700 }}>{t.savings.filled}</span>
+              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700 }}>{t.savings.filled}</span>
             </div>
           </div>
           <div style={{ minWidth: 0 }}>
@@ -246,7 +247,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 22, color: 'var(--aurora-hi)' }}>{formatAmount(goal.savedAmount)}</span>
               <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, color: 'var(--aurora-faint)' }}> / {formatAmount(goal.targetAmount)}</span>
             </div>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 6 }}>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 6 }}>
               {isCompleted ? `🎉 ${t.savings.completed}` : `${t.savings.remainingLabel} ${formatAmount(remaining)}`}
             </div>
           </div>
@@ -256,7 +257,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 18 }}>
           {stats.map(s => (
             <div key={s.label} style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 12px' }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{s.label}</div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: s.green ? 'var(--aurora-emerald)' : 'var(--aurora-hi)' }}>{s.value}</div>
             </div>
           ))}
@@ -307,7 +308,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</div>
-                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10.5, color: 'var(--aurora-faint)', marginTop: 1 }}>{r.sub}</div>
+                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 1 }}>{r.sub}</div>
                 </div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12.5, fontWeight: 700, color: r.val === '—' ? 'var(--aurora-faint)' : 'var(--aurora-hi)', flexShrink: 0 }}>{r.val}</div>
               </div>

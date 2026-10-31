@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
-import { isEndedInMonth } from './useFixedExpenses'
+import { isEndedInMonth, isNewerRow } from './useFixedExpenses'
 import type { Income, ApiTransaction } from '../types'
 import { getAllTransactions } from '../api/allTransactions'
 
@@ -66,9 +66,11 @@ export async function fetchIncomes(
       for (const t of recurring) {
         if (t.date.substring(0, 7) > monthStr) continue
         if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
-        const key = `${t.created_by ?? ''}|${t.description ?? ''}`
+        // Same series key and same-date tie-break as the backend cards and
+        // household stats (owner + description, later-created row wins).
+        const key = `${t.userId}|${t.description ?? ''}`
         const cur = latest.get(key)
-        if (!cur || t.date > cur.date) latest.set(key, t)
+        if (!cur || isNewerRow(t, cur)) latest.set(key, t)
       }
       const extra = [...latest.values()]
         .filter(t => !isEndedInMonth(t.endedOn, monthStr))

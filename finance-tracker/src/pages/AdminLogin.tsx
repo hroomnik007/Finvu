@@ -47,7 +47,7 @@ export function AdminLoginPage({ onSuccess }: AdminLoginPageProps) {
   })
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',

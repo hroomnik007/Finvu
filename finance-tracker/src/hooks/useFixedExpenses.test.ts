@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isFixedExpenseDue, parseDescription } from './useFixedExpenses'
+import { isFixedExpenseDue, isNewerRow, parseDescription } from './useFixedExpenses'
 
 // 15 Oct 2026, local noon
 const TODAY = new Date(2026, 9, 15, 12)
@@ -38,5 +38,17 @@ describe('isFixedExpenseDue', () => {
     expect(isFixedExpenseDue(14, 10, 2026, TODAY)).toBe(true)
     expect(isFixedExpenseDue(15, 10, 2026, TODAY)).toBe(true)
     expect(isFixedExpenseDue(16, 10, 2026, TODAY)).toBe(false)
+  })
+})
+
+describe('isNewerRow', () => {
+  it('prefers the later date', () => {
+    expect(isNewerRow({ date: '2026-10-01', createdAt: '2026-01-01T00:00:00Z' }, { date: '2026-09-01', createdAt: '2026-12-01T00:00:00Z' })).toBe(true)
+  })
+  it('breaks same-date ties by creation time, like the backend', () => {
+    const older = { date: '2026-10-01', createdAt: '2026-10-01T08:00:00Z' }
+    const newer = { date: '2026-10-01', createdAt: '2026-10-01T09:00:00Z' }
+    expect(isNewerRow(newer, older)).toBe(true)
+    expect(isNewerRow(older, newer)).toBe(false)
   })
 })

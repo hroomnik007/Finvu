@@ -194,7 +194,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   })
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -257,7 +257,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           <label style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
           <input
             type="email"
-            placeholder="vas@email.com"
+            placeholder={t.auth.emailPlaceholder}
             value={email}
             onChange={e => setEmail(e.target.value)}
             onFocus={() => setFocused('email')}
@@ -274,7 +274,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
             <button
               type="button"
               onClick={onNavigateForgotPassword}
-              style={{ fontSize: 12, color: 'var(--aurora-violet)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", padding: 0 }}
+              style={{ fontSize: 12, color: 'var(--aurora-violet-text)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", padding: 0 }}
             >
               {t.auth.forgotPasswordLink}
             </button>
@@ -327,7 +327,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         </button>
 
         {/* Alt sign-in methods */}
-        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, margin: '24px 0 10px' }}>{t.auth.continueWithLabel}</p>
+        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, margin: '24px 0 10px' }}>{t.auth.continueWithLabel}</p>
 
         {pinOnThisDevice ? (
           <div style={{ display: 'flex', gap: 10 }}>
@@ -398,7 +398,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           <button
             type="button"
             onClick={onNavigateRegister}
-            style={{ color: 'var(--aurora-violet)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5 }}
+            style={{ color: 'var(--aurora-violet-text)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5 }}
           >
             {t.auth.registerArrow}
           </button>
@@ -426,7 +426,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
               <button
                 type="button"
                 onClick={() => setPinModalOpen(false)}
-                aria-label="Zavrieť"
+                aria-label={t.common.close}
                 style={{ position: 'absolute', top: 24, right: 24, width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer' }}
               >
                 <X size={14} />

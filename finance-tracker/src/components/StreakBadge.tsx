@@ -1,4 +1,5 @@
 import { Flame } from 'lucide-react'
+import { useTranslation } from '../i18n'
 
 interface StreakBadgeProps {
   count: number
@@ -8,6 +9,7 @@ interface StreakBadgeProps {
 }
 
 export function StreakBadge({ count, size = 'lg', onClick, variant = 'default' }: StreakBadgeProps) {
+  const { t } = useTranslation()
   if (count <= 0) return null
   const isLg = size === 'lg'
   const interactive = !!onClick
@@ -16,14 +18,14 @@ export function StreakBadge({ count, size = 'lg', onClick, variant = 'default' }
     <button
       type="button"
       onClick={onClick}
-      title={interactive ? `Séria ${count} dní — klikni pre detail` : `Sledujete financie ${count} dní v rade!`}
+      title={(interactive ? t.streak.badgeTitleInteractive : t.streak.badgeTitle).replace('{n}', String(count))}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         padding: isLg ? '4px 9px' : '2px 6px',
         borderRadius: 99,
         background: isAurora ? 'rgba(251,191,36,.15)' : 'linear-gradient(135deg,rgba(251,146,60,0.18),rgba(248,113,113,0.15))',
         border: isAurora ? '1px solid rgba(251,191,36,.3)' : '1px solid rgba(251,146,60,0.3)',
-        fontSize: isLg ? 11 : 10, fontWeight: 700, color: isAurora ? 'var(--aurora-amber)' : '#FB923C',
+        fontSize: isLg ? 13 : 12, fontWeight: 700, color: isAurora ? 'var(--aurora-amber)' : '#FB923C',
         cursor: interactive ? 'pointer' : 'default', userSelect: 'none',
         fontFamily: isAurora ? "'Manrope', sans-serif" : "'DM Mono', monospace",
         flexShrink: 0,

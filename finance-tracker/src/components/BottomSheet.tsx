@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { FileUp } from 'lucide-react'
+import { useTranslation } from '../i18n'
 
 interface BottomSheetProps {
   open: boolean
@@ -11,6 +12,7 @@ interface BottomSheetProps {
 }
 
 export function BottomSheet({ open, onClose, title, children, footer, onImportCsv }: BottomSheetProps) {
+  const { t } = useTranslation()
   const [translateY, setTranslateY] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const startYRef = useRef(0)
@@ -148,7 +150,8 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
                   border: '1px solid rgba(139,92,246,0.3)',
                   color: 'var(--violet)', cursor: 'pointer',
                 }}
-                title="Import výpisu"
+                title={t.settings.importStatement}
+                aria-label={t.settings.importStatement}
               >
                 <FileUp size={17} />
               </button>
@@ -156,7 +159,7 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
             <button
               type="button"
               onClick={onClose}
-              aria-label="Zavrieť"
+              aria-label={t.common.close}
               style={{
                 width: 30, height: 30, borderRadius: '50%',
                 background: 'var(--bg3)', border: 'none',
@@ -178,7 +181,7 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
           <div style={{
             padding: '16px 24px',
             paddingBottom: isMobile
-              ? 'calc(24px + env(safe-area-inset-bottom, 0px))'
+              ? 'calc(24px + var(--safe-bottom))'
               : '24px',
             borderTop: '1px solid var(--border)',
             flexShrink: 0,

@@ -5,6 +5,8 @@ import {
   Target, Flame, PiggyBank, BarChart3, Trophy, Zap, Users, Gem,
 } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { formatDateLocale } from '../utils/format'
+import { useFormatters } from '../hooks/useFormatters'
 import { updateAvatar, updateUserSettings, updateProfile } from '../api/auth'
 import { getTransactions } from '../api/transactions'
 import { getSavingsGoals } from '../api/savings'
@@ -54,7 +56,7 @@ function AchievementsTab() {
 
   return (
     <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{t.profile.achievementsUnlocked} ({countLabel})</div>
+      <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{t.profile.achievementsUnlocked} ({countLabel})</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, opacity: loaded ? 1 : 0.5, transition: 'opacity 0.2s' }}>
         {items.map((a, i) => {
           const Icon = ACHIEVEMENT_ICONS[a.key] ?? Target
@@ -83,7 +85,7 @@ function AchievementsTab() {
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>{a.desc}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 1 }}>{a.desc}</div>
               </div>
             </div>
             </div>
@@ -111,10 +113,23 @@ function AchievementsTab() {
 
 type Tab = 'profile' | 'account' | 'achievements'
 
+const COUNTRY_OPTIONS = [
+  { code: 'SK', flag: '🇸🇰' },
+  { code: 'CZ', flag: '🇨🇿' },
+  { code: 'HU', flag: '🇭🇺' },
+  { code: 'PL', flag: '🇵🇱' },
+  { code: 'GB', flag: '🇬🇧' },
+]
+
 export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLogout?: () => void }) {
   const { profileName: ctxName, profileAvatar: ctxAvatar, setProfile } = useSettingsContext()
   const { user, refreshUser } = useAuth()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
+  const { formatNumber, currency } = useFormatters()
+  const formatMoneyRounded = (n: number) => formatNumber(n, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  const regionName = (code: string) => {
+    try { return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? code } catch { return code }
+  }
 
   const [tab, setTab] = useState<Tab>('profile')
   const [editMode, setEditMode] = useState(false)
@@ -298,9 +313,9 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
               </div>
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-lo)', margin: 0 }}>{user?.email}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
-                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(251,191,36,0.18)', color: '#fde68a', border: '1px solid rgba(251,191,36,0.3)', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 3 }}><Crown size={10} /> Pro</span>
+                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(251,191,36,0.18)', color: '#fde68a', border: '1px solid rgba(251,191,36,0.3)', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 3 }}><Crown size={10} /> Pro</span>
                 {user?.createdAt && (
-                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-faint)' }}>{t.profile.memberSince.replace('{date}', new Date(user.createdAt).toLocaleDateString('sk-SK', { month: 'long', year: 'numeric' }))}</span>
+                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{t.profile.memberSince.replace('{date}', formatDateLocale(user.createdAt, locale, { month: 'long', year: 'numeric' }))}</span>
                 )}
               </div>
             </div>
@@ -341,15 +356,15 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', borderTop: '1px solid var(--aurora-gline)', background: 'rgba(0,0,0,0.15)' }}>
             {[
               { label: t.profile.transactionsStat, value: txnCount !== null ? String(txnCount) : '—', color: 'var(--aurora-hi)', icon: null },
-              { label: t.profile.savingsStat, value: savingsTotal !== null ? `${savingsTotal.toLocaleString('sk-SK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €` : '—', color: 'var(--aurora-emerald)', icon: null },
+              { label: t.profile.savingsStat, value: savingsTotal !== null ? formatMoneyRounded(savingsTotal) : '—', color: 'var(--aurora-emerald)', icon: null },
               { label: t.profile.streakStat, value: String(user?.currentStreak ?? 0), color: '#FB923C', icon: Flame },
-              { label: t.profile.trackingStat, value: trackingDays !== null ? `${trackingDays} ${t.profile.days}` : '—', color: 'var(--aurora-violet)', icon: null },
+              { label: t.profile.trackingStat, value: trackingDays !== null ? `${trackingDays} ${t.profile.days}` : '—', color: 'var(--aurora-violet-text)', icon: null },
             ].map((stat, i) => (
               <div key={i} style={{ padding: '12px 8px', textAlign: 'center', borderLeft: i > 0 ? '1px solid var(--aurora-gline)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: stat.color, marginBottom: 2 }}>
                   {stat.value}{stat.icon && <stat.icon size={11} color={stat.color} fill={stat.color} />}
                 </div>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{stat.label}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -392,7 +407,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
             <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* OSOBNÉ ÚDAJE section */}
               <div>
-                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 8, textTransform: 'uppercase' }}>{t.profile.personalData}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 8, textTransform: 'uppercase' }}>{t.profile.personalData}</div>
                 <GlassCard radius={14} style={{ padding: 0, overflow: 'hidden' }}>
                   {/* Meno row */}
                   <div style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: '1px solid var(--aurora-gline)' }}>
@@ -420,7 +435,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                   <div style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: '1px solid var(--aurora-gline)' }}>
                     <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', width: 80, flexShrink: 0 }}>{t.auth.email}</span>
                     <span style={{ flex: 1, fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email ?? '—'}</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(52,211,153,0.12)', color: 'var(--aurora-emerald)', border: '1px solid rgba(52,211,153,0.25)', letterSpacing: '0.06em', flexShrink: 0, marginLeft: 6 }}>VERIF.</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(52,211,153,0.12)', color: 'var(--aurora-emerald)', border: '1px solid rgba(52,211,153,0.25)', letterSpacing: '0.06em', flexShrink: 0, marginLeft: 6 }}>VERIF.</span>
                   </div>
                   {/* Krajina row */}
                   <div style={{ display: 'flex', alignItems: 'center', padding: '13px 16px' }}>
@@ -434,11 +449,9 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                       }}
                       style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', fontFamily: 'inherit', padding: 0, cursor: 'pointer', appearance: 'none' as const }}
                     >
-                      <option value="SK">🇸🇰 Slovensko</option>
-                      <option value="CZ">🇨🇿 Česko</option>
-                      <option value="HU">🇭🇺 Maďarsko</option>
-                      <option value="PL">🇵🇱 Poľsko</option>
-                      <option value="GB">🇬🇧 Veľká Británia</option>
+                      {COUNTRY_OPTIONS.map(c => (
+                        <option key={c.code} value={c.code}>{c.flag} {regionName(c.code)}</option>
+                      ))}
                     </select>
                   </div>
                 </GlassCard>
@@ -446,7 +459,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
 
               {/* PREDVOLENÁ STRÁNKA */}
               <div>
-                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 8, textTransform: 'uppercase' }}>{t.profile.defaultPage}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 8, textTransform: 'uppercase' }}>{t.profile.defaultPage}</div>
                 <select
                   value={defaultPageDraft}
                   onChange={e => setDefaultPageDraft(e.target.value)}
@@ -465,7 +478,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 {defaultPageSaveOk ? (
                   <div style={{ flex: 2, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10, fontSize: 14, fontWeight: 600, color: 'var(--aurora-emerald)', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>
-                    <Check size={15} /> Uložené
+                    <Check size={15} /> {t.profile.saved}
                   </div>
                 ) : (
                   <button
@@ -503,15 +516,15 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>Finvu Pro</div>
                   <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
-                    {user?.createdAt ? t.profile.memberSince.replace('{date}', new Date(user.createdAt).toLocaleDateString('sk-SK', { month: 'long', year: 'numeric' })) : t.profile.allFeaturesUnlocked}
+                    {user?.createdAt ? t.profile.memberSince.replace('{date}', formatDateLocale(user.createdAt, locale, { month: 'long', year: 'numeric' })) : t.profile.allFeaturesUnlocked}
                   </div>
                 </div>
-                <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,215,100,0.15)', color: '#fde68a', border: '1px solid rgba(255,215,100,0.3)', letterSpacing: '0.06em', flexShrink: 0 }}>{t.profile.active.toUpperCase()}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,215,100,0.15)', color: '#fde68a', border: '1px solid rgba(255,215,100,0.3)', letterSpacing: '0.06em', flexShrink: 0 }}>{t.profile.active.toUpperCase()}</span>
               </GlassCard>
 
               {/* BEZPEČNOSŤ */}
               <div>
-                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 10, textTransform: 'uppercase' }}>{t.profile.security}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 10, textTransform: 'uppercase' }}>{t.profile.security}</div>
                 <GlassCard radius={14} style={{ padding: 0, overflow: 'hidden' }}>
                   {/* Single entry point — password & PIN live in Nastavenia → Bezpečnosť */}
                   <button
@@ -523,7 +536,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><KeyRound size={17} color="var(--aurora-violet)" /></div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)' }}>{t.profile.security}</div>
-                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>{t.profile.passwordProtection}</div>
+                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 1 }}>{t.profile.passwordProtection}</div>
                     </div>
                     <ChevronRight size={15} style={{ color: 'var(--aurora-faint)', flexShrink: 0 }} />
                   </button>

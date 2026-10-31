@@ -41,8 +41,8 @@ const emptyForm = (): VarForm => ({ amount: '', categoryId: '', note: '', date: 
 
 const getBudgetBarColor = (pct: number, autoLimit = false) => {
   if (autoLimit) return '#22c55e'
-  if (pct >= 100) return '#ef4444'
-  if (pct >= 80) return '#FBBF24'
+  if (pct >= 100) return 'var(--aurora-rose)'
+  if (pct >= 80) return 'var(--aurora-amber)'
   return 'var(--green)'
 }
 
@@ -73,7 +73,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, onClick }: {
       }}>
         <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
       </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{label}</span>
+      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{label}</span>
     </button>
   )
 }
@@ -85,7 +85,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const { fixedExpenses } = useFixedExpenses(month, year)
   const { categories, addCategory } = useCategories()
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
-  const { formatAmount, formatDate } = useFormatters()
+  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
 
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -205,8 +205,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
     setSheetOpen(false)
   }
 
-  const MONTH_NAMES_VAR = ['Január','Február','Marec','Apríl','Máj','Jún','Júl','August','September','Október','November','December']
-  const MONTH_NAME_VAR = MONTH_NAMES_VAR[month - 1] ?? ''
+  const monthNameRaw = getLocalizedMonthNames(locale)[month - 1] ?? ''
+  const MONTH_NAME_VAR = monthNameRaw.charAt(0).toUpperCase() + monthNameRaw.slice(1)
 
   const filteredTotal = useMemo(() =>
     (activeCategory
@@ -265,7 +265,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
           {/* Hero wallet card */}
           <HeroCard variant="expense">
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
               {t.expenses.variable.title} · {MONTH_NAME_VAR} {year}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
@@ -274,14 +274,14 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-rose))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                −{Math.floor(animatedFilteredTotal).toLocaleString('sk-SK')}
+                −{formatAmountParts(animatedFilteredTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                ,{String(Math.round((animatedFilteredTotal % 1) * 100)).padStart(2, '0')}&nbsp;€
+                {formatAmountParts(animatedFilteredTotal).rest}
               </span>
             </div>
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 12 }}>
-              {filteredSorted.length} transakcií tento mesiac
+              {t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length))}
             </div>
           </HeroCard>
 
@@ -314,7 +314,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
           )}
 
           {/* Mobile: day-grouped GlassCard rows */}
-          <div className="lg:hidden" style={{ paddingBottom: 196 }} onClick={() => setOpenSwipeId(null)}>
+          <div className="lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }} onClick={() => setOpenSwipeId(null)}>
             {filteredSorted.length === 0 ? (
               <GlassCard radius={18}>
                 <div className="empty-state">
@@ -348,7 +348,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
-                                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
+                                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
                                 </div>
                                 <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>-{formatAmount(e.amount)}</span>
                               </div>
@@ -396,7 +396,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
-                              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
+                              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
                               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>-{formatAmount(e.amount)}</span>
@@ -421,7 +421,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
             budgetStatuses.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--aurora-faint)', fontSize: 13, fontFamily: "'Manrope', sans-serif" }}>
                 <div>{t.dashboard.noLimits}</div>
-                <div style={{ fontSize: 11, marginTop: 4 }}>{t.dashboard.setInCategories}</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>{t.dashboard.setInCategories}</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -438,13 +438,13 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                           </span>
                           <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bs.categoryName}</span>
                         </div>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, fontWeight: 700, color: barColor, background: barColor + '20', padding: '2px 6px', borderRadius: 20, flexShrink: 0, marginLeft: 6 }}>{Math.round(bs.percentage)}%</span>
+                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '20', padding: '2px 6px', borderRadius: 20, flexShrink: 0, marginLeft: 6 }}>{Math.round(bs.percentage)}%</span>
                       </div>
                       <div style={{ height: 4, borderRadius: 2, background: 'var(--aurora-gline)', overflow: 'hidden', marginBottom: 6 }}>
                         <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: barColor }} />
                       </div>
-                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>{formatAmount(bs.spent)} / {formatAmount(bs.limit)}</div>
-                      {bs.isOver && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-rose)', marginTop: 2, fontWeight: 500 }}>{t.dashboard.limitExceeded}</div>}
+                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{formatAmount(bs.spent)} / {formatAmount(bs.limit)}</div>
+                      {bs.isOver && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-rose)', marginTop: 2, fontWeight: 500 }}>{t.dashboard.limitExceeded}</div>}
                     </GlassCard>
                   )
                 })}
@@ -460,7 +460,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
-          style={{ position: 'fixed', right: 16, bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
+          style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
         </button>
@@ -498,7 +498,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
         {livePct !== null && liveLimit && (
           <div style={{ borderRadius: 12, padding: '10px 12px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif" }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif" }}>
               <span>{liveBudget?.categoryName}</span>
               <span>{formatAmount(liveSpent)} / {formatAmount(liveLimit)}</span>
             </div>
@@ -552,7 +552,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
             placeholder={t.expenses.variable.notePlaceholder}
             value={form.note}
             onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-            style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '8px 12px', color: 'var(--aurora-hi)', fontSize: 11.5, fontFamily: "'Manrope', sans-serif", outline: 'none', minWidth: 100 }}
+            style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '8px 12px', color: 'var(--aurora-hi)', fontSize: 12, fontFamily: "'Manrope', sans-serif", outline: 'none', minWidth: 100 }}
           />
         </div>
       </CompactModal>

@@ -7,7 +7,7 @@ import { annualCsv, savingsRatePct, yearCategories, yearTotals } from '../utils/
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 
-const th: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', padding: '6px 6px', textAlign: 'right' }
+const th: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', padding: '6px 6px', textAlign: 'right' }
 const td: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap' }
 
 function downloadCsv(content: string, filename: string) {
@@ -49,7 +49,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
   const arrow: React.CSSProperties = { background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--aurora-hi)' }
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px var(--page-pad-bottom-nofab)' }}>
       <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.annual.title}</h1>
@@ -69,7 +69,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
               ...(rate !== null ? [[t.dashboard.savingsRate, `${rate} %`, 'var(--aurora-hi)']] : []),
             ] as [string, string, string][]).map(([label, value, color]) => (
               <div key={label} style={{ flex: '1 1 120px' }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--aurora-faint)', marginBottom: 2 }}>{label}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--aurora-faint)', marginBottom: 2 }}>{label}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color }}>{value}</div>
               </div>
             ))}
@@ -129,7 +129,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
           type="button"
           onClick={exportCsv}
           disabled={months.length === 0}
-          style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: '1.5px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+          style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: '1.5px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet-text)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
         >
           <Download size={15} /> {t.annual.export}
         </button>

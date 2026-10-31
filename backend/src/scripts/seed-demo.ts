@@ -283,25 +283,25 @@ async function main() {
   // March
   incomeRows.push(tx("Plat",     "income", "1250", "Výplata",  d(2026,3,1),  true,  P));
   incomeRows.push(tx("Freelance","income", "350",  "Freelance",d(2026,3,20), false, P));
-  incomeRows.push(tx("Plat",     "income", "980",  "Výplata",  d(2026,3,1),  true,  L));
-  incomeRows.push(tx("Plat",     "income", "850",  "Výplata",  d(2026,3,1),  true,  T));
+  incomeRows.push(tx("Plat",     "income", "980",  "Výplata (Demo 1)",  d(2026,3,1),  true,  L));
+  incomeRows.push(tx("Plat",     "income", "850",  "Výplata (Demo 2)",  d(2026,3,1),  true,  T));
   incomeRows.push(tx("Brigáda",  "income", "250",  "Brigáda",  d(2026,3,15), false, T));
-  incomeRows.push(tx("Plat",     "income", "920",  "Výplata",  d(2026,3,1),  true,  A));
+  incomeRows.push(tx("Plat",     "income", "920",  "Výplata (Demo 3)",  d(2026,3,1),  true,  A));
 
   // April
   incomeRows.push(tx("Plat",     "income", "1300", "Výplata",  d(2026,4,1),  true,  P));
   incomeRows.push(tx("Freelance","income", "450",  "Freelance",d(2026,4,15), false, P));
-  incomeRows.push(tx("Plat",     "income", "1050", "Výplata",  d(2026,4,1),  true,  L));
-  incomeRows.push(tx("Plat",     "income", "850",  "Výplata",  d(2026,4,1),  true,  T));
-  incomeRows.push(tx("Plat",     "income", "950",  "Výplata",  d(2026,4,1),  true,  A));
+  incomeRows.push(tx("Plat",     "income", "1050", "Výplata (Demo 1)",  d(2026,4,1),  true,  L));
+  incomeRows.push(tx("Plat",     "income", "850",  "Výplata (Demo 2)",  d(2026,4,1),  true,  T));
+  incomeRows.push(tx("Plat",     "income", "950",  "Výplata (Demo 3)",  d(2026,4,1),  true,  A));
   incomeRows.push(tx("Freelance","income", "180",  "Freelance",d(2026,4,20), false, A));
 
   // May (all ≤ day 25)
   incomeRows.push(tx("Plat",     "income", "1200", "Výplata",  d(2026,5,1),  true,  P));
-  incomeRows.push(tx("Plat",     "income", "1000", "Výplata",  d(2026,5,1),  true,  L));
-  incomeRows.push(tx("Plat",     "income", "850",  "Výplata",  d(2026,5,1),  true,  T));
+  incomeRows.push(tx("Plat",     "income", "1000", "Výplata (Demo 1)",  d(2026,5,1),  true,  L));
+  incomeRows.push(tx("Plat",     "income", "850",  "Výplata (Demo 2)",  d(2026,5,1),  true,  T));
   incomeRows.push(tx("Brigáda",  "income", "300",  "Brigáda",  d(2026,5,10), false, T));
-  incomeRows.push(tx("Plat",     "income", "950",  "Výplata",  d(2026,5,1),  true,  A));
+  incomeRows.push(tx("Plat",     "income", "950",  "Výplata (Demo 3)",  d(2026,5,1),  true,  A));
 
   console.log(`Built ${incomeRows.length} income rows.`);
 
