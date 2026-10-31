@@ -12,6 +12,7 @@ import {
   check,
   unique,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -268,6 +269,13 @@ export const notificationsDismissed = pgTable("notifications_dismissed", {
   index("notifications_dismissed_user_id_idx").on(t.userId),
 ]);
 export type NotificationDismissed = typeof notificationsDismissed.$inferSelect;
+
+// Subscription suggestions the user hid, per normalized merchant name (lib/subscriptions.ts)
+export const subscriptionDismissals = pgTable("subscription_dismissals", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  patternKey: varchar("pattern_key", { length: 120 }).notNull(),
+  dismissedAt: timestamp("dismissed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.userId, t.patternKey] })]);
 
 export const userAchievements = pgTable("user_achievements", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

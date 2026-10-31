@@ -1052,6 +1052,15 @@ export const pl: Translations = {
     badgeTitleInteractive: 'Seria {n} dni — kliknij, aby zobaczyć szczegóły',
     badgeTitle: 'Śledzisz finanse {n} dni z rzędu!',
   },
+  subscriptions: {
+    title: 'Wygląda na subskrypcję',
+    perMonth: 'miesięcznie',
+    detail: '{n}× z rzędu, zwykle około {day}. dnia miesiąca',
+    add: 'Dodaj jako stały',
+    hide: 'Ukryj',
+    startLabel: 'Zaczyna się od',
+    startHint: 'Następna płatność według twoich wydatków: {date}',
+  },
   budgetTemplate: {
     title: 'Wybierz szablon budżetu',
     subtitle: 'Zacznij od gotowych kategorii i limitów albo pomiń ten krok.',

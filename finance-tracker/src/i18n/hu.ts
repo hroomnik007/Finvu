@@ -1052,6 +1052,15 @@ export const hu: Translations = {
     badgeTitleInteractive: '{n} napos sorozat — kattintson a részletekért',
     badgeTitle: '{n} napja egymás után követi a pénzügyeit!',
   },
+  subscriptions: {
+    title: 'Előfizetésnek tűnik',
+    perMonth: 'havonta',
+    detail: '{n} hónapja egymás után, általában a hónap {day}. napja körül',
+    add: 'Hozzáadás fix kiadásként',
+    hide: 'Elrejtés',
+    startLabel: 'Kezdés',
+    startHint: 'Következő terhelés a kiadásaid alapján: {date}',
+  },
   budgetTemplate: {
     title: 'Válasszon költségvetés-sablont',
     subtitle: 'Kezdjen előre elkészített kategóriákkal és limitekkel, vagy hagyja ki.',

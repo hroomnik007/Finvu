@@ -1052,6 +1052,15 @@ export const en: Translations = {
     badgeTitleInteractive: '{n}-day streak — click for details',
     badgeTitle: 'You\'ve tracked your finances {n} days in a row!',
   },
+  subscriptions: {
+    title: 'Looks like a subscription',
+    perMonth: 'a month',
+    detail: '{n} months in a row, usually around day {day}',
+    add: 'Add as fixed',
+    hide: 'Hide',
+    startLabel: 'Starts from',
+    startHint: 'Next charge based on your spending: {date}',
+  },
   budgetTemplate: {
     title: 'Choose a budget template',
     subtitle: 'Start with ready-made categories and limits, or skip this step.',
