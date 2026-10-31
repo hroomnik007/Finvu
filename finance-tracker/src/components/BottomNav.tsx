@@ -1,33 +1,38 @@
 import { useState } from 'react'
-import { Home, TrendingUp, Settings, Receipt, Lock, Tag, Search, PiggyBank, MoreHorizontal } from 'lucide-react'
+import { Home, TrendingUp, Settings, Receipt, Lock, Tag, Search, PiggyBank, MoreHorizontal, CalendarRange } from 'lucide-react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useScrollCollapse } from '../hooks/useScrollCollapse'
+import { activeBottomTab, bottomTabs, moreMenuPages, EXPENSE_MENU_PAGES, type BottomTabId } from '../utils/bottomNav'
 
 interface BottomNavProps {
   current: Page
   onChange: (page: Page) => void
 }
 
-const EXPENSE_PAGES: Page[] = ['variable-expenses', 'fixed-expenses', 'categories', 'search']
-const VIAC_PAGES: Page[] = ['savings', 'household']
+const HouseIcon = ({ size }: { size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    <polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>
+)
+const CardIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="2" y="5" width="20" height="14" rx="2"/>
+    <line x1="2" y1="10" x2="22" y2="10"/>
+  </svg>
+)
 
 export function BottomNav({ current, onChange }: BottomNavProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const expensesActive = EXPENSE_PAGES.includes(current)
   const householdEnabled = user?.household_enabled ?? false
   const savingsEnabled = user?.savings_enabled ?? false
-  const showViac = savingsEnabled && householdEnabled
-  const showOnlySavings = savingsEnabled && !householdEnabled
-  const showOnlyHousehold = householdEnabled && !savingsEnabled
-  const viacActive = VIAC_PAGES.includes(current)
 
-  const [showExpenseMenu, setShowExpenseMenu] = useState(false)
-  const [showViacSheet, setShowViacSheet] = useState(false)
+  const [openMenu, setOpenMenu] = useState<'expenses' | 'more' | null>(null)
   const collapsed = useScrollCollapse()
-  const menuOpen = showExpenseMenu || showViacSheet
+  const active = activeBottomTab(current)
 
   const submenuCardStyle: React.CSSProperties = {
     position: 'fixed',
@@ -48,128 +53,74 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
     </div>
   )
 
-  function handleExpenseNav(page: Page) {
-    onChange(page)
-    setShowExpenseMenu(false)
+  const pageItem: Record<string, { icon: React.ReactNode; label: string }> = {
+    'variable-expenses': { icon: <Receipt size={16} aria-hidden />, label: t.nav.variable },
+    'fixed-expenses': { icon: <Lock size={16} aria-hidden />, label: t.nav.fixed },
+    categories: { icon: <Tag size={16} aria-hidden />, label: t.nav.categories },
+    search: { icon: <Search size={16} aria-hidden />, label: t.nav.search },
+    savings: { icon: <PiggyBank size={16} aria-hidden />, label: t.nav.savings },
+    annual: { icon: <CalendarRange size={16} aria-hidden />, label: t.nav.annual },
+    settings: { icon: <Settings size={16} aria-hidden />, label: t.nav.settings },
   }
 
-  function handleViacNav(page: Page) {
+  function go(page: Page) {
+    setOpenMenu(null)
     onChange(page)
-    setShowViacSheet(false)
+  }
+
+  const menu = openMenu && (
+    <>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setOpenMenu(null)} />
+      <div
+        id={`bottom-nav-menu-${openMenu}`}
+        role="menu"
+        aria-label={openMenu === 'expenses' ? t.nav.expenses : t.nav.more}
+        style={submenuCardStyle}
+      >
+        {dragHandle}
+        {(openMenu === 'expenses' ? EXPENSE_MENU_PAGES : moreMenuPages({ savingsEnabled })).map(page => {
+          const on = current === page
+          return (
+            <button
+              key={page}
+              role="menuitem"
+              aria-current={on ? 'page' : undefined}
+              onClick={() => go(page)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px',
+                background: on ? 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))' : 'transparent',
+                border: 'none', borderRadius: '12px',
+                color: on ? '#fff' : 'var(--aurora-lo)',
+                fontSize: '14px', fontFamily: "'Manrope', sans-serif", fontWeight: on ? 600 : 500,
+                cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              {pageItem[page].icon}
+              {pageItem[page].label}
+            </button>
+          )
+        })}
+      </div>
+    </>
+  )
+
+  const tabs = bottomTabs({ householdEnabled })
+  const tabDef: Record<BottomTabId, { icon: React.ReactNode; label: string; onClick: () => void; menu?: 'expenses' | 'more' }> = {
+    dashboard: { icon: <Home size={20} aria-hidden />, label: t.nav.overview, onClick: () => go('dashboard') },
+    income: { icon: <TrendingUp size={20} aria-hidden />, label: t.nav.income, onClick: () => go('income') },
+    expenses: { icon: <CardIcon />, label: t.nav.expenses, menu: 'expenses', onClick: () => setOpenMenu(m => m === 'expenses' ? null : 'expenses') },
+    household: { icon: <HouseIcon size={20} />, label: t.nav.household, onClick: () => go('household') },
+    more: { icon: <MoreHorizontal size={20} aria-hidden />, label: t.nav.more, menu: 'more', onClick: () => setOpenMenu(m => m === 'more' ? null : 'more') },
   }
 
   return (
     <>
-      {/* Expense submenu popup */}
-      {showExpenseMenu && (
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 98 }}
-            onClick={() => setShowExpenseMenu(false)}
-          />
-          <div style={submenuCardStyle}>
-            {dragHandle}
-            {([
-              { icon: <Receipt size={16} />, label: t.nav.variable, page: 'variable-expenses' as Page },
-              { icon: <Lock size={16} />, label: t.nav.fixed, page: 'fixed-expenses' as Page },
-              { icon: <Tag size={16} />, label: t.nav.categories, page: 'categories' as Page },
-              { icon: <Search size={16} />, label: t.nav.search, page: 'search' as Page },
-            ] as const).map(item => (
-              <button
-                key={item.page}
-                onClick={() => handleExpenseNav(item.page)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: current === item.page ? 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))' : 'transparent',
-                  border: 'none',
-                  borderRadius: '12px',
-                  color: current === item.page ? '#fff' : 'var(--aurora-lo)',
-                  fontSize: '14px',
-                  fontFamily: "'Manrope', sans-serif",
-                  fontWeight: current === item.page ? 600 : 500,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Viac popup */}
-      {showViacSheet && (
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 98 }}
-            onClick={() => setShowViacSheet(false)}
-          />
-          <div style={submenuCardStyle}>
-            {dragHandle}
-            {savingsEnabled && (
-              <button
-                onClick={() => handleViacNav('savings')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: current === 'savings' ? 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))' : 'transparent',
-                  border: 'none',
-                  borderRadius: '12px',
-                  color: current === 'savings' ? '#fff' : 'var(--aurora-lo)',
-                  fontSize: '14px',
-                  fontFamily: "'Manrope', sans-serif",
-                  fontWeight: current === 'savings' ? 600 : 500,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <PiggyBank size={16} />
-                {t.nav.savings}
-              </button>
-            )}
-            {householdEnabled && (
-              <button
-                onClick={() => handleViacNav('household')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: current === 'household' ? 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))' : 'transparent',
-                  border: 'none',
-                  borderRadius: '12px',
-                  color: current === 'household' ? '#fff' : 'var(--aurora-lo)',
-                  fontSize: '14px',
-                  fontFamily: "'Manrope', sans-serif",
-                  fontWeight: current === 'household' ? 600 : 500,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                  <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-                {t.nav.household}
-              </button>
-            )}
-          </div>
-        </>
-      )}
+      {menu}
 
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, display: 'flex', justifyContent: 'center' }}>
         <nav
           className="bottom-nav-bar"
+          aria-label={t.nav.appName}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -189,71 +140,24 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
             transition: 'width 0.35s cubic-bezier(0.4,0,0.2,1), max-width 0.35s cubic-bezier(0.4,0,0.2,1), padding 0.35s cubic-bezier(0.4,0,0.2,1), gap 0.3s ease',
           }}
         >
-          <NavTab
-            active={current === 'dashboard' && !menuOpen}
-            collapsed={collapsed}
-            icon={<Home size={20} />}
-            label={t.nav.overview}
-            onClick={() => { setShowExpenseMenu(false); setShowViacSheet(false); onChange('dashboard') }}
-          />
-          <NavTab
-            active={current === 'income' && !menuOpen}
-            collapsed={collapsed}
-            icon={<TrendingUp size={20} />}
-            label={t.nav.income}
-            onClick={() => { setShowExpenseMenu(false); setShowViacSheet(false); onChange('income') }}
-          />
-          <NavTab
-            active={showExpenseMenu || (expensesActive && !showViacSheet)}
-            collapsed={collapsed}
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="5" width="20" height="14" rx="2"/>
-                <line x1="2" y1="10" x2="22" y2="10"/>
-              </svg>
-            }
-            label={t.nav.expenses}
-            onClick={() => { setShowViacSheet(false); setShowExpenseMenu(s => !s) }}
-          />
-          <NavTab
-            active={current === 'settings' && !menuOpen}
-            collapsed={collapsed}
-            icon={<Settings size={20} />}
-            label={t.nav.settings}
-            onClick={() => { setShowExpenseMenu(false); setShowViacSheet(false); onChange('settings') }}
-          />
-          {showViac && (
-            <NavTab
-              active={showViacSheet || (viacActive && !showExpenseMenu)}
-              collapsed={collapsed}
-              icon={<MoreHorizontal size={20} />}
-              label={t.nav.more}
-              onClick={() => { setShowExpenseMenu(false); setShowViacSheet(s => !s) }}
-            />
-          )}
-          {showOnlySavings && (
-            <NavTab
-              active={current === 'savings' && !menuOpen}
-              collapsed={collapsed}
-              icon={<PiggyBank size={20} />}
-              label={t.nav.savings}
-              onClick={() => { setShowExpenseMenu(false); onChange('savings') }}
-            />
-          )}
-          {showOnlyHousehold && (
-            <NavTab
-              active={current === 'household' && !menuOpen}
-              collapsed={collapsed}
-              icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                  <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-              }
-              label={t.nav.household}
-              onClick={() => { setShowExpenseMenu(false); onChange('household') }}
-            />
-          )}
+          {tabs.map(id => {
+            const d = tabDef[id]
+            // An open menu takes the highlight; otherwise the current page's tab.
+            const isActive = openMenu ? openMenu === id : active === id
+            return (
+              <NavTab
+                key={id}
+                active={isActive}
+                current={!d.menu && active === id}
+                collapsed={collapsed}
+                icon={d.icon}
+                label={d.label}
+                onClick={d.onClick}
+                menuId={d.menu ? `bottom-nav-menu-${d.menu}` : undefined}
+                expanded={d.menu ? openMenu === d.menu : undefined}
+              />
+            )
+          })}
         </nav>
       </div>
     </>
@@ -262,16 +166,22 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
 
 function NavTab({
   active,
+  current,
   collapsed,
   icon,
   label,
   onClick,
+  menuId,
+  expanded,
 }: {
   active: boolean
+  current: boolean
   collapsed: boolean
   icon: React.ReactNode
   label: string
   onClick: () => void
+  menuId?: string
+  expanded?: boolean
 }) {
   // Expanded: every tab shows icon-above-label; the active tab additionally
   // gets the gradient highlight pill behind it.
@@ -281,6 +191,11 @@ function NavTab({
   return (
     <button
       onClick={onClick}
+      aria-label={label}
+      aria-current={current ? 'page' : undefined}
+      aria-haspopup={menuId ? 'menu' : undefined}
+      aria-expanded={menuId ? !!expanded : undefined}
+      aria-controls={menuId && expanded ? menuId : undefined}
       style={{
         flex: collapsed ? '0 0 auto' : 1,
         display: 'flex',
