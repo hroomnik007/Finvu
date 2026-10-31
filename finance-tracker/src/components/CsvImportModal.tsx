@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Upload, Check, Landmark, FileText, Trash2 } from 'lucide-react'
 import { createTransactionsBulk, findDuplicateRows } from '../api/transactions'
@@ -35,6 +35,8 @@ interface CsvImportModalProps {
   open: boolean
   onClose: () => void
   filterType?: 'income' | 'expense'
+  /** A file handed over by the share sheet; read as soon as the modal opens. */
+  initialFile?: File | null
 }
 
 type BankFormat = 'camt053' | 'revolut' | 'tatra' | 'csob' | 'slsp' | 'mbank' | 'bank365' | 'custom'
@@ -413,7 +415,7 @@ function parseMBank(rows: CsvRow[]): ImportRow[] {
     .filter(r => r.amount > 0 && /^\d{4}-\d{2}-\d{2}$/.test(r.date))
 }
 
-export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProps) {
+export function CsvImportModal({ open, onClose, filterType, initialFile }: CsvImportModalProps) {
   const { t } = useTranslation()
   const [format, setFormat] = useState<BankFormat>('revolut')
   const [rows, setRows] = useState<ImportRow[]>([])
@@ -431,6 +433,16 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
   const qc = useQueryClient()
   const { categories } = useCategories()
   const { data: rules = [] } = useQuery({ queryKey: ['categoryRules'], queryFn: getCategoryRules, enabled: open })
+  const loadedFile = useRef<File | null>(null)
+
+  useEffect(() => {
+    if (!open || !initialFile || loadedFile.current === initialFile) return
+    loadedFile.current = initialFile
+    setFormat('camt053')
+    void handleFile(initialFile, 'camt053')
+  // Runs once per handed-over file; handleFile is recreated every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialFile])
 
   if (!open) return null
 
@@ -467,7 +479,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
     }
   }
 
-  async function handleFile(file: File) {
+  async function handleFile(file: File, pickedFormat: BankFormat = format) {
     setError(null)
     setImportedCount(null)
     setRows([])
@@ -475,7 +487,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
 
     // camt.053 XML is the same for every bank, so it is detected whatever format is picked.
     const head = await file.slice(0, 512).text()
-    if (format === 'camt053' || looksLikeXml(file.name, head)) {
+    if (pickedFormat === 'camt053' || looksLikeXml(file.name, head)) {
       try {
         const result = parseCamt053(await file.text())
         const n = (tpl: string, count: number) => tpl.replace('{n}', String(count))
@@ -500,7 +512,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
     }
 
     // 365.bank ships a PDF statement instead of CSV — extract text, then parse.
-    if (format === 'bank365') {
+    if (pickedFormat === 'bank365') {
       try {
         const text = await extractPdfText(file)
         acceptParsed(parse365BankPDF(text))
@@ -512,7 +524,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
 
     // Revolut also offers a PDF statement alongside its CSV export — dispatch on the
     // uploaded file's extension since both are accepted for this bank.
-    if (format === 'revolut' && /\.pdf$/i.test(file.name)) {
+    if (pickedFormat === 'revolut' && /\.pdf$/i.test(file.name)) {
       try {
         const text = await extractPdfText(file)
         acceptParsed(parseRevolutPDF(text))
@@ -527,14 +539,14 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
 
     function handleParsed(result: ParseResult<CsvRow>) {
       const headers = result.meta.fields ?? []
-      if (format === 'custom') {
+      if (pickedFormat === 'custom') {
         setCsvHeaders(headers)
         setRawCsvRows(result.data)
         setCustomMapping({ date: headers[0] ?? '', description: headers[1] ?? '', amount: headers[2] ?? '' })
         return
       }
       let parsed: ImportRow[] = []
-      switch (format) {
+      switch (pickedFormat) {
         case 'revolut':  parsed = parseRevolut(result.data); break
         case 'tatra':    parsed = parseTatra(result.data); break
         case 'csob':     parsed = parseCSOB(result.data); break
@@ -544,7 +556,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
       acceptParsed(parsed)
     }
 
-    if (format === 'csob') {
+    if (pickedFormat === 'csob') {
       // ČSOB export starts with an account summary line + a blank line before the real
       // column header row — strip those so header:true picks up the actual columns.
       const text = await file.text()
@@ -561,7 +573,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
     Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
-      delimiter: format === 'mbank' ? ';' : undefined,
+      delimiter: pickedFormat === 'mbank' ? ';' : undefined,
       complete: handleParsed,
       error: () => setError(t.csv.readError),
     })

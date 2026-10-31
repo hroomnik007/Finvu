@@ -3,7 +3,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { AppNav } from './components/AppNav'
 import { BottomNav } from './components/BottomNav'
 import { Topbar } from './components/Topbar'
-import { GlobalFAB } from './components/GlobalFAB'
+import { GlobalFAB, type FabLaunch } from './components/GlobalFAB'
+import { CsvImportModal } from './components/CsvImportModal'
+import { takePendingIntent, takeSharedFile } from './utils/shareIntent'
 import { PullToRefresh } from './components/PullToRefresh'
 import { ToastContainer } from './components/ToastContainer'
 import { LoginPage } from './pages/Login'
@@ -161,6 +163,10 @@ function App() {
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false)
   const [fabTrigger, setFabTrigger] = useState(0)
   const [savingsFabTrigger, setSavingsFabTrigger] = useState(0)
+  // Home-screen shortcut / share sheet launch, acted on once signed in.
+  const [fabLaunch, setFabLaunch] = useState<FabLaunch | null>(null)
+  const [sharedFile, setSharedFile] = useState<File | null>(null)
+  const [postLoginReady, setPostLoginReady] = useState(0)
 
   // Re-apply the per-theme background tint whenever `data-theme` changes
   // (theme toggle can be flipped from Topbar, Login, Settings, ForgotPassword,
@@ -230,6 +236,7 @@ function App() {
           const dest = VALID_PAGES.includes(target) ? target : 'dashboard'
           setPage(dest)
           window.location.hash = dest
+          setPostLoginReady(v => v + 1)
         }
 
         const runPrefetch = async () => {
@@ -269,6 +276,25 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) window.location.hash = page
   }, [page, isAuthenticated])
+
+  // Shortcut or share launch: wait for the post-login navigation, then open the
+  // right page or modal. A shared amount only prefills the form.
+  useEffect(() => {
+    if (!isAuthenticated || isLoading || sessionStorage.getItem('just_logged_in') === 'true') return
+    const intent = takePendingIntent()
+    if (!intent) return
+    if (intent.kind === 'annual') {
+      setPage('annual')
+    } else if (intent.kind === 'add-income') {
+      setPage('income')
+      setFabLaunch({ id: Date.now(), type: 'income' })
+    } else if (intent.kind === 'add-expense') {
+      setPage('variable-expenses')
+      setFabLaunch({ id: Date.now(), type: 'variable', amount: intent.amount, note: intent.note })
+    } else if (intent.kind === 'import-file') {
+      void takeSharedFile().then(file => { if (file) setSharedFile(file) })
+    }
+  }, [isAuthenticated, isLoading, postLoginReady])
 
   useEffect(() => {
     if (isAuthenticated && !isLoading && user) {
@@ -566,7 +592,11 @@ function App() {
         showToast={showToast}
         currentPage={page}
         openTrigger={fabTrigger}
+        launch={fabLaunch}
       />
+
+      {/* camt.053 file handed over by the share sheet */}
+      <CsvImportModal open={!!sharedFile} initialFile={sharedFile} onClose={() => setSharedFile(null)} />
 
       {/* Mobile bottom nav */}
       {!isDesktop && <BottomNav current={page} onChange={setPage} />}
