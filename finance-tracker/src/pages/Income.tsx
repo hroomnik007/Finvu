@@ -16,6 +16,8 @@ import { todayISO } from '../utils/format'
 import { getAllTransactions } from '../api/allTransactions'
 import type { Income } from '../types'
 import { SwipeableRow } from '../components/SwipeableRow'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 
 interface IncomePageProps {
@@ -47,20 +49,10 @@ function FormBody({ form, setForm, t }: FormBodyProps) {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
-        <input
-          type="text"
-          inputMode="decimal"
+        <AmountInput
           placeholder="0"
           value={form.amount}
-          onChange={e => {
-            const raw = e.target.value.replace(/[^0-9,]/g, '')
-            if ((raw.match(/,/g) || []).length > 1) return
-            setForm(f => ({ ...f, amount: raw }))
-          }}
-          onKeyDown={e => {
-            const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-            if (!allowed.includes(e.key)) e.preventDefault()
-          }}
+          onValueChange={v => setForm(f => ({ ...f, amount: v }))}
           style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
         />
         <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
@@ -129,12 +121,12 @@ export function IncomePage({ month, year }: IncomePageProps) {
   const openEdit = (income: Income) => {
     setEditing(income)
     setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
-    setForm({ amount: String(income.amount), label: income.label, date: income.date, recurring: income.recurring })
+    setForm({ amount: formatAmountInput(income.amount, decimalSeparator(locale)), label: income.label, date: income.date, recurring: income.recurring })
     setSheetOpen(true)
   }
 
   const handleSave = async () => {
-    const amount = parseFloat(form.amount.replace(',', '.'))
+    const amount = (parseAmountInput(form.amount) ?? NaN)
     if (!form.label.trim() || isNaN(amount) || amount <= 0) return
     if (editing?.id) {
       const priceChange = editing.recurring && form.recurring && !isCorrection && amount !== editing.amount
@@ -348,7 +340,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
       >
         <FormBody form={form} setForm={setForm} t={t} />
         {editing?.recurring && (() => {
-          const newAmount = parseFloat(form.amount.replace(',', '.'))
+          const newAmount = (parseAmountInput(form.amount) ?? NaN)
           const priceChanged = Number.isFinite(newAmount) && newAmount > 0 && newAmount !== editing.amount
           const box: React.CSSProperties = { background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }
           const small: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, lineHeight: 1.5 }

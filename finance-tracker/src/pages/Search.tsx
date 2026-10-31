@@ -7,6 +7,8 @@ import { parseDescription } from '../hooks/useFixedExpenses'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
+import AmountInput from '../components/AmountInput'
+import { parseAmountInput } from '../utils/amountInput'
 
 const PAGE = 50
 
@@ -30,8 +32,8 @@ const chipStyle = (active: boolean): React.CSSProperties => ({
 
 // "12,5" or "12.5" → 12.5; empty or invalid → undefined
 function parseAmount(raw: string): number | undefined {
-  const n = parseFloat(raw.replace(',', '.'))
-  return Number.isFinite(n) && n >= 0 ? n : undefined
+  const n = parseAmountInput(raw)
+  return n != null && n >= 0 ? n : undefined
 }
 
 export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
@@ -102,10 +104,10 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <label style={labelStyle}>{t.search.min}
-              <input type="text" inputMode="decimal" value={minAmount} onChange={e => setMinAmount(e.target.value.replace(/[^0-9,.]/g, ''))} style={fieldStyle} />
+              <AmountInput value={minAmount} onValueChange={setMinAmount} style={fieldStyle} />
             </label>
             <label style={labelStyle}>{t.search.max}
-              <input type="text" inputMode="decimal" value={maxAmount} onChange={e => setMaxAmount(e.target.value.replace(/[^0-9,.]/g, ''))} style={fieldStyle} />
+              <AmountInput value={maxAmount} onValueChange={setMaxAmount} style={fieldStyle} />
             </label>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

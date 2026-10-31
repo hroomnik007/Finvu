@@ -13,6 +13,8 @@ import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { listDeposits, addDeposit, deleteDeposit } from '../api/savings'
 import { getSummaryCards } from '../api/transactions'
 import type { SavingsGoal, Deposit } from '../types'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 const PRESET_COLORS = [
   '#7C3AED', '#A78BFA', '#10B981', '#34D399', '#EF4444', '#F59E0B', '#3B82F6', '#EC4899',
@@ -63,7 +65,7 @@ function goalMonthly(goal: SavingsGoal): number {
 export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   const { goals, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal } = useSavings()
   const { formatAmount, formatAmountParts } = useFormatters()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
 
   const [view, setView] = useState<'list' | 'detail' | 'edit'>('list')
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null)
@@ -149,8 +151,8 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   function openEdit(goal: SavingsGoal) {
     setSelectedGoal(goal)
     setFormName(goal.name)
-    setFormTarget(String(goal.targetAmount))
-    setFormSaved(String(goal.savedAmount))
+    setFormTarget(formatAmountInput(goal.targetAmount, decimalSeparator(locale)))
+    setFormSaved(formatAmountInput(goal.savedAmount, decimalSeparator(locale)))
     setFormDeadline(goal.deadline ?? '')
     setFormIcon(goal.icon ?? '🎯')
     setFormColor(goal.color ?? '#7C3AED')
@@ -173,9 +175,9 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   }
 
   const handleSave = useCallback(async () => {
-    const targetNum = parseFloat(formTarget.replace(',', '.'))
+    const targetNum = (parseAmountInput(formTarget) ?? NaN)
     if (!formName.trim() || isNaN(targetNum) || targetNum <= 0) return
-    const savedNum = parseFloat(formSaved) || 0
+    const savedNum = parseAmountInput(formSaved) ?? 0
     setSaving(true)
     try {
       const payload: Omit<SavingsGoal, 'id'> = {
@@ -261,32 +263,20 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label style={labelStyle}>{t.savings.targetAmount} (€)</label>
-          <input
+          <AmountInput
             style={inputStyle}
-            type="text"
-            inputMode="decimal"
+
             value={formTarget}
-            onChange={e => {
-              const raw = e.target.value.replace(/[^0-9,]/g, '')
-              if ((raw.match(/,/g) || []).length > 1) return
-              setFormTarget(raw)
-            }}
-            onKeyDown={e => {
-              const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-              if (!allowed.includes(e.key)) e.preventDefault()
-            }}
+            onValueChange={setFormTarget}
             placeholder="1000"
           />
         </div>
         <div>
           <label style={labelStyle}>{t.savings.savedAmount} (€)</label>
-          <input
+          <AmountInput
             style={inputStyle}
-            type="number"
-            min="0"
-            step="0.01"
             value={formSaved}
-            onChange={e => setFormSaved(e.target.value)}
+            onValueChange={setFormSaved}
             placeholder="0"
           />
         </div>
@@ -335,7 +325,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
     </div>
   )
 
-  const saveDisabled = saving || !formName.trim() || !formTarget || parseFloat(formTarget) <= 0
+  const saveDisabled = saving || !formName.trim() || !((parseAmountInput(formTarget) ?? 0) > 0)
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>

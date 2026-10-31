@@ -4,6 +4,8 @@ import type { SavingsGoal, Deposit } from '../types'
 import { useTranslation } from '../i18n'
 import { formatDateLocale } from '../utils/format'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
+import AmountInput from './AmountInput'
+import { parseAmountInput } from '../utils/amountInput'
 
 interface SavingsDetailModalProps {
   goal: SavingsGoal | null
@@ -84,7 +86,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
   ]
 
   async function handleDeposit() {
-    const amount = parseFloat(depositInput.replace(',', '.'))
+    const amount = parseAmountInput(depositInput)
     if (!amount || amount <= 0) return
     setSaving(true)
     try {
@@ -114,13 +116,13 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
 
   const depositInputEl = (
     <div style={{ display: 'flex', gap: 8 }}>
-      <input
-        type="number" min="0.01" step="0.01" placeholder={t.savings.depositPlaceholder}
-        value={depositInput} onChange={e => setDepositInput(e.target.value)} autoFocus
+      <AmountInput
+        placeholder={t.savings.depositPlaceholder}
+        value={depositInput} onValueChange={setDepositInput} autoFocus
         onKeyDown={e => { if (e.key === 'Enter') handleDeposit() }}
         style={glassInputStyle}
       />
-      <button onClick={handleDeposit} disabled={saving || !depositInput || parseFloat(depositInput) <= 0}
+      <button onClick={handleDeposit} disabled={saving || !((parseAmountInput(depositInput) ?? 0) > 0)}
         style={{ padding: '0 18px', borderRadius: 14, background: 'linear-gradient(135deg,var(--aurora-emerald),var(--aurora-cyan))', color: '#052e21', fontSize: 14, fontWeight: 700, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", opacity: saving ? 0.7 : 1 }}>
         {saving ? '...' : t.common.save}
       </button>

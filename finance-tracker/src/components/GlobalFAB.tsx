@@ -15,6 +15,8 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { todayISO } from '../utils/format'
+import AmountInput from './AmountInput'
+import { parseAmountInput } from '../utils/amountInput'
 
 type ModalType = 'income' | 'variable' | 'fixed' | 'category' | 'savings' | null
 
@@ -54,20 +56,12 @@ const finputStyle: React.CSSProperties = {
   fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box',
 }
 
-const AMOUNT_KEY_ALLOW = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-
 function AmountField({ value, onChange, accent }: { value: string; onChange: (v: string) => void; accent: string }) {
   return (
     <div style={amountFieldStyle}>
-      <input
-        type="text" inputMode="decimal" placeholder="0"
+      <AmountInput placeholder="0"
         value={value}
-        onChange={e => {
-          const raw = e.target.value.replace(/[^0-9,]/g, '')
-          if ((raw.match(/,/g) || []).length > 1) return
-          onChange(raw)
-        }}
-        onKeyDown={e => { if (!AMOUNT_KEY_ALLOW.includes(e.key)) e.preventDefault() }}
+        onValueChange={onChange}
         style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
       />
       <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
@@ -200,14 +194,14 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
 
   // ── Save handlers ─────────────────────────────────────────────────────────
   async function saveIncome() {
-    const amt = parseFloat(incAmt.replace(',', '.'))
+    const amt = (parseAmountInput(incAmt) ?? NaN)
     if (!incLabel.trim() || isNaN(amt) || amt <= 0) return
     await addIncome({ amount: amt, label: incLabel.trim(), date: incDate, recurring: incRecurring })
     closeModal()
   }
 
   async function saveVariable() {
-    const amt = parseFloat(varAmt.replace(',', '.'))
+    const amt = (parseAmountInput(varAmt) ?? NaN)
     if (isNaN(amt) || amt <= 0) return
     let catId: string
     if (varNewCatMode) {
@@ -229,7 +223,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   }
 
   async function saveFixed() {
-    const amt = parseFloat(fixAmt.replace(',', '.'))
+    const amt = (parseAmountInput(fixAmt) ?? NaN)
     const day = parseInt(fixDay)
     if (!fixLabel.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 31) return
     await addFixedExpense({ label: fixLabel.trim(), amount: amt, dayOfMonth: day, categoryId: fixCatId || null, note: '' })
@@ -238,7 +232,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
 
   async function saveCategory() {
     if (!catName.trim()) return
-    const limit = catBudgetLimit ? parseFloat(catBudgetLimit.replace(',', '.')) : undefined
+    const limit = parseAmountInput(catBudgetLimit) ?? undefined
     await addCategory({
       name: catName.trim(),
       color: catColor,
@@ -250,7 +244,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   }
 
   async function saveSavingsGoal() {
-    const amt = parseFloat(savTarget.replace(',', '.'))
+    const amt = (parseAmountInput(savTarget) ?? NaN)
     if (!savName.trim() || isNaN(amt) || amt <= 0) return
     await addGoal({
       name: savName.trim(),
@@ -265,7 +259,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
 
   // ── Live budget preview (variable expense) ────────────────────────────────
   const liveBudget = varCatId ? budgetStatuses.find(b => b.categoryId === varCatId) : null
-  const liveVarAmt = parseFloat(varAmt.replace(',', '.')) || 0
+  const liveVarAmt = parseAmountInput(varAmt) ?? 0
   const liveSpent = liveBudget ? liveBudget.spent + liveVarAmt : 0
   const liveLimit = liveBudget?.limit
   const livePct = liveLimit ? Math.min((liveSpent / liveLimit) * 100, 100) : null
@@ -565,16 +559,10 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
           ))}
         </div>
 
-        <input
-          type="text" inputMode="decimal"
+        <AmountInput
           placeholder={`${t.expenses.categories.limitLabel} · ${t.expenses.categories.limitOptional}`}
           value={catBudgetLimit}
-          onChange={e => {
-            const raw = e.target.value.replace(/[^0-9,]/g, '')
-            if ((raw.match(/,/g) || []).length > 1) return
-            setCatBudgetLimit(raw)
-          }}
-          onKeyDown={e => { if (!AMOUNT_KEY_ALLOW.includes(e.key)) e.preventDefault() }}
+          onValueChange={setCatBudgetLimit}
           style={finputStyle}
         />
       </CompactModal>

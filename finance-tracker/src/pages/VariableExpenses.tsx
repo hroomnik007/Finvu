@@ -23,6 +23,8 @@ import type { VariableExpense, BudgetStatus } from '../types'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 interface VariableExpensesPageProps {
   month: number
@@ -155,7 +157,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const selectedCatId = form.categoryId || null
   const liveBudget = selectedCatId ? getBudgetForCat(selectedCatId) : null
-  const liveAmount = parseFloat(form.amount) || 0
+  const liveAmount = parseAmountInput(form.amount) ?? 0
   const liveSpent = (liveBudget?.spent ?? 0) + (editing ? 0 : liveAmount)
   const liveLimit = liveBudget?.limit
   const livePct = liveLimit ? Math.min((liveSpent / liveLimit) * 100, 100) : null
@@ -171,13 +173,13 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const openEdit = (e: VariableExpense) => {
     setEditing(e)
-    setForm({ amount: String(e.amount), categoryId: String(e.categoryId), note: e.note, date: e.date })
+    setForm({ amount: formatAmountInput(e.amount, decimalSeparator(locale)), categoryId: String(e.categoryId), note: e.note, date: e.date })
     setNewCatMode(false)
     setSheetOpen(true)
   }
 
   const handleSave = async () => {
-    const amount = parseFloat(form.amount.replace(',', '.'))
+    const amount = (parseAmountInput(form.amount) ?? NaN)
     if (isNaN(amount) || amount <= 0) return
 
     let catId: string
@@ -477,20 +479,10 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
-          <input
-            type="text"
-            inputMode="decimal"
+          <AmountInput
             placeholder="0"
             value={form.amount}
-            onChange={e => {
-              const raw = e.target.value.replace(/[^0-9,]/g, '')
-              if ((raw.match(/,/g) || []).length > 1) return
-              setForm(f => ({ ...f, amount: raw }))
-            }}
-            onKeyDown={e => {
-              const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-              if (!allowed.includes(e.key)) e.preventDefault()
-            }}
+            onValueChange={v => setForm(f => ({ ...f, amount: v }))}
             style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
           />
           <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>

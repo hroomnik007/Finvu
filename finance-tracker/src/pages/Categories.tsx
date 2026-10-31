@@ -34,6 +34,8 @@ import { useTranslation } from '../i18n'
 import { reorderCategories as reorderCategoriesApi, shareCategories } from '../api/categories'
 import { useAuth } from '../context/AuthContext'
 import type { Category } from '../types'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 const selectBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
@@ -288,7 +290,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
 export function CategoriesPage({ showToast }: { showToast: (msg: string) => void }) {
   const { categories, addCategory, updateCategory, deleteCategory, reload } = useCategories()
   const { formatAmount, formatAmountParts } = useFormatters()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const now = new Date()
   const { variableExpenses } = useVariableExpenses(now.getMonth() + 1, now.getFullYear())
   const { fixedExpenses } = useFixedExpenses()
@@ -423,7 +425,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
 
   async function applyBulk() {
     const ids = [...selectedIds]
-    const limit = bulkLimit ? parseFloat(bulkLimit.replace(',', '.')) : NaN
+    const limit = parseAmountInput(bulkLimit) ?? NaN
     setBulkBusy(true)
     let failed = 0
     for (const id of ids) {
@@ -466,9 +468,9 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
 
   function openEdit(cat: Category) {
     setEditing(cat); setName(cat.name); setColor(cat.color); setIcon(cat.icon)
-    setBudgetLimit(cat.budgetLimit != null ? String(cat.budgetLimit) : ''); setCatType(cat.type)
+    setBudgetLimit(cat.budgetLimit != null ? formatAmountInput(cat.budgetLimit, decimalSeparator(locale)) : ''); setCatType(cat.type)
     setAutoLimit(cat.hasFixedExpenses ? (cat.autoLimit ?? true) : false)
-    setLimitReserve(cat.limitReserve ? String(cat.limitReserve).replace('.', ',') : '')
+    setLimitReserve(cat.limitReserve ? formatAmountInput(cat.limitReserve, decimalSeparator(locale)) : '')
     setSharedFlag(cat.shared ?? false)
     setSheetOpen(true)
   }
@@ -498,7 +500,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   }
 
   function parseReserve(raw: string): number {
-    const v = parseFloat(raw.replace(',', '.'))
+    const v = parseAmountInput(raw) ?? NaN
     return Number.isFinite(v) && v > 0 ? v : 0
   }
 
@@ -507,7 +509,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     // Shared categories have one common manual limit
     const effectiveAutoLimit = sharedFlag ? false : requestedAutoLimit
     if (editing?.id != null) {
-      const limit = effectiveAutoLimit ? undefined : (budgetLimit ? parseFloat(budgetLimit.replace(',', '.')) : undefined)
+      const limit = effectiveAutoLimit ? undefined : (parseAmountInput(budgetLimit) ?? undefined)
       await updateCategory(editing.id, {
         name: name.trim(), color, icon,
         autoLimit: effectiveAutoLimit,
@@ -523,7 +525,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         await reload()
       }
     } else {
-      const limit = effectiveAutoLimit ? undefined : (budgetLimit ? parseFloat(budgetLimit.replace(',', '.')) : undefined)
+      const limit = effectiveAutoLimit ? undefined : (parseAmountInput(budgetLimit) ?? undefined)
       await addCategory({
         name: name.trim(), color, icon, type: catType,
         autoLimit: effectiveAutoLimit,
@@ -746,16 +748,10 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         submitDisabled={bulkBusy || (!bulkLimit && !bulkColor && bulkShared === 'keep')}
       >
         <p style={{ fontSize: 12, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", margin: 0, lineHeight: 1.4 }}>{t.expenses.categories.bulkHint}</p>
-        <input
-          type="text"
-          inputMode="decimal"
+        <AmountInput
           placeholder={`${t.expenses.categories.limitLabel} · ${t.expenses.categories.bulkLimitHint}`}
           value={bulkLimit}
-          onChange={e => {
-            const raw = e.target.value.replace(/[^0-9,]/g, '')
-            if ((raw.match(/,/g) || []).length > 1) return
-            setBulkLimit(raw)
-          }}
+          onValueChange={setBulkLimit}
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -923,38 +919,18 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                 ? t.expenses.categories.autoLimitComputed.replace('{amount}', String(editing.budgetLimit))
                 : t.expenses.categories.autoLimitDesc}
             </div>
-            <input
-              type="text"
-              inputMode="decimal"
+            <AmountInput
               placeholder={t.expenses.categories.limitReserveLabel}
               value={limitReserve}
-              onChange={e => {
-                const raw = e.target.value.replace(/[^0-9,]/g, '')
-                if ((raw.match(/,/g) || []).length > 1) return
-                setLimitReserve(raw)
-              }}
-              onKeyDown={e => {
-                const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-                if (!allowed.includes(e.key)) e.preventDefault()
-              }}
+              onValueChange={setLimitReserve}
               style={{ width: '100%', marginTop: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
             />
             </>
           ) : (
-            <input
-              type="text"
-              inputMode="decimal"
+            <AmountInput
               placeholder={`${t.expenses.categories.limitLabel} · ${t.expenses.categories.limitOptional}`}
               value={budgetLimit}
-              onChange={e => {
-                const raw = e.target.value.replace(/[^0-9,]/g, '')
-                if ((raw.match(/,/g) || []).length > 1) return
-                setBudgetLimit(raw)
-              }}
-              onKeyDown={e => {
-                const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-                if (!allowed.includes(e.key)) e.preventDefault()
-              }}
+              onValueChange={setBudgetLimit}
               style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
             />
           )}
