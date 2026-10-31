@@ -1700,26 +1700,28 @@ export function SettingsPage() {
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deactivationSection.charAt(0) + t.settings.deactivationSection.slice(1).toLowerCase()}</h2>
               <button onClick={() => setDeactivationModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
             </div>
+            {/* Each action closes this sheet first: its dialog is rendered earlier in the
+                tree with the same z-index, so it would otherwise open hidden behind it. */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <ChevronRow
                 icon={Trash2} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.deleteAllTransactions} sublabel={t.settings.deleteAllTransactionsSub}
-                onClick={() => { setDangerAction('transactions'); setDangerConfirmText('') }}
+                onClick={() => { setDeactivationModalOpen(false); setDangerAction('transactions'); setDangerConfirmText('') }}
               />
               <ChevronRow
                 icon={RotateCcw} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.resetAppLabel} sublabel={t.settings.resetAppSub}
-                onClick={() => { setDangerAction('reset'); setDangerConfirmText('') }}
+                onClick={() => { setDeactivationModalOpen(false); setDangerAction('reset'); setDangerConfirmText('') }}
               />
               <ChevronRow
                 icon={Ban} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.deactivateAccount} sublabel={t.settings.deactivateSub}
-                onClick={() => { setDeactivateOpen(true); setDeactivateConfirm(''); setDeactivateError(null) }}
+                onClick={() => { setDeactivationModalOpen(false); setDeactivateOpen(true); setDeactivateConfirm(''); setDeactivateError(null) }}
               />
               <ChevronRow
                 icon={UserX} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.deleteAccount} sublabel={t.settings.deleteAccountSub}
-                onClick={() => setDeleteOpen(true)}
+                onClick={() => { setDeactivationModalOpen(false); setDeleteOpen(true) }}
               />
             </div>
           </div>
