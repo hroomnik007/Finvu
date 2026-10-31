@@ -12,7 +12,7 @@ function StatBox({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 12px', textAlign: 'center' }}>
       <div style={{ fontSize: 24, fontWeight: 800, color: '#FB923C', fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', letterSpacing: '0.08em', marginTop: 6 }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', letterSpacing: '0.08em', marginTop: 6 }}>{label}</div>
     </div>
   )
 }

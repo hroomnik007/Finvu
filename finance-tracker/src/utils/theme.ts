@@ -56,15 +56,6 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   return [(r + m) * 255, (g + m) * 255, (b + m) * 255]
 }
 
-// Shifts a hex color's HSL lightness by `delta` percentage points, flipping
-// direction (lighten vs. darken) when the base color is already light, so the
-// result always reads as a distinct-but-related second gradient stop.
-function shiftLightness(hex: string, delta: number): string {
-  const [h, s, l] = rgbToHsl(...hexToRgb(hex))
-  const targetL = l >= 65 ? Math.max(12, l - delta) : Math.min(90, l + delta)
-  return rgbToHex(...hslToRgb(h, s, targetL))
-}
-
 // ── Accent color ─────────────────────────────────────────────────────────────
 // The accent picker in Settings sets `--accent-color`, `--aurora-violet` and
 // the older v3 `--violet` token — nearly every button, active nav pill,
@@ -77,20 +68,73 @@ function shiftLightness(hex: string, delta: number): string {
 // green paired with a hardcoded pink read as a jarring, unrelated "rainbow"
 // combination. It's now derived from the chosen accent itself (same hue,
 // shifted lightness), so every accent produces a coherent monochromatic
-// two-tone gradient instead.
+// two-tone gradient instead — see accentFill / accentFillEnd below.
 export const ACCENT_COLOR_KEY = 'accent_color'
 export const DEFAULT_ACCENT_COLOR = '#3B82F6'
 
-export function accentGradientEnd(color: string): string {
-  return shiftLightness(color, 18)
+// ── Accent as a text colour ──────────────────────────────────────────────────
+// Most accents are mid-tone (default blue #3B82F6 is ~3:1 on both themes), fine
+// for fills and icons but below WCAG AA (4.5:1) for small text. Links, chips,
+// "today" markers etc. use `--aurora-violet-text` instead, which index.css maps
+// per theme to a same-hue variant lightened (dark) / darkened (light) until it
+// reaches AA on the lightest (dark mode) / darkest (light mode) surface that
+// such text sits on — an accent-tinted chip over the glass card.
+const ACCENT_TEXT_SURFACES: Record<ResolvedTheme, string[]> = {
+  dark: ['#26366B', '#1E3A57'],
+  light: ['#DAEAFA', '#E2DDFC'],
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map(v => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+export function contrastRatio(a: string, b: string): number {
+  const la = relativeLuminance(a), lb = relativeLuminance(b)
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+
+export function readableAccent(color: string, theme: ResolvedTheme, min = 4.6): string {
+  const [h, s, l0] = rgbToHsl(...hexToRgb(color))
+  const surfaces = ACCENT_TEXT_SURFACES[theme]
+  const step = theme === 'dark' ? 1 : -1
+  for (let l = l0; l >= 0 && l <= 100; l += step) {
+    const hex = rgbToHex(...hslToRgb(h, s, l))
+    if (surfaces.every(bg => contrastRatio(hex, bg) >= min)) return hex
+  }
+  return theme === 'dark' ? '#ffffff' : '#000000'
+}
+
+// Primary buttons, active nav pills, badges etc. put white text on
+// `linear-gradient(var(--aurora-violet), var(--aurora-fuchsia))`. Most picker
+// accents are too light for that (white on #3B82F6 is 3.7:1, on #10B981 2.5:1),
+// so the fill is the accent darkened just enough for white text to reach AA,
+// and the gradient's second stop goes a little darker still instead of lighter.
+export function accentFill(color: string, min = 4.6): string {
+  const [h, s, l0] = rgbToHsl(...hexToRgb(color))
+  for (let l = l0; l >= 0; l -= 1) {
+    const hex = rgbToHex(...hslToRgb(h, s, l))
+    if (contrastRatio(hex, '#ffffff') >= min) return hex
+  }
+  return '#000000'
+}
+
+export function accentFillEnd(color: string): string {
+  const [h, s, l] = rgbToHsl(...hexToRgb(accentFill(color)))
+  return rgbToHex(...hslToRgb(h, s, Math.max(0, l - 8)))
 }
 
 export function applyAccentColor(color: string) {
   const html = document.documentElement
   html.style.setProperty('--accent-color', color)
-  html.style.setProperty('--aurora-violet', color)
-  html.style.setProperty('--violet', color)
-  html.style.setProperty('--aurora-fuchsia', accentGradientEnd(color))
+  html.style.setProperty('--aurora-violet', accentFill(color))
+  html.style.setProperty('--violet', accentFill(color))
+  html.style.setProperty('--aurora-fuchsia', accentFillEnd(color))
+  html.style.setProperty('--accent-text-dark', readableAccent(color, 'dark'))
+  html.style.setProperty('--accent-text-light', readableAccent(color, 'light'))
 }
 
 // ── Background color ─────────────────────────────────────────────────────────

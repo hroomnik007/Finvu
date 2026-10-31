@@ -21,7 +21,7 @@ interface ExpenseHeatmapProps {
 // day's total variable-expense amount instead of fixed-expense amount.
 function severityColor(amount: number): string {
   if (amount >= 100) return 'rgba(251,113,133,0.6)'
-  if (amount >= 20) return 'rgba(251,191,36,0.55)'
+  if (amount >= 20) return 'rgba(251,191,36,0.75)'
   return 'rgba(139,92,246,0.5)'
 }
 
@@ -77,7 +77,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
       <h3 className="text-center lg:text-left" style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-hi)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
         {t.dashboard.heatmapTitle}
       </h3>
-      <p className="text-center lg:text-left" style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginBottom: 12, textTransform: 'capitalize' }}>
+      <p className="text-center lg:text-left" style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginBottom: 12, textTransform: 'capitalize' }}>
         {monthLabel}
       </p>
 
@@ -105,11 +105,11 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 fontFamily: "'Outfit', sans-serif",
-                color: hasSpend ? 'white' : isToday ? 'var(--aurora-violet)' : 'var(--aurora-faint)',
-                opacity: isPast ? 0.55 : 1,
+                color: hasSpend ? (amount >= 20 && amount < 100 ? '#1A1535' : 'var(--heat-ink)') : isToday ? 'var(--aurora-violet-text)' : 'var(--aurora-faint)',
+                filter: isPast ? 'saturate(0.5)' : undefined,
                 position: 'relative',
                 transition: 'transform 0.12s',
               }}
@@ -160,9 +160,9 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 12, flexWrap: 'wrap' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.55)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.75)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(100))}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'transparent', border: '1.5px solid var(--aurora-violet)', display: 'inline-block' }} />{t.dashboard.heatmapToday}</span>
       </div>
@@ -202,17 +202,17 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                 <Icon size={13} color={cat?.color ?? 'var(--aurora-faint)'} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--aurora-lo)', fontSize: 11 }}>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--aurora-lo)', fontSize: 12 }}>
                   {exp.note || '—'}
                 </span>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'var(--aurora-rose)', flexShrink: 0 }}>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-rose)', flexShrink: 0 }}>
                   -{formatAmount(exp.amount)}
                 </span>
               </div>
             )
           })}
           {tooltip.dayExpenses.length > 3 && (
-            <div style={{ color: 'var(--aurora-faint)', fontSize: 10, marginTop: 4 }}>
+            <div style={{ color: 'var(--aurora-faint)', fontSize: 12, marginTop: 4 }}>
               {t.dashboard.heatmapMoreItems.replace('{n}', String(tooltip.dayExpenses.length - 3))}
             </div>
           )}

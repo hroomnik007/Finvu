@@ -47,7 +47,7 @@ export function ToastContainer({ toasts }: ToastContainerProps) {
             >
               <span style={{ fontSize: 24, flexShrink: 0 }}>{toast.icon ?? '🏆'}</span>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#FBBF24' }}>{toast.label}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24' }}>{toast.label}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{toast.message}</div>
               </div>
             </div>

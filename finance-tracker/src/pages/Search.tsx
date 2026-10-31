@@ -19,12 +19,12 @@ const fieldStyle: React.CSSProperties = {
 }
 const labelStyle: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 4, fontFamily: "'Manrope', sans-serif",
-  fontSize: 11, fontWeight: 700, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.05em', flex: '1 1 140px', minWidth: 0,
+  fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.05em', flex: '1 1 140px', minWidth: 0,
 }
 const chipStyle = (active: boolean): React.CSSProperties => ({
   padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
   background: active ? 'rgba(139,92,246,0.18)' : 'var(--aurora-glass)',
-  color: active ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+  color: active ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)',
   border: active ? '1px solid rgba(139,92,246,0.45)' : '1px solid var(--aurora-gline)',
 })
 

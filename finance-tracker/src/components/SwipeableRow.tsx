@@ -150,7 +150,7 @@ export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = t
             }}
           >
             <Trash2 size={18} />
-            <span style={{ fontSize: 11, fontWeight: 600 }}>{t.common.delete}</span>
+            <span style={{ fontSize: 12, fontWeight: 600 }}>{t.common.delete}</span>
           </button>
         </div>
       )}

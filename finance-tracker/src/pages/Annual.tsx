@@ -7,7 +7,7 @@ import { annualCsv, savingsRatePct, yearCategories, yearTotals } from '../utils/
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 
-const th: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', padding: '6px 6px', textAlign: 'right' }
+const th: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', padding: '6px 6px', textAlign: 'right' }
 const td: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap' }
 
 function downloadCsv(content: string, filename: string) {
@@ -69,7 +69,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
               ...(rate !== null ? [[t.dashboard.savingsRate, `${rate} %`, 'var(--aurora-hi)']] : []),
             ] as [string, string, string][]).map(([label, value, color]) => (
               <div key={label} style={{ flex: '1 1 120px' }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--aurora-faint)', marginBottom: 2 }}>{label}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--aurora-faint)', marginBottom: 2 }}>{label}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color }}>{value}</div>
               </div>
             ))}
@@ -129,7 +129,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
           type="button"
           onClick={exportCsv}
           disabled={months.length === 0}
-          style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: '1.5px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+          style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: '1.5px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet-text)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
         >
           <Download size={15} /> {t.annual.export}
         </button>

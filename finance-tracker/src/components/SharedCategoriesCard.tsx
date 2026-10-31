@@ -24,7 +24,7 @@ interface Props {
 }
 
 const heading = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: 0 } as const
-const small = { fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' } as const
+const small = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' } as const
 
 /**
  * Every expense category as a tile: shared ones show the family's spend against
@@ -73,7 +73,7 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
                   <Icon size={15} color={x.color} strokeWidth={1.8} />
                 </span>
                 <span style={{ flex: 1, minWidth: 0, fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-lo)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.name}</span>
-                <span style={{ ...small, color: 'var(--aurora-violet)', fontWeight: 700, flexShrink: 0 }}>{ht.sharedAdd}</span>
+                <span style={{ ...small, color: 'var(--aurora-violet-text)', fontWeight: 700, flexShrink: 0 }}>{ht.sharedAdd}</span>
               </button>
             )
           }

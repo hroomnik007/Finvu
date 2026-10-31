@@ -76,17 +76,17 @@ export function SharedReportPage({ token }: SharedReportProps) {
       </div>
 
       <div style={{ background: '#2A1F4A', border: '0.5px solid #4C3A8A', borderRadius: 16, padding: 20, marginBottom: 12 }}>
-        <p style={{ fontSize: 11, color: '#9D84D4', margin: '0 0 4px' }}>{t.nav.income}</p>
+        <p style={{ fontSize: 12, color: '#9D84D4', margin: '0 0 4px' }}>{t.nav.income}</p>
         <p style={{ fontSize: 24, fontWeight: 700, color: '#34D399', margin: 0, fontFamily: 'monospace' }}>+{formatAmount(report.totalIncome ?? 0)}</p>
       </div>
 
       <div style={{ background: '#2A1F4A', border: '0.5px solid #4C3A8A', borderRadius: 16, padding: 20, marginBottom: 12 }}>
-        <p style={{ fontSize: 11, color: '#9D84D4', margin: '0 0 4px' }}>{t.nav.expenses}</p>
+        <p style={{ fontSize: 12, color: '#9D84D4', margin: '0 0 4px' }}>{t.nav.expenses}</p>
         <p style={{ fontSize: 24, fontWeight: 700, color: '#F87171', margin: 0, fontFamily: 'monospace' }}>-{formatAmount(report.totalExpenses ?? 0)}</p>
       </div>
 
       <div style={{ background: '#1E1535', border: '1px solid #4C3A8A', borderRadius: 16, padding: 20, marginBottom: 20 }}>
-        <p style={{ fontSize: 11, color: '#9D84D4', margin: '0 0 4px' }}>{t.sharedReport.balance}</p>
+        <p style={{ fontSize: 12, color: '#9D84D4', margin: '0 0 4px' }}>{t.sharedReport.balance}</p>
         <p style={{ fontSize: 28, fontWeight: 700, color: (report.balance ?? 0) >= 0 ? '#34D399' : '#F87171', margin: 0, fontFamily: 'monospace' }}>
           {(report.balance ?? 0) >= 0 ? '+' : ''}{formatAmount(report.balance ?? 0)}
         </p>
@@ -111,7 +111,7 @@ export function SharedReportPage({ token }: SharedReportProps) {
         </div>
       )}
 
-      <p style={{ fontSize: 11, color: '#4C3A8A', textAlign: 'center' }}>
+      <p style={{ fontSize: 12, color: '#4C3A8A', textAlign: 'center' }}>
         {t.sharedReport.createdVia} <strong style={{ color: '#7C3AED' }}>{t.nav.appName}</strong>
         {report.generatedAt && ` · ${formatDateLocale(report.generatedAt, locale)}`}
       </p>

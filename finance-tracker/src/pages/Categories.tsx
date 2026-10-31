@@ -39,7 +39,7 @@ const selectBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
   fontFamily: "'Manrope', sans-serif",
   background: active ? 'rgba(139,92,246,0.18)' : 'var(--aurora-glass)',
-  color: active ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+  color: active ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)',
   border: active ? '1px solid rgba(139,92,246,0.45)' : '1px solid var(--aurora-gline)',
 })
 
@@ -110,7 +110,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
           {cat.budgetLimit != null
             ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>
             : cat.autoLimit
-              ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet)', marginTop: 2 }}>⚡ {t.expenses.categories.autoLimit}</div>
+              ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', marginTop: 2 }}>⚡ {t.expenses.categories.autoLimit}</div>
               : <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{t.expenses.categories.noLimit}</div>
           }
         </div>
@@ -136,7 +136,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
           <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', marginBottom: 6 }}>
             <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
             <span>{t.expenses.categories.spent}</span>
             <span style={{ fontWeight: 700, color: barColor }}>{Math.round(status?.percentage ?? 0)}%</span>
           </div>
@@ -184,7 +184,7 @@ function SortableListCard(props: CardProps) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
-        {cat.budgetLimit != null && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>}
+        {cat.budgetLimit != null && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>}
       </div>
       {cat.budgetLimit != null && status && (
         <div style={{ width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -193,7 +193,7 @@ function SortableListCard(props: CardProps) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `-${formatAmount(status.spent)}` : '—'}</span>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
           </div>
         </div>
       )}
@@ -250,9 +250,9 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
               {cat.budgetLimit != null
-                ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>
+                ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>
                 : cat.autoLimit
-                  ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-violet)', marginTop: 1 }}>⚡ {t.expenses.categories.autoLimit}</div>
+                  ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', marginTop: 1 }}>⚡ {t.expenses.categories.autoLimit}</div>
                   : null
               }
             </div>
@@ -272,7 +272,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `-${formatAmount(status.spent)}` : '—'}</span>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
               </div>
             </div>
           )}
@@ -560,7 +560,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
 
           {/* Hero wallet card */}
           <HeroCard variant="neutral">
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
               {t.expenses.categories.title} · {t.expenses.activeCount.replace('{n}', String(heroCatCount))}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
@@ -577,7 +577,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                 </span>
               </div>
               {heroTotalLimit > 0 && (
-                <span style={{ marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: `${heroBarColor}22`, color: heroBarColor, border: `1px solid ${heroBarColor}55` }}>
+                <span style={{ marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: `${heroBarColor}22`, color: heroBarColor, border: `1px solid ${heroBarColor}55` }}>
                   {heroOverallPct}% z {Math.round(heroTotalLimit)} €
                 </span>
               )}
@@ -589,15 +589,15 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.totalLimit}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.totalLimit}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(heroTotalLimit)}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.remaining}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.remaining}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(Math.max(0, heroTotalLimit - heroTotalSpent))}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.nearLimit}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.nearLimit}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: heroNearLimitCount > 0 ? 'var(--aurora-rose)' : 'var(--aurora-hi)' }}>{heroNearLimitCount}</div>
               </div>
             </div>
@@ -759,7 +759,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
           {PRESET_COLORS.map(c => (
             <button
               key={c}
@@ -872,7 +872,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
           {PRESET_COLORS.map(c => (
             <button
               key={c}
@@ -891,7 +891,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         <div>
           {editing?.hasFixedExpenses && !sharedFlag && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 11, color: autoLimit ? 'var(--aurora-violet)' : 'var(--aurora-lo)', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
+              <span style={{ fontSize: 12, color: autoLimit ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
                 {t.expenses.categories.autoLimit}
               </span>
               <button
@@ -917,7 +917,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             <div style={{
               padding: '10px 14px', borderRadius: 12,
               background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
-              fontSize: 12, color: 'var(--aurora-violet)', fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
+              fontSize: 12, color: 'var(--aurora-violet-text)', fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
             }}>
               {editing?.budgetLimit != null && editing.budgetLimit > 0
                 ? t.expenses.categories.autoLimitComputed.replace('{amount}', String(editing.budgetLimit))
@@ -963,7 +963,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         {sharingOn && editing && catType === 'expense' && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 11, color: sharedFlag ? 'var(--aurora-violet)' : 'var(--aurora-lo)', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
+              <span style={{ fontSize: 12, color: sharedFlag ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
                 👥 {t.expenses.categories.sharedLabel}
               </span>
               <button
@@ -983,7 +983,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                 }} />
               </button>
             </div>
-            <p style={{ fontSize: 11.5, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", lineHeight: 1.4, margin: '6px 0 0' }}>
+            <p style={{ fontSize: 12, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", lineHeight: 1.4, margin: '6px 0 0' }}>
               {t.expenses.categories.sharedDesc}
             </p>
           </div>

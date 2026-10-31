@@ -80,7 +80,7 @@ export function AdminPage() {
   }
 
   const statCards = stats ? [
-    { label: 'Celkom používateľov', value: stats.totalUsers, color: 'var(--aurora-violet)', bg: 'rgba(139,92,246,0.15)', icon: Users },
+    { label: 'Celkom používateľov', value: stats.totalUsers, color: 'var(--aurora-violet-text)', bg: 'rgba(139,92,246,0.15)', icon: Users },
     { label: 'Noví (7 dní)', value: stats.newUsers7d, color: 'var(--aurora-emerald)', bg: 'rgba(52,211,153,0.15)', icon: UserPlus },
     { label: 'Celkom transakcií', value: stats.totalTransactions, color: 'var(--aurora-cyan)', bg: 'rgba(34,211,238,0.15)', icon: CreditCard },
     { label: 'Aktívni (30 dní)', value: stats.activeUsers30d, color: 'var(--aurora-amber)', bg: 'rgba(251,191,36,0.15)', icon: Flame },
@@ -153,7 +153,7 @@ export function AdminPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--aurora-gline)' }}>
                   {['Meno', 'Email', 'Email overený', 'Registrácia', 'Posledné prihlásenie', 'Naposledy aktívny', 'Transakcie'].map(h => (
-                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--aurora-lo)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{h}</th>
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--aurora-lo)', fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -181,7 +181,7 @@ export function AdminPage() {
                     <td style={{ padding: '12px 16px', color: 'var(--aurora-lo)' }}>
                       {u.lastActiveAt ? new Date(u.lastActiveAt).toLocaleDateString('sk-SK') : '—'}
                     </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--aurora-violet)', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>
+                    <td style={{ padding: '12px 16px', color: 'var(--aurora-violet-text)', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>
                       {u.transactionCount}
                     </td>
                   </tr>

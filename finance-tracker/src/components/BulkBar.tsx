@@ -34,7 +34,7 @@ export function BulkBar({ count, total, hint, countLabel, selectAllLabel, cancel
           {count > 0 ? countLabel.replace('{n}', String(count)) : hint}
         </div>
         {count < total && (
-          <button type="button" onClick={onSelectAll} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 11.5, fontWeight: 600, color: 'var(--aurora-violet)' }}>
+          <button type="button" onClick={onSelectAll} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)' }}>
             {selectAllLabel}
           </button>
         )}

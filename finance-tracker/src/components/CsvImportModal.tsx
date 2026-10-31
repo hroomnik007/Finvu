@@ -635,7 +635,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                 onDragLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--aurora-gline)' }}
                 onDrop={e => { e.preventDefault(); (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--aurora-gline)'; const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
               >
-                <Upload size={24} style={{ color: 'var(--aurora-violet)', margin: '0 auto 8px', display: 'block' }} />
+                <Upload size={24} style={{ color: 'var(--aurora-violet-text)', margin: '0 auto 8px', display: 'block' }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', marginBottom: 4 }}>
                   {format === 'bank365' ? t.csv.dragHerePdf : format === 'revolut' ? t.csv.dragHereCsvOrPdf : t.csv.dragHere}
                 </p>
@@ -694,7 +694,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                     <span style={{ fontSize: 18, flexShrink: 0 }}>{row.type === 'income' ? '💰' : '💸'}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description || '—'}</p>
-                      <p style={{ fontSize: 11, color: 'var(--text3)', margin: '1px 0 0' }}>{row.date}</p>
+                      <p style={{ fontSize: 12, color: 'var(--text3)', margin: '1px 0 0' }}>{row.date}</p>
                       <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
                         <select
                           value={row.categoryId ?? ''}
@@ -707,10 +707,10 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                           <option value="">{t.csv.noCategory}</option>
                           {categories.filter(c => c.type === row.type && c.id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
-                        {row.auto && <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--violet)' }}>{t.csv.byRule}</span>}
-                        {row.duplicate && <span style={{ fontSize: 10.5, fontWeight: 700, color: '#FBBF24' }}>{t.csv.possibleDuplicate}</span>}
+                        {row.auto && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--violet)' }}>{t.csv.byRule}</span>}
+                        {row.duplicate && <span style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24' }}>{t.csv.possibleDuplicate}</span>}
                         {row.categoryId && !row.auto && suggestKeyword(row.description) && (
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text3)', cursor: 'pointer' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text3)', cursor: 'pointer' }}>
                             <input type="checkbox" checked={!!row.remember} onChange={e => setRows(r => r.map((x, j) => (j === i ? { ...x, remember: e.target.checked } : x)))} />
                             {t.csv.rememberRule.replace('{keyword}', suggestKeyword(row.description))}
                           </label>

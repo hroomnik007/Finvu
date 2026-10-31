@@ -108,7 +108,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     try { await onResume() } finally { setPauseLoading(false) }
   }
 
-  const pausedBadge = { fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.35)', color: '#fb923c', letterSpacing: '0.05em', flexShrink: 0 } as const
+  const pausedBadge = { fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.35)', color: '#fb923c', letterSpacing: '0.05em', flexShrink: 0 } as const
 
   const glassInputStyle = { flex: 1, padding: '11px 14px', borderRadius: 14, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-hi)', fontSize: 14, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' as const }
 
@@ -138,7 +138,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     { icon: Bell, label: t.savings.reminder, sub: t.savings.reminderSub, val: '—' },
   ]
 
-  const sectionLabelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 10, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, fontWeight: 700, letterSpacing: '0.06em', margin: '0 0 10px 2px' }
+  const sectionLabelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, fontWeight: 700, letterSpacing: '0.06em', margin: '0 0 10px 2px' }
 
   const depositsEl = deposits.length === 0 ? (
     <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '24px 0', textAlign: 'center' }}>
@@ -154,13 +154,13 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
           </span>
           {confirmDeleteId === d.id ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>{t.savings.deleteDepositConfirm.replace('{amount}', formatAmount(d.amount))}</span>
+              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{t.savings.deleteDepositConfirm.replace('{amount}', formatAmount(d.amount))}</span>
               <button onClick={async () => { if (!onDeleteDeposit) return; setDeleting(true); try { await onDeleteDeposit(d.id) } finally { setDeleting(false); setConfirmDeleteId(null) } }} disabled={deleting}
-                style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--aurora-rose)', background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}>
+                style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)', background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}>
                 {t.common.yes}
               </button>
               <button onClick={() => setConfirmDeleteId(null)}
-                style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-lo)', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer' }}>
+                style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '3px 8px', cursor: 'pointer' }}>
                 {t.common.no}
               </button>
             </div>
@@ -208,7 +208,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</span>
               {goal.paused && <span style={pausedBadge}>{t.savings.pausedBadge}</span>}
             </div>
-            <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {goal.note ? goal.note : goal.deadline ? `${t.savings.goalUntil} ${formatDateLocale(goal.deadline, locale, { day: 'numeric', month: 'long', year: 'numeric' })}` : `${pctStr} ${t.savings.filled}`}
             </p>
           </div>
@@ -239,7 +239,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
             </svg>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 20, color: 'var(--aurora-hi)' }}>{pctStr}</span>
-              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700 }}>{t.savings.filled}</span>
+              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700 }}>{t.savings.filled}</span>
             </div>
           </div>
           <div style={{ minWidth: 0 }}>
@@ -247,7 +247,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 22, color: 'var(--aurora-hi)' }}>{formatAmount(goal.savedAmount)}</span>
               <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, color: 'var(--aurora-faint)' }}> / {formatAmount(goal.targetAmount)}</span>
             </div>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 6 }}>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 6 }}>
               {isCompleted ? `🎉 ${t.savings.completed}` : `${t.savings.remainingLabel} ${formatAmount(remaining)}`}
             </div>
           </div>
@@ -257,7 +257,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 18 }}>
           {stats.map(s => (
             <div key={s.label} style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 12px' }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{s.label}</div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: s.green ? 'var(--aurora-emerald)' : 'var(--aurora-hi)' }}>{s.value}</div>
             </div>
           ))}
@@ -308,7 +308,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</div>
-                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10.5, color: 'var(--aurora-faint)', marginTop: 1 }}>{r.sub}</div>
+                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 1 }}>{r.sub}</div>
                 </div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12.5, fontWeight: 700, color: r.val === '—' ? 'var(--aurora-faint)' : 'var(--aurora-hi)', flexShrink: 0 }}>{r.val}</div>
               </div>

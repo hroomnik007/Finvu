@@ -290,7 +290,7 @@ function NavTab({
         gap: collapsed ? 0 : 4,
         padding: collapsed ? '8px' : '7px 6px 9px',
         borderRadius: collapsed ? 999 : 16,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 500,
         color: active ? '#fff' : 'var(--aurora-faint)',
         cursor: 'pointer',

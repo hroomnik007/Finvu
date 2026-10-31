@@ -115,7 +115,7 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
           body: t.notifications.spentOf.replace('{spent}', formatAmount(item.spent)).replace('{limit}', formatAmount(item.limit)),
           time: t.notifications.today,
           read: false,
-          color: pct >= 100 ? '#f87171' : '#FB923C',
+          color: pct >= 100 ? 'var(--aurora-rose)' : 'var(--aurora-amber)',
           amount: `${Math.round(item.spent)} / ${Math.round(item.limit)} €`,
           target: 'variable-expenses',
         }
@@ -273,9 +273,9 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
           <span style={{
             position: 'absolute', top: -2, right: -2,
             minWidth: 16, height: 16, borderRadius: 99,
-            background: '#f87171', border: '2px solid var(--bg)',
+            background: '#DC2626', border: '2px solid var(--bg)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 700, color: 'white',
+            fontSize: 12, fontWeight: 700, color: 'white',
             fontFamily: "'DM Mono', monospace",
             animation: 'pulseRing 2s ease-in-out infinite',
           }}>
@@ -304,15 +304,15 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{t.notifications.title}</span>
               {unreadCount > 0 && (
-                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.16)', color: 'var(--aurora-violet)' }}>
+                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.16)', color: 'var(--aurora-violet-text)' }}>
                   {unreadCount} {t.notifications.newBadge}
                 </span>
               )}
             </div>
             {notifications.length > 0 && (
               unreadCount > 0
-                ? <button onClick={markAllRead} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11.5, color: 'var(--aurora-violet)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>{t.notifications.markAll}</button>
-                : <button onClick={clearAll} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11.5, color: 'var(--aurora-faint)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>{t.notifications.clear}</button>
+                ? <button onClick={markAllRead} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>{t.notifications.markAll}</button>
+                : <button onClick={clearAll} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>{t.notifications.clear}</button>
             )}
           </div>
 
@@ -368,17 +368,17 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
                       <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: n.read ? 500 : 700, color: 'var(--aurora-hi)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{n.title}</p>
-                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-faint)', flexShrink: 0, whiteSpace: 'nowrap' }}>{n.time}</p>
+                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', flexShrink: 0, whiteSpace: 'nowrap' }}>{n.time}</p>
                     </div>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11.5, color: 'var(--aurora-lo)', lineHeight: 1.45, marginBottom: n.amount ? 4 : 0 }}>{n.body}</p>
+                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', lineHeight: 1.45, marginBottom: n.amount ? 4 : 0 }}>{n.body}</p>
                     {n.amount && (
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11.5, fontWeight: 700, color: n.color }}>{n.amount}</span>
-                        {n.target && <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10.5, color: 'var(--aurora-faint)' }}>· {t.notifications.openLink}</span>}
+                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: n.color }}>{n.amount}</span>
+                        {n.target && <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>· {t.notifications.openLink}</span>}
                       </div>
                     )}
                     {!n.amount && n.target && (
-                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10.5, color: 'var(--aurora-violet)', fontWeight: 600, marginTop: 4 }}>{t.notifications.openLink}</p>
+                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', fontWeight: 600, marginTop: 4 }}>{t.notifications.openLink}</p>
                     )}
                   </div>
                   {/* Unread dot */}

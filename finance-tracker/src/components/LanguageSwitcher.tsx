@@ -119,7 +119,7 @@ export function LanguageSwitcher({ onLanguageChange, variant = 'compact' }: Lang
                   width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                   padding: '9px 14px', border: 'none', cursor: 'pointer',
                   background: active ? 'var(--aurora-glass)' : 'transparent',
-                  color: active ? 'var(--accent-color)' : 'var(--aurora-hi)',
+                  color: active ? 'var(--aurora-violet-text)' : 'var(--aurora-hi)',
                   fontSize: 13, fontWeight: active ? 600 : 400,
                   fontFamily: "'DM Sans', sans-serif",
                   transition: 'background 0.1s',

@@ -51,7 +51,7 @@ export function DateInput({ value, onChange, compact }: DateInputProps) {
         }}
       >
         <Calendar size={13} color="var(--aurora-lo)" style={{ flexShrink: 0 }} />
-        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11.5, fontWeight: 600, color: 'var(--aurora-hi)', userSelect: 'none', whiteSpace: 'nowrap' }}>
+        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-hi)', userSelect: 'none', whiteSpace: 'nowrap' }}>
           {displayValue || 'DD.MM.RRRR'}
         </span>
         <input

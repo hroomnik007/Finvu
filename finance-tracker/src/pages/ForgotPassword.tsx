@@ -43,7 +43,7 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
   }
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
@@ -141,7 +141,7 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
           <button
             type="button"
             onClick={onNavigateLogin}
-            style={{ color: 'var(--aurora-violet)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5 }}
+            style={{ color: 'var(--aurora-violet-text)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5 }}
           >
             ← {t.auth.backToLogin}
           </button>

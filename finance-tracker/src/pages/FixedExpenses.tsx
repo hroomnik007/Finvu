@@ -43,7 +43,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, onClick }: {
   return (
     <button
       type="button" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 52 }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 60 }}
     >
       <div style={{
         width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -52,7 +52,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, onClick }: {
       }}>
         <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
       </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{label}</span>
+      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>{label}</span>
     </button>
   )
 }
@@ -153,7 +153,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   }, [monthStartWeekday, daysInCurrentMonth])
 
   function countdownBadge(daysUntil: number) {
-    if (daysUntil === 0) return { text: t.expenses.fixed.countdown.today, color: 'var(--aurora-violet)', bg: 'rgba(139,92,246,0.15)' }
+    if (daysUntil === 0) return { text: t.expenses.fixed.countdown.today, color: 'var(--aurora-violet-text)', bg: 'rgba(139,92,246,0.15)' }
     const text = t.expenses.fixed.countdown.days.replace('{n}', String(daysUntil))
     if (daysUntil <= 3) return { text, color: 'var(--aurora-rose)', bg: 'rgba(251,113,133,0.15)' }
     if (daysUntil <= 7) return { text, color: 'var(--aurora-amber)', bg: 'rgba(251,191,36,0.15)' }
@@ -208,7 +208,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const yearlyContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 24, fontWeight: 700, color: 'var(--aurora-hi)', letterSpacing: '-0.5px' }}>{formatAmount(total * 12)}</div>
-      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginBottom: 8 }}>{formatAmount(total)} × 12 {t.expenses.fixed.monthly.toLowerCase()}</div>
+      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginBottom: 8 }}>{formatAmount(total)} × 12 {t.expenses.fixed.monthly.toLowerCase()}</div>
       {categoryTotals.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
           {categoryTotals.map(({ id, amount: catAmt }) => {
@@ -222,8 +222,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                 </span>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: 8 }}>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'var(--aurora-lo)' }}>{formatAmount(catAmt)}<span style={{ fontSize: 10, color: 'var(--aurora-faint)' }}>/mes.</span></span>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, color: 'var(--aurora-faint)' }}>{formatAmount(catAmt * 12)} / rok</span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-lo)' }}>{formatAmount(catAmt)}<span style={{ fontSize: 12, color: 'var(--aurora-faint)' }}>/mes.</span></span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{formatAmount(catAmt * 12)} / rok</span>
                 </div>
               </div>
             )
@@ -262,19 +262,19 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--aurora-amber)', flexShrink: 0 }} />
           <div>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>{t.nav.fixed}</div>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{t.nav.fixed}</div>
             <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(total)}</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--aurora-violet)', flexShrink: 0 }} />
           <div>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>{t.nav.variable}</div>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{t.nav.variable}</div>
             <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(variableTotal)}</div>
           </div>
         </div>
         {(total + variableTotal) > 0 && (
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-amber)', fontWeight: 700, marginTop: 8 }}>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-amber)', fontWeight: 700, marginTop: 8 }}>
             {t.nav.fixed} {Math.round((total / (total + variableTotal)) * 100)}%
           </div>
         )}
@@ -306,7 +306,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
           {/* Hero wallet card */}
           <HeroCard variant="fixed">
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
               {t.expenses.fixed.title} · {t.expenses.fixed.recurringMonthly}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
@@ -323,11 +323,11 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.fixed.yearlyLabel}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.fixed.yearlyLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(filteredTotal * 12)}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.fixed.installmentsLabel}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.fixed.installmentsLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{filtered.length}</div>
               </div>
             </div>
@@ -363,10 +363,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
           {/* Compact month-grid calendar — mobile only */}
           <div className={mobileView === 'calendar' ? 'lg:hidden' : 'hidden'}>
             <GlassCard radius={18}>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', marginBottom: 14 }}>{t.expenses.fixed.monthCalendar}</div>
+              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', marginBottom: 14 }}>{t.expenses.fixed.monthCalendar}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
                 {t.daysShort.map(d => (
-                  <div key={d} style={{ textAlign: 'center', fontFamily: "'Manrope', sans-serif", fontSize: 10, fontWeight: 600, color: 'var(--aurora-faint)' }}>{d}</div>
+                  <div key={d} style={{ textAlign: 'center', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)' }}>{d}</div>
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
@@ -391,7 +391,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                         border: isToday ? '1.5px solid var(--aurora-violet)' : isSelected ? '1px solid rgba(139,92,246,0.4)' : '1px solid var(--aurora-gline)',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
                         fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
-                        color: isPast ? 'var(--aurora-faint)' : isToday ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+                        color: isPast ? 'var(--aurora-faint)' : isToday ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)',
                         opacity: isPast ? 0.6 : 1,
                         cursor: hasPayment ? 'pointer' : 'default',
                         padding: 0,
@@ -423,7 +423,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.label}</div>
-                          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>{cat?.name ?? '—'}</div>
+                          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{cat?.name ?? '—'}</div>
                         </div>
                         <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, color: 'var(--aurora-amber)', flexShrink: 0 }}>{formatAmount(e.amount)}</span>
                       </div>
@@ -437,7 +437,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
           {/* Calendar strip — desktop only */}
           <div className="hidden lg:block">
           <GlassCard radius={18}>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-lo)', marginBottom: 14 }}>{t.expenses.fixed.monthCalendar}</div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-lo)', marginBottom: 14 }}>{t.expenses.fixed.monthCalendar}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(31, 1fr)', gap: 2, marginBottom: 8 }}>
               {Array.from({ length: daysInCurrentMonth }, (_, i) => {
                 const day = i + 1
@@ -454,13 +454,13 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       aspectRatio: '1',
                       borderRadius: 6,
                       background: hasPayment
-                        ? (sum >= 100 ? 'rgba(251,113,133,0.6)' : sum >= 20 ? 'rgba(251,191,36,0.55)' : 'rgba(139,92,246,0.5)')
+                        ? (sum >= 100 ? 'rgba(251,113,133,0.6)' : sum >= 20 ? 'rgba(251,191,36,0.75)' : 'rgba(139,92,246,0.5)')
                         : 'var(--aurora-glass)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 9, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
-                      color: hasPayment ? 'white' : isToday ? 'var(--aurora-violet)' : 'var(--aurora-faint)',
+                      fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
+                      color: hasPayment ? (sum >= 20 && sum < 100 ? '#1A1535' : 'var(--heat-ink)') : isToday ? 'var(--aurora-violet-text)' : 'var(--aurora-faint)',
                       border: isToday ? '1.5px solid var(--aurora-violet)' : '1px solid var(--aurora-gline)',
-                      opacity: isPast ? 0.55 : 1,
+                      filter: isPast ? 'saturate(0.5)' : undefined,
                       cursor: hasPayment ? 'pointer' : 'default',
                       transition: 'transform 0.12s',
                     }}
@@ -472,9 +472,9 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                 )
               })}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 6, flexWrap: 'wrap' as const }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 6, flexWrap: 'wrap' as const }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.55)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.75)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(100))}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'transparent', border: '1.5px solid var(--aurora-violet)', display: 'inline-block' }} />{t.dashboard.heatmapToday}</span>
             </div>
@@ -559,7 +559,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
                     }}>
                       <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: isPast ? 'var(--aurora-faint)' : daysUntil <= 3 ? badge.color : 'var(--aurora-hi)', lineHeight: 1 }}>{expense.dayOfMonth}</span>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9, fontWeight: 600, color: 'var(--aurora-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{monthAbbr}</span>
+                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{monthAbbr}</span>
                     </div>
                     {/* Category icon */}
                     <div style={{ width: 34, height: 34, borderRadius: 10, background: catBg(color), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -567,13 +567,13 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 500, color: isPast ? 'var(--aurora-lo)' : 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{expense.label}</div>
-                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat?.name ?? '—'}</div>
+                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat?.name ?? '—'}</div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                       <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: isPast ? 'var(--aurora-faint)' : 'var(--aurora-rose)' }}>{formatAmount(expense.amount)}</span>
-                      {!isPast && <span style={{ fontSize: 10, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20 }}>{badge.text}</span>}
+                      {!isPast && <span style={{ fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20 }}>{badge.text}</span>}
                       {isPast && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: 'var(--aurora-emerald)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '2px 8px', borderRadius: 20 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600, color: 'var(--aurora-emerald)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '2px 8px', borderRadius: 20 }}>
                           <CheckCircle2 size={11} /> {t.expenses.paid}
                         </span>
                       )}
@@ -622,7 +622,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                   <GlassCard key={e.id} radius={14} onClick={() => openEdit(e)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', opacity: 0.75 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13.5, fontWeight: 500, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.label}</div>
-                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 2 }}>
+                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>
                         {t.expenses.fixed.endedBadge.replace('{month}', e.endedOn ? `${e.endedOn.slice(5, 7)}/${e.endedOn.slice(0, 4)}` : '')}
                       </div>
                     </div>
@@ -712,7 +712,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               onClick={() => setDayOfMonth(d => String(Math.max(1, parseInt(d || '1') - 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
-            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dueDay}</span>
+            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dueDay}</span>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{dayOfMonth}</span>
             <button
               type="button"
@@ -720,7 +720,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >+</button>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,#FBBF24,#f59e0b)', border: '1px solid transparent', borderRadius: 12, padding: '8px 11px', fontSize: 11, color: '#fff', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,#FBBF24,#f59e0b)', border: '1px solid transparent', borderRadius: 12, padding: '8px 11px', fontSize: 12, color: '#fff', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
             <Repeat size={12} /> {t.expenses.fixed.recurringMonthly}
           </div>
         </div>
@@ -774,7 +774,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               {ended ? (
                 <div style={box}>
                   <p style={small}>{t.expenses.fixed.endedBadge.replace('{month}', editing.endedOn ? `${editing.endedOn.slice(5, 7)}/${editing.endedOn.slice(0, 4)}` : '')}</p>
-                  <button type="button" onClick={async () => { await endFixedExpense(editing.id!, null); closeSheet() }} style={{ marginTop: 8, padding: '7px 14px', borderRadius: 10, border: '1px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600 }}>
+                  <button type="button" onClick={async () => { await endFixedExpense(editing.id!, null); closeSheet() }} style={{ marginTop: 8, padding: '7px 14px', borderRadius: 10, border: '1px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet-text)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 600 }}>
                     {t.expenses.fixed.restore}
                   </button>
                 </div>

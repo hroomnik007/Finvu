@@ -210,7 +210,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
         <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, color: 'var(--aurora-faint)', maxWidth: 280 }}>{ht.notEnabled}</p>
         <button
           onClick={() => { window.location.hash = 'settings' }}
-          style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-violet)', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', padding: '8px 20px', borderRadius: 12, cursor: 'pointer' }}
+          style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-violet-text)', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', padding: '8px 20px', borderRadius: 12, cursor: 'pointer' }}
         >
           {ht.enableInSettings}
         </button>
@@ -239,13 +239,13 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
             </div>
           ))}
           {memberCount > 4 && (
-            <div style={{ marginLeft: -10, width: 34, height: 34, borderRadius: '50%', background: 'rgba(139,92,246,0.25)', border: '2px solid var(--aurora-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, color: 'white', zIndex: 5 }}>
+            <div style={{ marginLeft: -10, width: 34, height: 34, borderRadius: '50%', background: 'rgba(139,92,246,0.25)', border: '2px solid var(--aurora-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'white', zIndex: 5 }}>
               +{memberCount - 4}
             </div>
           )}
         </div>
 
-        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
           {ht.title} · Rodina {householdData?.name ?? ''}
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
@@ -262,7 +262,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
             </span>
           </div>
           <span style={{
-            marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
+            marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
             background: savingsRate >= 0 ? 'rgba(52,211,153,0.15)' : 'rgba(251,113,133,0.15)',
             color: savingsRate >= 0 ? 'var(--aurora-emerald)' : 'var(--aurora-rose)',
             border: `1px solid ${savingsRate >= 0 ? 'rgba(52,211,153,0.3)' : 'rgba(251,113,133,0.3)'}`,
@@ -272,15 +272,15 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{ht.totalIncomeStat}</div>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{ht.totalIncomeStat}</div>
             <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', wordBreak: 'break-word' }}>+{formatAmount(totalIncome)}</div>
           </div>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{ht.totalExpensesStat}</div>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{ht.totalExpensesStat}</div>
             <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', wordBreak: 'break-word' }}>−{formatAmount(totalExpenses)}</div>
           </div>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{ht.membersCount}</div>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{ht.membersCount}</div>
             <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{memberCount}</div>
           </div>
         </div>
@@ -347,11 +347,11 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                     <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {m.is_owner ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.13)', color: 'var(--aurora-violet)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.13)', color: 'var(--aurora-violet-text)', border: '1px solid rgba(139,92,246,0.2)' }}>
                           <Crown size={9} /> {ht.owner}
                         </span>
                       ) : (
-                        <span style={{ fontSize: 10.5, fontWeight: 500, padding: '2px 7px', borderRadius: 99, background: 'var(--aurora-glass)', color: 'var(--aurora-faint)', border: '1px solid var(--aurora-gline)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 500, padding: '2px 7px', borderRadius: 99, background: 'var(--aurora-glass)', color: 'var(--aurora-faint)', border: '1px solid var(--aurora-gline)' }}>
                           {ht.member}
                         </span>
                       )}
@@ -361,10 +361,10 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                   {isOwner && m.id !== user?.id && (
                     removePendingId === m.id ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)' }}>{ht.confirmRemoveMember}</span>
+                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{ht.confirmRemoveMember}</span>
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(251,113,133,0.4)', background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>{ht.confirmBtn}</button>
-                          <button onClick={() => setRemovePendingId(null)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>✕</button>
+                          <button onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(251,113,133,0.4)', background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>{ht.confirmBtn}</button>
+                          <button onClick={() => setRemovePendingId(null)} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>✕</button>
                         </div>
                       </div>
                     ) : (
@@ -372,7 +372,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                         onClick={() => setRemovePendingId(m.id)}
                         title={ht.removeMember}
                         aria-label={ht.removeMember}
-                        style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-faint)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
+                        style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-faint)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
                       >{ht.removeMember}</button>
                     )
                   )}
@@ -381,16 +381,16 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                 {/* 3-col mini stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
                   <div style={{ textAlign: 'center', padding: '8px 6px', background: 'rgba(52,211,153,0.08)', borderRadius: 10 }}>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9.5, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 2 }}>{ht.incomeStat}</p>
+                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 2 }}>{ht.incomeStat}</p>
                     <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, color: 'var(--aurora-emerald)' }}>+{formatAmount(inc)}</p>
                   </div>
                   <div style={{ textAlign: 'center', padding: '8px 6px', background: 'rgba(251,113,133,0.08)', borderRadius: 10 }}>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9.5, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 2 }}>{ht.expensesStat}</p>
+                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 2 }}>{ht.expensesStat}</p>
                     <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, color: 'var(--aurora-rose)' }}>−{formatAmount(exp)}</p>
                   </div>
                   <div style={{ textAlign: 'center', padding: '8px 6px', background: 'rgba(139,92,246,0.08)', borderRadius: 10 }}>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 9.5, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 2 }}>{ht.balanceStat}</p>
-                    <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, color: bal >= 0 ? 'var(--aurora-violet)' : 'var(--aurora-rose)' }}>
+                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 2 }}>{ht.balanceStat}</p>
+                    <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, color: bal >= 0 ? 'var(--aurora-violet-text)' : 'var(--aurora-rose)' }}>
                       {bal >= 0 ? '+' : '−'}{formatAmount(Math.abs(bal))}
                     </p>
                   </div>
@@ -399,13 +399,13 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                 {/* Rozdelenie výdavkov */}
                 {exp > 0 && (
                   <>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10.5, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>{ht.expenseBreakdown}</p>
+                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>{ht.expenseBreakdown}</p>
                     <div style={{ display: 'flex', height: 8, borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
                       {catBreakdown.map((c, j) => (
                         <div key={j} style={{ flex: c.val, background: c.color, transition: 'flex 0.7s' }} title={`${c.name}: ${formatAmount(c.val)}`} />
                       ))}
                     </div>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 10.5, color: 'var(--aurora-faint)', margin: 0, lineHeight: 1.6 }}>
+                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, lineHeight: 1.6 }}>
                       {catBreakdown.map((c, j) => {
                         const catTotal = catBreakdown.reduce((s, x) => s + x.val, 0)
                         return (
@@ -438,14 +438,14 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: 0 }}>{ht.activityLabel}</p>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: "'Manrope', sans-serif", fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: 'rgba(52,211,153,0.13)', color: 'var(--aurora-emerald)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: 'rgba(52,211,153,0.13)', color: 'var(--aurora-emerald)' }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--aurora-emerald)', animation: 'pulse-glow 1.5s ease-in-out infinite', display: 'inline-block' }} />
               Live
             </span>
           </div>
           {activityGroups.map((group, gi) => (
             <div key={gi} style={{ marginBottom: 16 }}>
-              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-faint)', margin: '0 0 8px' }}>{group.label}</p>
+              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-faint)', margin: '0 0 8px' }}>{group.label}</p>
               <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 8 }}>
                 {group.items.map((a, i) => {
                   const member = householdData?.members.find(m => m.id === a.created_by)
@@ -468,7 +468,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                             <span style={{ color: 'var(--aurora-faint)' }}> {actionText} </span>
                             <span style={{ fontWeight: 500 }}>{description}</span>
                           </p>
-                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>{timeAgo(a.created_at, ht)}</p>
+                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{timeAgo(a.created_at, ht)}</p>
                         </div>
                         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', flexShrink: 0 }}>
                           {isIncome ? '+' : '−'}{formatAmount(a.amount)}
@@ -483,7 +483,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
           {activityFeed.length > ACTIVITY_INITIAL_LIMIT && (
             <button
               onClick={() => setActivityExpanded(prev => !prev)}
-              style={{ marginTop: 4, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet)', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}
+              style={{ marginTop: 4, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}
             >
               {activityExpanded ? ht.showLess : ht.showMore}
             </button>
@@ -511,10 +511,10 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
             </div>
           )}
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '2px', color: 'var(--aurora-faint)', marginBottom: 6 }}>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '2px', color: 'var(--aurora-faint)', marginBottom: 6 }}>
               {ht.inviteCode}
             </div>
-            <code style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--aurora-violet)', letterSpacing: '3px', fontSize: 18 }}>
+            <code style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--aurora-violet-text)', letterSpacing: '3px', fontSize: 18 }}>
               {householdData?.invite_code}
             </code>
           </div>

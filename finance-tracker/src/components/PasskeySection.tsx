@@ -123,7 +123,7 @@ export function PasskeySection() {
         type="button"
         onClick={handleAdd}
         disabled={busy || (secretOpen && !secret)}
-        style={{ marginTop: 10, height: 40, padding: '0 16px', borderRadius: 12, border: '1.5px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet)', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy || (secretOpen && !secret) ? 0.6 : 1, fontFamily: "'Outfit', sans-serif" }}
+        style={{ marginTop: 10, height: 40, padding: '0 16px', borderRadius: 12, border: '1.5px solid var(--aurora-violet)', background: 'transparent', color: 'var(--aurora-violet-text)', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy || (secretOpen && !secret) ? 0.6 : 1, fontFamily: "'Outfit', sans-serif" }}
       >
         {t.settings.passkeyAdd}
       </button>

@@ -106,7 +106,7 @@ function SectionHeader({ icon: Icon, label }: { icon: LucideIcon; label: string 
   return (
     <div style={{ borderBottom: '1px solid var(--aurora-gline)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
       <Icon size={13} color="var(--aurora-hi)" />
-      <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--aurora-hi)', fontWeight: 700, margin: 0 }}>
+      <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--aurora-hi)', fontWeight: 700, margin: 0 }}>
         {label}
       </p>
     </div>
@@ -130,7 +130,7 @@ function SettingRow({ label, sublabel, children }: { label: string; sublabel?: R
 function CompactSettingCell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--aurora-faint)', margin: 0 }}>{label}</p>
+      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--aurora-faint)', margin: 0 }}>{label}</p>
       <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '10px 12px' }}>{children}</div>
     </div>
   )
@@ -931,12 +931,12 @@ export function SettingsPage() {
                             padding: '8px 12px', borderRadius: 12, cursor: 'pointer',
                             border: theme === id ? '2px solid var(--aurora-violet)' : '1px solid var(--aurora-gline)',
                             background: theme === id ? 'rgba(139,92,246,0.12)' : 'var(--aurora-glass)',
-                            color: theme === id ? 'var(--aurora-violet)' : 'var(--aurora-lo)',
+                            color: theme === id ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)',
                             minWidth: 56, transition: 'all 0.15s', fontFamily: "'Manrope', sans-serif",
                           }}
                         >
                           <Icon size={16} />
-                          <span style={{ fontSize: 11, fontWeight: theme === id ? 600 : 400 }}>{label}</span>
+                          <span style={{ fontSize: 12, fontWeight: theme === id ? 600 : 400 }}>{label}</span>
                         </button>
                       ))}
                     </div>
@@ -1453,7 +1453,7 @@ export function SettingsPage() {
             </p>
             {dangerAction === 'reset' && (
               <div className="mb-4">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-red-400 mb-2 block">
+                <label className="text-[12px] font-semibold uppercase tracking-wider text-red-400 mb-2 block">
                   {t.settings.dangerResetConfirmLabel}
                 </label>
                 <input
@@ -1494,7 +1494,7 @@ export function SettingsPage() {
             </div>
             <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deactivateAccountDesc}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
                 {t.settings.deactivateAccountConfirmLabel}
               </label>
               <input
@@ -1541,7 +1541,7 @@ export function SettingsPage() {
             </div>
             <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deleteAccountDesc}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
                 {t.settings.currentPassword}
               </label>
               <input
@@ -1553,7 +1553,7 @@ export function SettingsPage() {
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
+              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
                 {t.settings.deleteAccountConfirmLabel}
               </label>
               <input
@@ -1663,7 +1663,7 @@ export function SettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--aurora-hi)', margin: 0 }}>{session.deviceName ?? t.common.unknownDevice}</p>
                           {isCurrent && (
-                            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', letterSpacing: '0.05em' }}>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', letterSpacing: '0.05em' }}>
                               {t.settings.currentSessionBadge}
                             </span>
                           )}
@@ -1671,7 +1671,7 @@ export function SettingsPage() {
                         <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
                           {session.browser ?? ''}{session.location ? ` · ${session.location}` : ''}{session.ip ? ` · ${session.ip}` : ''}
                         </p>
-                        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>
+                        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
                           {formatDateLocale(session.createdAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
@@ -1717,7 +1717,7 @@ export function SettingsPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 500, color: 'var(--aurora-hi)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.label ? deviceName : t.common.unknownDevice}</p>
                               {device.isCurrentDevice && (
-                                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', letterSpacing: '0.05em', flexShrink: 0 }}>
+                                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: 'rgba(52,211,153,0.15)', color: 'var(--aurora-emerald)', letterSpacing: '0.05em', flexShrink: 0 }}>
                                   {t.settings.pinDeviceCurrentBadge}
                                 </span>
                               )}
@@ -1728,7 +1728,7 @@ export function SettingsPage() {
                             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
                               {t.settings.pinDeviceLastUsed}: {formatDateLocale(device.lastUsedAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
-                            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: 0 }}>
+                            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
                               {t.settings.pinDeviceExpires}: {formatDateLocale(device.expiresAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
                           </div>
@@ -1805,7 +1805,7 @@ export function SettingsPage() {
               {t.settings.trackingStartDesc}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 {t.settings.trackingFromShort}
               </label>
               <input

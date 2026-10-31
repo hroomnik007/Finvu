@@ -69,7 +69,7 @@ export function ResetPasswordPage({ token, onNavigateLogin }: ResetPasswordPageP
   })
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     color: LABEL_COLOR,
     letterSpacing: '0.08em',
