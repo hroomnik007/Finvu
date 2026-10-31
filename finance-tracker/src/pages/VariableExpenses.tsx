@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Edit2, Trash2, Plus, Receipt, X, ArrowDown, Tag } from 'lucide-react'
 
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { BulkBar } from '../components/BulkBar'
@@ -89,6 +90,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
   const { formatAmount, formatAmountParts, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
+  const feedback = useSaveFeedback()
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<VariableExpense | null>(null)
@@ -181,30 +183,37 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const handleSave = async () => {
     const amount = (parseAmountInput(form.amount) ?? NaN)
     if (isNaN(amount) || amount <= 0) return
+    if (newCatMode ? !newCatName.trim() : !form.categoryId) return
 
-    let catId: string
-
-    if (newCatMode) {
-      if (!newCatName.trim()) return
-      catId = await addCategory({ name: newCatName, color: '#9D84D4', icon: '📦', type: 'expense' })
-    } else {
-      if (!form.categoryId) return
-      catId = form.categoryId
-      const bs = getBudgetForCat(catId)
-      if (bs) {
-        const newSpent = bs.spent + amount
-        const newPct = (newSpent / bs.limit) * 100
-        if (newPct >= 100 && bs.percentage < 100) showToast(t.expenses.variable.toastLimitExceeded.replace('{name}', bs.categoryName))
-        else if (newPct >= 90 && bs.percentage < 90) showToast(t.expenses.variable.toastLimitWarning.replace('{name}', bs.categoryName))
+    try {
+      let catId: string
+      if (newCatMode) {
+        catId = await addCategory({ name: newCatName, color: '#9D84D4', icon: '📦', type: 'expense' })
+        // If the expense itself fails, a retry must not create the category again.
+        setForm(f => ({ ...f, categoryId: catId })); setNewCatMode(false); setNewCatName('')
+      } else {
+        catId = form.categoryId
+        const bs = getBudgetForCat(catId)
+        if (bs) {
+          const newSpent = bs.spent + amount
+          const newPct = (newSpent / bs.limit) * 100
+          if (newPct >= 100 && bs.percentage < 100) showToast(t.expenses.variable.toastLimitExceeded.replace('{name}', bs.categoryName))
+          else if (newPct >= 90 && bs.percentage < 90) showToast(t.expenses.variable.toastLimitWarning.replace('{name}', bs.categoryName))
+        }
       }
-    }
 
-    if (editing?.id) {
-      await updateVariableExpense(editing.id, { amount, categoryId: catId, note: form.note, date: form.date })
-    } else {
-      await addVariableExpense({ amount, categoryId: catId, note: form.note, date: form.date })
+      if (editing?.id) {
+        await updateVariableExpense(editing.id, { amount, categoryId: catId, note: form.note, date: form.date })
+        setSheetOpen(false)
+        feedback.saved()
+      } else {
+        const id = await addVariableExpense({ amount, categoryId: catId, note: form.note, date: form.date })
+        setSheetOpen(false)
+        feedback.saved(() => deleteVariableExpense(id))
+      }
+    } catch {
+      feedback.failed()
     }
-    setSheetOpen(false)
   }
 
   const monthNameRaw = getLocalizedMonthNames(locale)[month - 1] ?? ''

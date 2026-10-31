@@ -4,6 +4,7 @@ import {
   Pencil, Trash2, Plus, Lock, Calendar, List as ListIcon, CheckCircle2, Tag, Repeat,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CsvImportModal } from '../components/CsvImportModal'
@@ -74,6 +75,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const { categories } = useCategories()
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
+  const feedback = useSaveFeedback()
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true))
@@ -191,12 +193,18 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     const day = parseInt(dayOfMonth)
     if (!label.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 28) return
     const catId = categoryId || null
-    if (editing?.id != null) {
-      await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, isCorrection ? undefined : priceFrom)
-    } else {
-      await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note })
+    try {
+      if (editing?.id != null) {
+        await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, isCorrection ? undefined : priceFrom)
+      } else {
+        // No undo: deleting a fixed expense removes its whole series by name.
+        await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note })
+      }
+      closeSheet()
+      feedback.saved()
+    } catch {
+      feedback.failed()
     }
-    closeSheet()
   }
 
   async function handleDelete(id: string) {

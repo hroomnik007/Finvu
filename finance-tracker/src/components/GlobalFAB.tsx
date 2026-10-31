@@ -14,6 +14,7 @@ import { useSavings } from '../hooks/useSavings'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { todayISO } from '../utils/format'
 import AmountInput from './AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
@@ -128,8 +129,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   }
 
   // ── Data hooks ────────────────────────────────────────────────────────────
-  const { addIncome } = useIncomes(month, year)
-  const { addVariableExpense, variableExpenses } = useVariableExpenses(month, year)
+  const { addIncome, deleteIncome } = useIncomes(month, year)
+  const { addVariableExpense, deleteVariableExpense, variableExpenses } = useVariableExpenses(month, year)
   const { addFixedExpense } = useFixedExpenses()
   const { categories, addCategory } = useCategories()
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses })
@@ -137,6 +138,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   const { formatAmount } = useFormatters()
   const { t } = useTranslation()
   const { user } = useAuth()
+  const feedback = useSaveFeedback()
   const savingsEnabled = user?.savings_enabled ?? false
 
   // ── Income form state ─────────────────────────────────────────────────────
@@ -193,68 +195,98 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   function closeModal() { setActiveModal(null) }
 
   // ── Save handlers ─────────────────────────────────────────────────────────
+  // CompactModal awaits these: while one is pending its button shows a spinner
+  // and further taps are ignored. On error the modal stays open with the values.
   async function saveIncome() {
     const amt = (parseAmountInput(incAmt) ?? NaN)
     if (!incLabel.trim() || isNaN(amt) || amt <= 0) return
-    await addIncome({ amount: amt, label: incLabel.trim(), date: incDate, recurring: incRecurring })
-    closeModal()
+    try {
+      const id = await addIncome({ amount: amt, label: incLabel.trim(), date: incDate, recurring: incRecurring })
+      closeModal()
+      // Deleting a recurring income removes its whole series (matched by name),
+      // so undo is offered only for one-off incomes.
+      feedback.saved(incRecurring ? undefined : () => deleteIncome(id))
+    } catch {
+      feedback.failed()
+    }
   }
 
   async function saveVariable() {
     const amt = (parseAmountInput(varAmt) ?? NaN)
     if (isNaN(amt) || amt <= 0) return
-    let catId: string
-    if (varNewCatMode) {
-      if (!varNewCatName.trim()) return
-      catId = await addCategory({ name: varNewCatName.trim(), color: '#64748b', icon: '📦', type: 'expense' })
-    } else {
-      if (!varCatId) return
-      catId = varCatId
-      const bs = budgetStatuses.find(b => b.categoryId === catId)
-      if (bs) {
-        const newSpent = bs.spent + amt
-        const newPct = (newSpent / bs.limit) * 100
-        if (newPct >= 100 && bs.percentage < 100) showToast(t.expenses.categories.limitExceededToast.replace('{name}', bs.categoryName))
-        else if (newPct >= 90 && bs.percentage < 90) showToast(t.expenses.categories.nearLimitToast.replace('{name}', bs.categoryName))
+    if (varNewCatMode ? !varNewCatName.trim() : !varCatId) return
+    try {
+      let catId: string
+      if (varNewCatMode) {
+        catId = await addCategory({ name: varNewCatName.trim(), color: '#64748b', icon: '📦', type: 'expense' })
+        // If the expense itself fails, a retry must not create the category again.
+        setVarCatId(catId); setVarNewCatMode(false); setVarNewCatName('')
+      } else {
+        catId = varCatId
+        const bs = budgetStatuses.find(b => b.categoryId === catId)
+        if (bs) {
+          const newSpent = bs.spent + amt
+          const newPct = (newSpent / bs.limit) * 100
+          if (newPct >= 100 && bs.percentage < 100) showToast(t.expenses.categories.limitExceededToast.replace('{name}', bs.categoryName))
+          else if (newPct >= 90 && bs.percentage < 90) showToast(t.expenses.categories.nearLimitToast.replace('{name}', bs.categoryName))
+        }
       }
+      const id = await addVariableExpense({ amount: amt, categoryId: catId, note: varNote, date: varDate })
+      closeModal()
+      feedback.saved(() => deleteVariableExpense(id))
+    } catch {
+      feedback.failed()
     }
-    await addVariableExpense({ amount: amt, categoryId: catId, note: varNote, date: varDate })
-    closeModal()
   }
 
   async function saveFixed() {
     const amt = (parseAmountInput(fixAmt) ?? NaN)
     const day = parseInt(fixDay)
     if (!fixLabel.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 31) return
-    await addFixedExpense({ label: fixLabel.trim(), amount: amt, dayOfMonth: day, categoryId: fixCatId || null, note: '' })
-    closeModal()
+    try {
+      await addFixedExpense({ label: fixLabel.trim(), amount: amt, dayOfMonth: day, categoryId: fixCatId || null, note: '' })
+      closeModal()
+      feedback.saved()
+    } catch {
+      feedback.failed()
+    }
   }
 
   async function saveCategory() {
     if (!catName.trim()) return
     const limit = parseAmountInput(catBudgetLimit) ?? undefined
-    await addCategory({
-      name: catName.trim(),
-      color: catColor,
-      icon: catIcon,
-      type: 'expense',
-      budgetLimit: limit && limit > 0 ? limit : undefined,
-    })
-    closeModal()
+    try {
+      await addCategory({
+        name: catName.trim(),
+        color: catColor,
+        icon: catIcon,
+        type: 'expense',
+        budgetLimit: limit && limit > 0 ? limit : undefined,
+      })
+      closeModal()
+      feedback.saved()
+    } catch {
+      feedback.failed()
+    }
   }
 
   async function saveSavingsGoal() {
     const amt = (parseAmountInput(savTarget) ?? NaN)
     if (!savName.trim() || isNaN(amt) || amt <= 0) return
-    await addGoal({
-      name: savName.trim(),
-      targetAmount: amt,
-      savedAmount: 0,
-      deadline: savDeadline || null,
-      icon: savIcon,
-      color: '#7C3AED',
-    })
-    closeModal()
+    try {
+      await addGoal({
+        name: savName.trim(),
+        targetAmount: amt,
+        savedAmount: 0,
+        deadline: savDeadline || null,
+        icon: savIcon,
+        color: '#7C3AED',
+      })
+      closeModal()
+      feedback.saved()
+    } catch {
+      feedback.failed()
+    }
   }
 
   // ── Live budget preview (variable expense) ────────────────────────────────

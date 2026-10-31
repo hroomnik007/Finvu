@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Plus, PiggyBank, Target } from 'lucide-react'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { SavingsDetailModal } from '../components/SavingsDetailModal'
 import { SwipeableRow } from '../components/SwipeableRow'
@@ -63,9 +64,10 @@ function goalMonthly(goal: SavingsGoal): number {
 }
 
 export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
-  const { goals, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal } = useSavings()
+  const { goals, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal, reload: reloadGoals } = useSavings()
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
+  const feedback = useSaveFeedback()
 
   const [view, setView] = useState<'list' | 'detail' | 'edit'>('list')
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null)
@@ -136,9 +138,18 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
 
   async function handleDeposit(amount: number) {
     if (!selectedGoal?.id) return
-    const { goal: updated, deposit } = await addDeposit(selectedGoal.id, amount)
+    const goalId = selectedGoal.id
+    const { goal: updated, deposit } = await addDeposit(goalId, amount)
     setDeposits(prev => [deposit, ...prev])
     setSelectedGoal(prev => prev ? { ...prev, savedAmount: updated.savedAmount } : null)
+    void reloadGoals()
+    // A deposit is its own row, so undo simply deletes that row.
+    feedback.saved(async () => {
+      const after = await deleteDeposit(goalId, deposit.id)
+      setDeposits(prev => prev.filter(d => d.id !== deposit.id))
+      setSelectedGoal(prev => prev?.id === goalId ? { ...prev, savedAmount: after.savedAmount } : prev)
+      void reloadGoals()
+    })
   }
 
   async function handleDeleteDeposit(depositId: string) {
@@ -197,10 +208,13 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         await addGoal(payload)
         setView('list')
       }
+      feedback.saved()
+    } catch {
+      feedback.failed()
     } finally {
       setSaving(false)
     }
-  }, [formName, formTarget, formSaved, formDeadline, formIcon, formColor, formNote, selectedGoal, addGoal, updateGoal])
+  }, [formName, formTarget, formSaved, formDeadline, formIcon, formColor, formNote, selectedGoal, addGoal, updateGoal, feedback])
 
   const handleDelete = useCallback(async (goal: SavingsGoal) => {
     if (!goal.id) return
@@ -325,7 +339,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
     </div>
   )
 
-  const saveDisabled = saving || !formName.trim() || !((parseAmountInput(formTarget) ?? 0) > 0)
+  const saveDisabled = !formName.trim() || !((parseAmountInput(formTarget) ?? 0) > 0)
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -460,6 +474,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         submitDisabled={saveDisabled}
+        submitting={saving}
       >
         {form}
       </CompactModal>

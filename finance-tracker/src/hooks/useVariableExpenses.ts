@@ -57,8 +57,8 @@ export function useVariableExpenses(month?: number, year?: number, scope: DataSc
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
   ]), [qc])
 
-  const addVariableExpense = useCallback(async (expense: Omit<VariableExpense, 'id'>): Promise<void> => {
-    await createTransaction({
+  const addVariableExpense = useCallback(async (expense: Omit<VariableExpense, 'id'>): Promise<string> => {
+    const { data } = await createTransaction({
       type: 'expense',
       amount: expense.amount,
       categoryId: expense.categoryId || null,
@@ -67,6 +67,7 @@ export function useVariableExpenses(month?: number, year?: number, scope: DataSc
       isFixed: false,
     })
     await invalidate()
+    return data.id
   }, [invalidate])
 
   const updateVariableExpense = useCallback(async (id: string, changes: Partial<VariableExpense>): Promise<void> => {

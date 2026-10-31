@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Repeat, Edit2, Trash2, Calendar, Plus, CalendarDays, PiggyBank, ArrowUp } from 'lucide-react'
 
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DateInput } from '../components/DateInput'
@@ -90,6 +91,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
   const { incomes, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
   const { formatAmount, formatAmountParts, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
+  const feedback = useSaveFeedback()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<Income | null>(null)
   const [form, setForm] = useState<FormState>(makeEmpty())
@@ -128,14 +130,23 @@ export function IncomePage({ month, year }: IncomePageProps) {
   const handleSave = async () => {
     const amount = (parseAmountInput(form.amount) ?? NaN)
     if (!form.label.trim() || isNaN(amount) || amount <= 0) return
-    if (editing?.id) {
-      const priceChange = editing.recurring && form.recurring && !isCorrection && amount !== editing.amount
-      await updateIncome(editing.id, { amount: priceChange ? undefined : amount, label: form.label, date: form.date, recurring: form.recurring })
-      if (priceChange) await changeIncomePrice(editing.id, amount, priceFrom)
-    } else {
-      await addIncome({ amount, label: form.label, date: form.date, recurring: form.recurring })
+    try {
+      if (editing?.id) {
+        const priceChange = editing.recurring && form.recurring && !isCorrection && amount !== editing.amount
+        await updateIncome(editing.id, { amount: priceChange ? undefined : amount, label: form.label, date: form.date, recurring: form.recurring })
+        if (priceChange) await changeIncomePrice(editing.id, amount, priceFrom)
+        setSheetOpen(false)
+        feedback.saved()
+      } else {
+        const id = await addIncome({ amount, label: form.label, date: form.date, recurring: form.recurring })
+        setSheetOpen(false)
+        // Deleting a recurring income removes its whole series (matched by
+        // name), so undo is offered only for one-off incomes.
+        feedback.saved(form.recurring ? undefined : () => deleteIncome(id))
+      }
+    } catch {
+      feedback.failed()
     }
-    setSheetOpen(false)
   }
 
   const handleDelete = async () => {

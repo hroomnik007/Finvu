@@ -17,6 +17,8 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
+import { useSubmitGuard } from '../hooks/useSubmitGuard'
 import { CompactModal } from '../components/CompactModal'
 import { BulkBar } from '../components/BulkBar'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -291,6 +293,9 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const { categories, addCategory, updateCategory, deleteCategory, reload } = useCategories()
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
+  const feedback = useSaveFeedback()
+  // Saves started from the confirm dialogs (not via the modal's own button)
+  const saveGuard = useSubmitGuard()
   const now = new Date()
   const { variableExpenses } = useVariableExpenses(now.getMonth() + 1, now.getFullYear())
   const { fixedExpenses } = useFixedExpenses()
@@ -508,31 +513,36 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     if (!name.trim()) return
     // Shared categories have one common manual limit
     const effectiveAutoLimit = sharedFlag ? false : requestedAutoLimit
-    if (editing?.id != null) {
-      const limit = effectiveAutoLimit ? undefined : (parseAmountInput(budgetLimit) ?? undefined)
-      await updateCategory(editing.id, {
-        name: name.trim(), color, icon,
-        autoLimit: effectiveAutoLimit,
-        // With auto limit the reserve for variable spending is added on top of the fixed total
-        ...(effectiveAutoLimit ? { limitReserve: parseReserve(limitReserve) } : { budgetLimit: limit && limit > 0 ? limit : undefined }),
-      })
-      if (sharedFlag !== (editing.shared ?? false)) {
-        try {
-          await shareCategories([editing.id], sharedFlag)
-        } catch (err: unknown) {
-          alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t.expenses.categories.deleteError)
+    try {
+      if (editing?.id != null) {
+        const limit = effectiveAutoLimit ? undefined : (parseAmountInput(budgetLimit) ?? undefined)
+        await updateCategory(editing.id, {
+          name: name.trim(), color, icon,
+          autoLimit: effectiveAutoLimit,
+          // With auto limit the reserve for variable spending is added on top of the fixed total
+          ...(effectiveAutoLimit ? { limitReserve: parseReserve(limitReserve) } : { budgetLimit: limit && limit > 0 ? limit : undefined }),
+        })
+        if (sharedFlag !== (editing.shared ?? false)) {
+          try {
+            await shareCategories([editing.id], sharedFlag)
+          } catch (err: unknown) {
+            alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t.expenses.categories.deleteError)
+          }
+          await reload()
         }
-        await reload()
+      } else {
+        const limit = effectiveAutoLimit ? undefined : (parseAmountInput(budgetLimit) ?? undefined)
+        await addCategory({
+          name: name.trim(), color, icon, type: catType,
+          autoLimit: effectiveAutoLimit,
+          ...(effectiveAutoLimit ? {} : { budgetLimit: limit && limit > 0 ? limit : undefined }),
+        })
       }
-    } else {
-      const limit = effectiveAutoLimit ? undefined : (parseAmountInput(budgetLimit) ?? undefined)
-      await addCategory({
-        name: name.trim(), color, icon, type: catType,
-        autoLimit: effectiveAutoLimit,
-        ...(effectiveAutoLimit ? {} : { budgetLimit: limit && limit > 0 ? limit : undefined }),
-      })
+      closeSheet()
+      feedback.saved()
+    } catch {
+      feedback.failed()
     }
-    closeSheet()
   }
 
   async function handleDelete(id: string) {
@@ -745,7 +755,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         title={t.expenses.categories.bulkEditTitle.replace('{n}', String(selectedIds.size))}
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={requestApplyBulk}
-        submitDisabled={bulkBusy || (!bulkLimit && !bulkColor && bulkShared === 'keep')}
+        submitDisabled={!bulkLimit && !bulkColor && bulkShared === 'keep'}
+        submitting={bulkBusy}
       >
         <p style={{ fontSize: 12, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", margin: 0, lineHeight: 1.4 }}>{t.expenses.categories.bulkHint}</p>
         <AmountInput
@@ -791,7 +802,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         onConfirm={() => {
           const which = shareConfirm
           setShareConfirm(null)
-          if (which === 'single') void doSave()
+          if (which === 'single') void saveGuard.run(() => doSave())
           else if (which === 'bulk') void applyBulk()
         }}
         onCancel={() => setShareConfirm(null)}
@@ -813,6 +824,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         submitDisabled={!name.trim()}
+        submitting={saveGuard.pending}
       >
         <input
           type="text"
@@ -986,14 +998,14 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 type="button"
-                onClick={async () => { setAutoLimitWarning(false); await doSave(false) }}
+                onClick={() => { setAutoLimitWarning(false); void saveGuard.run(() => doSave(false)) }}
                 style={{ flex: 1, height: 44, borderRadius: 14, background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', fontSize: 12.5, fontWeight: 600, border: '1px solid var(--aurora-gline)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
               >
                 {t.expenses.overrideLimitKeep}
               </button>
               <button
                 type="button"
-                onClick={async () => { setAutoLimitWarning(false); await doSave() }}
+                onClick={() => { setAutoLimitWarning(false); void saveGuard.run(() => doSave()) }}
                 style={{ flex: 1, height: 44, borderRadius: 14, background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', fontSize: 12.5, fontWeight: 700, color: 'white', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
               >
                 {t.expenses.overrideLimitReplace}

@@ -6,6 +6,8 @@ import { formatDateLocale } from '../utils/format'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import AmountInput from './AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
+import { useSubmitGuard } from '../hooks/useSubmitGuard'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 
 interface SavingsDetailModalProps {
   goal: SavingsGoal | null
@@ -42,7 +44,9 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
   const { t, locale } = useTranslation()
   const [depositMode, setDepositMode] = useState(false)
   const [depositInput, setDepositInput] = useState('')
-  const [saving, setSaving] = useState(false)
+  const depositGuard = useSubmitGuard()
+  const saving = depositGuard.pending
+  const feedback = useSaveFeedback()
   const [pauseLoading, setPauseLoading] = useState(false)
   const [animated, setAnimated] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -85,17 +89,20 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     { label: t.savings.monthsLabel.toUpperCase(), value: monthsLeft > 0 ? String(monthsLeft) : '—', green: false },
   ]
 
-  async function handleDeposit() {
+  // Guarded: Enter and the button share one in-flight flag, so a double
+  // Enter / double tap can't add the deposit twice.
+  function handleDeposit() {
     const amount = parseAmountInput(depositInput)
     if (!amount || amount <= 0) return
-    setSaving(true)
-    try {
-      await onDeposit(amount)
-      setDepositInput('')
-      setDepositMode(false)
-    } finally {
-      setSaving(false)
-    }
+    void depositGuard.run(async () => {
+      try {
+        await onDeposit(amount)
+        setDepositInput('')
+        setDepositMode(false)
+      } catch {
+        feedback.failed()
+      }
+    })
   }
 
   async function handlePause() {
@@ -122,9 +129,9 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
         onKeyDown={e => { if (e.key === 'Enter') handleDeposit() }}
         style={glassInputStyle}
       />
-      <button onClick={handleDeposit} disabled={saving || !((parseAmountInput(depositInput) ?? 0) > 0)}
+      <button onClick={handleDeposit} disabled={saving || !((parseAmountInput(depositInput) ?? 0) > 0)} aria-busy={saving}
         style={{ padding: '0 18px', borderRadius: 14, background: 'linear-gradient(135deg,var(--aurora-emerald),var(--aurora-cyan))', color: '#052e21', fontSize: 14, fontWeight: 700, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", opacity: saving ? 0.7 : 1 }}>
-        {saving ? '...' : t.common.save}
+        {saving ? t.common.saving : t.common.save}
       </button>
       <button onClick={() => { setDepositMode(false); setDepositInput('') }}
         aria-label={t.common.close}

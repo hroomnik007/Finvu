@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
-import { X, Check, FileUp } from 'lucide-react'
+import { useCallback, useEffect } from 'react'
+import { X, Check, FileUp, Loader2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { useSubmitGuard } from '../hooks/useSubmitGuard'
 
 interface CompactModalProps {
   open: boolean
@@ -12,8 +13,12 @@ interface CompactModalProps {
   title: string
   accent: string
   accent2: string
-  onSubmit: () => void
+  /** May return a promise: while it is pending the save button shows a
+   * spinner, is disabled and further submits are ignored. */
+  onSubmit: () => void | Promise<unknown>
   submitDisabled?: boolean
+  /** Extra busy flag for saves the parent tracks itself. */
+  submitting?: boolean
   onImportCsv?: () => void
   children: React.ReactNode
   maxWidth?: number
@@ -21,9 +26,18 @@ interface CompactModalProps {
 
 export function CompactModal({
   open, onClose, icon: Icon, iconColor, iconBg, title,
-  accent, accent2, onSubmit, submitDisabled, onImportCsv, children, maxWidth = 420,
+  accent, accent2, onSubmit, submitDisabled, submitting, onImportCsv, children, maxWidth = 420,
 }: CompactModalProps) {
   const { t } = useTranslation()
+  const guard = useSubmitGuard()
+  const busy = guard.pending || !!submitting
+  const disabled = !!submitDisabled || busy
+  const handleSubmit = () => {
+    if (disabled) return
+    void guard.run(onSubmit)
+  }
+  // Closing mid-save would hide an error toast's form; wait for the result.
+  const requestClose = useCallback(() => { if (!busy) onClose() }, [busy, onClose])
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
@@ -31,10 +45,10 @@ export function CompactModal({
 
   useEffect(() => {
     if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') requestClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open, requestClose])
 
   if (!open) return null
 
@@ -49,7 +63,7 @@ export function CompactModal({
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onClick={e => { if (e.target === e.currentTarget) requestClose() }}
     >
       <div
         className="modal-in"
@@ -84,7 +98,8 @@ export function CompactModal({
           )}
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
+            disabled={busy}
             aria-label={t.common.close}
             style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}
           >
@@ -99,21 +114,25 @@ export function CompactModal({
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0 }}>
           <button
             type="button"
-            onClick={onSubmit}
-            disabled={submitDisabled}
-            aria-label={t.common.save}
+            onClick={handleSubmit}
+            disabled={disabled}
+            aria-busy={busy}
+            aria-label={busy ? t.common.saving : t.common.save}
+            title={busy ? t.common.saving : t.common.save}
             style={{
               width: 44, height: 44, borderRadius: '50%',
               background: `linear-gradient(135deg,${accent},${accent2})`,
               border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: submitDisabled ? 'none' : `0 8px 22px ${accent}66`,
-              cursor: submitDisabled ? 'not-allowed' : 'pointer',
-              opacity: submitDisabled ? 0.5 : 1,
+              boxShadow: disabled ? 'none' : `0 8px 22px ${accent}66`,
+              cursor: busy ? 'progress' : disabled ? 'not-allowed' : 'pointer',
+              opacity: submitDisabled && !busy ? 0.5 : busy ? 0.8 : 1,
               transition: 'all 0.2s',
               flexShrink: 0,
             }}
           >
-            <Check size={18} color="#fff" strokeWidth={2.4} />
+            {busy
+              ? <Loader2 size={18} color="#fff" strokeWidth={2.4} className="animate-spin" aria-hidden />
+              : <Check size={18} color="#fff" strokeWidth={2.4} aria-hidden />}
           </button>
         </div>
       </div>

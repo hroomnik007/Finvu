@@ -103,8 +103,8 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
   ]), [qc])
 
-  const addIncome = useCallback(async (income: Omit<Income, 'id'>): Promise<void> => {
-    await createTransaction({
+  const addIncome = useCallback(async (income: Omit<Income, 'id'>): Promise<string> => {
+    const { data } = await createTransaction({
       type: 'income',
       amount: income.amount,
       description: income.label,
@@ -112,6 +112,7 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
       isFixed: income.recurring,
     })
     await invalidate()
+    return data.id
   }, [invalidate])
 
   const updateIncome = useCallback(async (id: string, changes: Partial<Income>): Promise<void> => {
