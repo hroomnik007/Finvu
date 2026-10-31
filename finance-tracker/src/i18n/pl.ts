@@ -681,6 +681,7 @@ export const pl: Translations = {
     registerArrow: 'Zarejestruj się →',
     showPasswordLabel: 'Pokaż hasło',
     hidePasswordLabel: 'Ukryj hasło',
+    nameLabel: 'Imię',
     switchToLight: 'Przełącz na jasny tryb',
     switchToDark: 'Przełącz na ciemny tryb',
     namePlaceholder: 'Twoje imię',

@@ -681,6 +681,7 @@ export const hu: Translations = {
     registerArrow: 'Regisztráció →',
     showPasswordLabel: 'Jelszó megjelenítése',
     hidePasswordLabel: 'Jelszó elrejtése',
+    nameLabel: 'Név',
     switchToLight: 'Váltás világos módra',
     switchToDark: 'Váltás sötét módra',
     namePlaceholder: 'Az Ön neve',

@@ -151,9 +151,12 @@ export function ResetPasswordPage({ token, onNavigateLogin }: ResetPasswordPageP
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label style={labelStyle}>{t.auth.newPasswordLabel}</label>
+              <label htmlFor="reset-password" style={labelStyle}>{t.auth.newPasswordLabel}</label>
               <input
+                id="reset-password"
+                name="new-password"
                 type="password"
+                autoComplete="new-password"
                 placeholder={t.auth.minChars}
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
@@ -163,9 +166,12 @@ export function ResetPasswordPage({ token, onNavigateLogin }: ResetPasswordPageP
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label style={labelStyle}>{t.auth.confirmPassword}</label>
+              <label htmlFor="reset-confirm" style={labelStyle}>{t.auth.confirmPassword}</label>
               <input
+                id="reset-confirm"
+                name="confirm-password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}

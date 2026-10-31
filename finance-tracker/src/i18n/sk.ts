@@ -679,6 +679,7 @@ export const sk = {
     registerArrow: 'Registrovať sa →',
     showPasswordLabel: 'Zobraziť heslo',
     hidePasswordLabel: 'Skryť heslo',
+    nameLabel: 'Meno',
     switchToLight: 'Prepnúť na svetlý režim',
     switchToDark: 'Prepnúť na tmavý režim',
     namePlaceholder: 'Vaše meno',

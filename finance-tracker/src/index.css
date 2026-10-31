@@ -939,3 +939,15 @@ html.compact .card { padding: var(--card-padding); }
 @media (min-width: 1024px) {
   .settings-grid { grid-template-columns: 200px 1fr; gap: 24px; align-items: start; }
 }
+
+/* iOS Safari zooms into any focused field whose font-size is below 16px.
+   On phone-sized screens force text fields to 16px (inline styles included);
+   the large amount fields and anything marked data-keep-font stay as they are. */
+@media (max-width: 767px) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not(.amount-input):not([data-keep-font]),
+  select:not([data-keep-font]),
+  textarea:not([data-keep-font]) {
+    font-size: 16px !important;
+  }
+  .amount-input-wrap input { font-size: 36px !important; }
+}

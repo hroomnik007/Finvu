@@ -159,7 +159,10 @@ export function PasskeySection() {
           value={secret}
           onChange={e => setSecret(e.target.value)}
           inputMode={reauthFactor === 'pin' ? 'numeric' : undefined}
+          pattern={reauthFactor === 'pin' ? '[0-9]*' : undefined}
+          autoComplete={reauthFactor === 'pin' ? 'off' : 'current-password'}
           maxLength={reauthFactor === 'pin' ? 4 : undefined}
+          aria-label={reauthFactor === 'pin' ? t.onboarding.passkeyPinLabel : t.profile.currentPassword}
           placeholder={reauthFactor === 'pin' ? t.onboarding.passkeyPinLabel : t.profile.currentPassword}
           style={{ marginTop: 10, width: '100%', height: 40, borderRadius: 10, padding: '0 12px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13 }}
         />

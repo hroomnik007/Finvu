@@ -681,6 +681,7 @@ export const cs: Translations = {
     registerArrow: 'Registrovat se →',
     showPasswordLabel: 'Zobrazit heslo',
     hidePasswordLabel: 'Skrýt heslo',
+    nameLabel: 'Jméno',
     switchToLight: 'Přepnout na světlý režim',
     switchToDark: 'Přepnout na tmavý režim',
     namePlaceholder: 'Vaše jméno',

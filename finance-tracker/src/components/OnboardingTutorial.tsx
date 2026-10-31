@@ -282,8 +282,9 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
                 <input
                   type="password"
                   autoFocus
-                  autoComplete="current-password"
+                  autoComplete={reauthFactor === 'pin' ? 'off' : 'current-password'}
                   inputMode={reauthFactor === 'pin' ? 'numeric' : undefined}
+                  pattern={reauthFactor === 'pin' ? '[0-9]*' : undefined}
                   maxLength={reauthFactor === 'pin' ? 4 : undefined}
                   value={webauthnSecret}
                   onChange={e => setWebauthnSecret(e.target.value)}

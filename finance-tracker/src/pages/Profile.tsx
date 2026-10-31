@@ -294,6 +294,9 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                 {editMode ? (
                   <input
                     value={profileNameDraft}
+                    data-keep-font
+                    aria-label={t.auth.nameLabel}
+                    autoComplete="name"
                     autoFocus
                     onChange={e => setProfileNameDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { handleSaveProfile(); setEditMode(false) } }}

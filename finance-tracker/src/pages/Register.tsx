@@ -126,9 +126,13 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
 
           {/* Name */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label className="form-label">MENO</label>
+            <label htmlFor="register-name" className="form-label">{t.auth.nameLabel}</label>
             <input
+              id="register-name"
+              name="name"
               type="text"
+              autoComplete="name"
+              autoCapitalize="words"
               placeholder={t.auth.namePlaceholder}
               value={name}
               onChange={e => setName(e.target.value)}
@@ -140,9 +144,16 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
 
           {/* Email */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label className="form-label">{t.auth.email}</label>
+            <label htmlFor="register-email" className="form-label">{t.auth.email}</label>
             <input
+              id="register-email"
+              name="email"
               type="email"
+              inputMode="email"
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder={t.auth.emailPlaceholder}
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -154,9 +165,12 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
 
           {/* Password */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label className="form-label">{t.auth.password}</label>
+            <label htmlFor="register-password" className="form-label">{t.auth.password}</label>
             <div style={{ position: 'relative' }}>
               <input
+                id="register-password"
+                name="new-password"
+                autoComplete="new-password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder={t.auth.minChars}
                 value={password}
@@ -183,9 +197,12 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
 
           {/* Confirm password */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label className="form-label">{t.auth.confirmPassword}</label>
+            <label htmlFor="register-confirm" className="form-label">{t.auth.confirmPassword}</label>
             <div style={{ position: 'relative' }}>
               <input
+                id="register-confirm"
+                name="confirm-password"
+                autoComplete="new-password"
                 type={showConfirm ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={confirmPassword}

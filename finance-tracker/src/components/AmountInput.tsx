@@ -12,9 +12,14 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 
 export default function AmountInput({ value, onValueChange, ...rest }: Props) {
   const { locale } = useTranslation()
   const sep = decimalSeparator(locale)
+  // Big hero amount fields are already >= 16px; keep their size out of the
+  // phone-wide 16px rule in index.css (which only exists to stop iOS zoom).
+  const fs = rest.style?.fontSize
+  const keepFont = typeof fs === 'number' && fs >= 16
   return (
     <input
       {...rest}
+      data-keep-font={keepFont || undefined}
       type="text"
       inputMode="decimal"
       autoComplete="off"

@@ -177,6 +177,9 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
                 <input
                   type="password"
                   autoFocus
+                  name="current-password"
+                  autoComplete="current-password"
+                  aria-label={t.profile.currentPassword}
                   placeholder={t.profile.currentPassword}
                   value={identityPassword}
                   onChange={e => setIdentityPassword(e.target.value)}

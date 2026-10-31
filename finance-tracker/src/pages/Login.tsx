@@ -334,10 +334,15 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
 
         {/* Email */}
         <div style={{ marginBottom: 14 }}>
-          <label style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
+          <label htmlFor="login-email" style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
           <input
+            id="login-email"
             type="email"
             name="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             autoComplete="username webauthn"
             placeholder={t.auth.emailPlaceholder}
             value={email}
@@ -352,7 +357,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         {/* Password */}
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <label style={labelStyle}>{t.auth.password}</label>
+            <label htmlFor="login-password" style={labelStyle}>{t.auth.password}</label>
             <button
               type="button"
               onClick={onNavigateForgotPassword}
@@ -363,7 +368,10 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           </div>
           <div style={{ position: 'relative' }}>
             <input
+              id="login-password"
+              name="password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -376,6 +384,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
               type="button"
               onClick={() => setShowPassword(v => !v)}
               tabIndex={-1}
+              aria-label={showPassword ? t.auth.hidePasswordLabel : t.auth.showPasswordLabel}
               style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-lo)', display: 'flex', alignItems: 'center', padding: 2 }}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
