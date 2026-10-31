@@ -89,10 +89,17 @@ export async function webauthnRegisterOptions(req: AuthRequest, res: Response): 
     userName: user.email,
     userDisplayName: user.name,
     excludeCredentials: existingCreds.map(c => ({ id: c.credentialId, type: 'public-key' as const })),
+    // No authenticatorAttachment: besides the device's own authenticator this
+    // also allows a phone via QR (hybrid) and USB/NFC security keys, so a desktop
+    // without Windows Hello / Touch ID can still add a passkey.
+    // residentKey 'required': every passkey must be discoverable, because the
+    // login screen asks for one without an e-mail (allowCredentials empty, and
+    // the browser autofill flow). With 'preferred' an authenticator could store
+    // a non-discoverable credential that the usernameless login can never find.
+    // The few U2F-only keys that can't store resident keys are refused up front.
     authenticatorSelection: {
-      authenticatorAttachment: 'platform',
       userVerification: 'required',
-      residentKey: 'preferred',
+      residentKey: 'required',
     },
   });
 
