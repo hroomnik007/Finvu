@@ -639,6 +639,7 @@ export const hu: Translations = {
     googleError: 'A Google bejelentkezés sikertelen. Próbálja újra.',
     loginFailed: 'Bejelentkezés sikertelen',
     wrongPin: 'Helytelen PIN.',
+    tooManyAttempts: 'Túl sok próbálkozás. Próbálja újra később.',
     loggingIn: 'Bejelentkezés...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',

@@ -639,6 +639,7 @@ export const cs: Translations = {
     googleError: 'Přihlášení přes Google selhalo. Zkuste to znovu.',
     loginFailed: 'Přihlášení selhalo',
     wrongPin: 'Nesprávný PIN.',
+    tooManyAttempts: 'Příliš mnoho pokusů. Zkuste to znovu později.',
     loggingIn: 'Přihlašuji...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',

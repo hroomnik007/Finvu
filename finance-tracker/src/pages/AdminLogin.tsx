@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { adminLogin } from '../api/admin'
+import { isTooManyAttempts } from '../utils/authError'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
 import { GlassCard } from '../components/GlassCard'
 
@@ -23,8 +24,8 @@ export function AdminLoginPage({ onSuccess }: AdminLoginPageProps) {
     try {
       await adminLogin(username, password)
       onSuccess()
-    } catch {
-      setError('Nesprávne prihlasovacie údaje.')
+    } catch (err) {
+      setError(isTooManyAttempts(err) ? 'Príliš veľa pokusov. Skúste neskôr.' : 'Nesprávne prihlasovacie údaje.')
     } finally {
       setLoading(false)
     }

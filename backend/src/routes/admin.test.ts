@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // The admin routes never need the database for these paths; keep it inert.
 vi.mock("../db", () => ({ db: {} }));
+vi.mock("../lib/lockoutStore", () => import("../test/memoryLockoutStore"));
 
 const { default: adminRouter } = await import("./admin");
 const { adminLogin } = await import("../controllers/auth.controller");
