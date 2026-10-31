@@ -654,6 +654,8 @@ export const sk = {
     loginFailed: 'Prihlásenie zlyhalo',
     wrongPin: 'Nesprávny PIN.',
     tooManyAttempts: 'Príliš veľa pokusov. Skús to znova neskôr.',
+    invalidCredentials: 'Nesprávny e-mail alebo heslo.',
+    accountDeactivated: 'Tvoj účet je deaktivovaný. Pre reaktiváciu kontaktuj podporu.',
     loggingIn: 'Prihlasujem...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',

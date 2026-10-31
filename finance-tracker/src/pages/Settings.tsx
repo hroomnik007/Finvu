@@ -35,6 +35,7 @@ import { PinKeypad } from '../components/PinKeypad'
 import { ExportDataModal } from '../components/ExportDataModal'
 import type { ExportFormat, ExportPeriod } from '../components/ExportDataModal'
 import type { ApiTransaction, UserSession } from '../types'
+import { rateLimitedMessage } from '../utils/authError'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -475,7 +476,7 @@ export function SettingsPage() {
       setCurrentPw(''); setNewPw(''); setConfirmPw('')
       setTimeout(() => { setChangePwOk(false); setChangePwOpen(false) }, 2000)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const msg = rateLimitedMessage(err, t.auth) ?? (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       setChangePwError(msg ?? t.profile.changePwFailed)
     } finally {
       setChangePwLoading(false)

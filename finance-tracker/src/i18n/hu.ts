@@ -656,6 +656,8 @@ export const hu: Translations = {
     loginFailed: 'Bejelentkezés sikertelen',
     wrongPin: 'Helytelen PIN.',
     tooManyAttempts: 'Túl sok próbálkozás. Próbálja újra később.',
+    invalidCredentials: 'Helytelen e-mail cím vagy jelszó.',
+    accountDeactivated: 'A fiókja deaktiválva van. Az újraaktiváláshoz forduljon az ügyfélszolgálathoz.',
     loggingIn: 'Bejelentkezés...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',

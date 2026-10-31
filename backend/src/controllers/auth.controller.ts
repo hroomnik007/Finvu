@@ -37,6 +37,7 @@ import { resetDemoAccount, DEMO_EMAIL } from "../lib/resetDemo";
 import { parseImageDataUrl, saveAvatarFile, deleteAvatarFiles } from "../lib/avatarStorage";
 import { releaseOwnedHouseholds } from "../lib/household";
 import { isLocked, recordFailure, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
+import { authError } from "../lib/authErrors";
 import { verifyGoogleAccessToken, FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN } from "../lib/googleToken";
 import { verifyPasskeyReauth } from "../lib/passkeyReauth";
 
@@ -350,18 +351,18 @@ export async function login(req: Request, res: Response): Promise<void> {
   const valid = await bcrypt.compare(password, user?.passwordHash ?? await dummyPasswordHash());
   if (!user || !user.passwordHash || !valid) {
     await recordFailure(lockKey);
-    res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
+    res.status(401).json(authError("INVALID_CREDENTIALS"));
     return;
   }
   await clearFailures(lockKey);
 
   if (!user.emailVerified) {
-    res.status(403).json({ error: "Pred prihlásením si prosím over email.", code: "EMAIL_NOT_VERIFIED" });
+    res.status(403).json(authError("EMAIL_NOT_VERIFIED"));
     return;
   }
 
   if (user.isDeactivated) {
-    res.status(403).json({ error: "Tvoj účet je deaktivovaný. Pre reaktiváciu kontaktuj podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 
@@ -413,7 +414,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
   if (!tokenUser || tokenUser.isDeactivated) {
     await db.delete(refreshTokens).where(eq(refreshTokens.userId, payload.userId));
     res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS));
-    res.status(403).json({ error: "Účet je deaktivovaný.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 
@@ -743,7 +744,7 @@ export async function adminLogin(req: Request, res: Response): Promise<void> {
 
   if (!userOk || !passOk) {
     await recordFailure(ADMIN_KEY);
-    res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
+    res.status(401).json(authError("INVALID_CREDENTIALS"));
     return;
   }
   await clearFailures(ADMIN_KEY);
@@ -838,7 +839,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
   let [user] = await db.select().from(users).where(byEmail(email)).limit(1);
 
   if (user?.isDeactivated) {
-    res.status(403).json({ error: "Tvoj účet je deaktivovaný. Pre reaktiváciu kontaktuj podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 
@@ -973,7 +974,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const GENERIC_FAIL = { error: "Nesprávny PIN." };
+  const GENERIC_FAIL = authError("INVALID_PIN");
 
   // Unknown email, no PIN and a foreign device all answer identically so the
   // endpoint cannot be used to find out which accounts exist.
@@ -1014,7 +1015,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
   }
 
   if (user.isDeactivated) {
-    res.status(403).json({ error: "Tvoj účet je deaktivovaný. Pre reaktiváciu kontaktuj podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 

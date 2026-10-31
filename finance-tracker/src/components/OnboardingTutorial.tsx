@@ -8,6 +8,7 @@ import { webauthnRegisterVerify } from '../api/auth'
 import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
 import { currentUa, suggestPasskeyName } from '../lib/passkeyName'
 import { useTranslation } from '../i18n'
+import { rateLimitedMessage } from '../utils/authError'
 
 const STEP_EMOJIS = ['🎉', '💰', '📊', '🐷', '🏠', '⚙️', '🔐']
 
@@ -79,7 +80,7 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
       setWebauthnDone(true)
       setWebauthnSecret('')
     } catch (e: unknown) {
-      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       const kind = serverMsg ? 'other' : ceremonyErrorKind(e)
       setWebauthnError(kind === 'cancelled' ? t.settings.passkeyCancelled
         : kind === 'exists' ? t.settings.passkeyExists

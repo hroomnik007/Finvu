@@ -45,7 +45,7 @@ const passwordHash = bcrypt.hashSync("correct-horse", 4);
 const pinHash = bcrypt.hashSync("1234", 4);
 const user = { id: "u1", email: "a@b.sk", name: "A", emailVerified: true, isDeactivated: false, googleId: null, passwordHash, pinHash };
 
-const FAIL = { status: 401, body: { error: "Nesprávne prihlasovacie údaje." } };
+const FAIL = { status: 401, body: { error: "Invalid email or password.", code: "INVALID_CREDENTIALS" } };
 const LOCKED = { status: 429, body: LOCKED_RESPONSE };
 
 beforeEach(() => {
@@ -57,6 +57,14 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); });
 
 const later = (ms: number) => vi.setSystemTime(new Date(Date.now() + ms));
+
+describe("lockout policy", () => {
+  it("is still 5 failures within 15 minutes, answered with the rate-limit code", () => {
+    expect(MAX_FAILURES).toBe(5);
+    expect(WINDOW_MS).toBe(15 * 60 * 1000);
+    expect(LOCKED_RESPONSE).toEqual({ error: "Too many attempts. Try again later.", code: "AUTH_RATE_LIMITED" });
+  });
+});
 
 describe("password login lockout", () => {
   const attempt = async (password: string, row: unknown = user, email = "a@b.sk") => {
@@ -138,7 +146,7 @@ describe("PIN login lockout", () => {
     await pinLogin(req({ email: "a@b.sk", pin }, { pinDevice: "device-token" }), r.res);
     return r.out;
   };
-  const WRONG_PIN = { status: 401, body: { error: "Nesprávny PIN." } };
+  const WRONG_PIN = { status: 401, body: { error: "Invalid PIN.", code: "INVALID_PIN" } };
 
   it(`locks after ${MAX_FAILURES} wrong PINs, then expires`, async () => {
     for (let i = 0; i < MAX_FAILURES; i++) expect(await attempt("0000")).toEqual(WRONG_PIN);

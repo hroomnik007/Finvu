@@ -656,6 +656,8 @@ export const cs: Translations = {
     loginFailed: 'Přihlášení selhalo',
     wrongPin: 'Nesprávný PIN.',
     tooManyAttempts: 'Příliš mnoho pokusů. Zkus to znovu později.',
+    invalidCredentials: 'Nesprávný e-mail nebo heslo.',
+    accountDeactivated: 'Tvůj účet je deaktivovaný. Pro opětovnou aktivaci kontaktuj podporu.',
     loggingIn: 'Přihlašuji...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',

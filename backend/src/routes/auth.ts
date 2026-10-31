@@ -1,5 +1,4 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
 import {
   register, login, refresh, logout, me,
   verifyEmail, forgotPassword, resetPassword, deleteAccount,
@@ -14,119 +13,53 @@ import {
   listPasskeys, deletePasskey, renamePasskey, webauthnReauthOptions,
 } from "../controllers/webauthn.controller";
 import { authenticateToken } from "../middleware/authenticate";
+import { authLimiter, signInLimiter } from "../lib/authLimiters";
 
 
-const registerLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
-});
+const MIN = 60 * 1000;
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
-});
+const registerLimiter = authLimiter(15 * MIN, 5);
 
-const pinLoginLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 8,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov PIN. Skús to znova o 10 minút." },
-});
+// Admin and Google sign-in keep the all-requests limiter.
+const loginLimiter = authLimiter(15 * MIN, 20);
+
+// Password, PIN and passkey sign-in count only failed attempts per IP (see
+// lib/authLimiters). The per-account lockout still applies on top.
+const passwordLoginLimiter = signInLimiter(15 * MIN, 20);
+const pinLoginLimiter = signInLimiter(10 * MIN, 8);
+const webauthnVerifyLimiter = signInLimiter(10 * MIN, 20);
 
 // Not an auth endpoint with sensitive failure consequences (it only ever
 // reveals "does this cookie match a valid device token"), but still worth a
 // cap since it's unauthenticated and open to anonymous polling.
-const pinDeviceStatusLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to znova o 10 minút." },
-});
+const pinDeviceStatusLimiter = authLimiter(10 * MIN, 30);
 
 // GET /webauthn/authenticate-options is intentionally unauthenticated (a
 // caller hasn't logged in yet when requesting a login challenge) — without a
 // limiter it was an unauthenticated memory-exhaustion DoS (security audit
 // run-1). Mirrors pinLoginLimiter's shape.
-const webauthnOptionsLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to znova o 10 minút." },
-});
+const webauthnOptionsLimiter = authLimiter(10 * MIN, 20);
 
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
-})
+const generalLimiter = authLimiter(15 * MIN, 20);
 
 // Re-authentication endpoints (current password / current PIN are checked in
 // the handler) — without a cap a stolen access token could be used to guess
 // either one, a 4-digit PIN in particular.
-const sensitiveLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
-});
+const sensitiveLimiter = authLimiter(15 * MIN, 10);
 
 // /methods has its own budget: it shares nothing with verify/forgot/reset, so
 // exhausting one cannot lock out the others.
-const methodsLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
-});
+const methodsLimiter = authLimiter(15 * MIN, 60);
 
-const webauthnVerifyLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to znova o 10 minút." },
-});
+const refreshLimiter = authLimiter(15 * MIN, 200);
 
-const refreshLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Príliš veľa pokusov. Skús to neskôr.' },
-});
-
-const sessionCheckLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Príliš veľa pokusov. Skús to neskôr.' },
-});
+const sessionCheckLimiter = authLimiter(15 * MIN, 60);
 
 // Separate from loginLimiter: pingSession fires every 60s while the app is
 // visible (up to ~15 pings per 15-min window), which was sharing — and
 // exhausting — the login attempt quota, causing genuine login attempts to be
 // rejected as rate-limited.
-const pingLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Príliš veľa pokusov. Skús to neskôr.' },
-});
+const pingLimiter = authLimiter(15 * MIN, 60);
 
 const router = Router();
 
@@ -134,7 +67,7 @@ router.get("/methods",          methodsLimiter,       getAuthMethods);
 router.get("/session-check",    sessionCheckLimiter,  authenticateToken, sessionCheck);
 router.get("/ping",             pingLimiter,          authenticateToken, pingSession);
 router.post("/register",        registerLimiter, register);
-router.post("/login",           loginLimiter,    login);
+router.post("/login",           passwordLoginLimiter, login);
 router.post("/refresh",         refreshLimiter,  refresh);
 router.post("/logout",          logout);
 router.get("/me",               authenticateToken, me);

@@ -656,6 +656,8 @@ export const en: Translations = {
     loginFailed: 'Login failed',
     wrongPin: 'Incorrect PIN.',
     tooManyAttempts: 'Too many attempts. Try again later.',
+    invalidCredentials: 'Incorrect email or password.',
+    accountDeactivated: 'Your account is deactivated. Contact support to reactivate it.',
     loggingIn: 'Signing in...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',

@@ -4,6 +4,7 @@ import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
+import { rateLimitedMessage } from '../utils/authError'
 
 interface RegisterPageProps {
   onNavigateLogin: () => void
@@ -40,7 +41,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
       setVerificationSent(true)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setError(msg ?? t.auth.registerFailed)
+      setError(rateLimitedMessage(err, t.auth) ?? msg ?? t.auth.registerFailed)
     } finally {
       setIsLoading(false)
     }

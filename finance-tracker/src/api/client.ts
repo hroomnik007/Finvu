@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { shouldRefreshOn401 } from './refreshPolicy'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
@@ -75,8 +76,9 @@ apiClient.interceptors.response.use(
     if (error.response?.status !== 401 || originalRequest._retry) {
       return Promise.reject(error)
     }
-    // Never attempt to re-refresh if the refresh endpoint itself returned 401
-    if (originalRequest.url?.includes('/api/auth/refresh')) {
+    // Never refresh on the refresh endpoint itself or on a sign-in endpoint,
+    // whose 401 is a wrong-credentials answer the caller must see.
+    if (!shouldRefreshOn401(originalRequest.url)) {
       return Promise.reject(error)
     }
 

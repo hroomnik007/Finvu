@@ -9,6 +9,7 @@ import { deletePasskey, getPasskeys, renamePasskey, webauthnRegisterVerify } fro
 import type { PasskeyInfo } from '../api/auth'
 import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
 import { currentUa, suggestPasskeyName } from '../lib/passkeyName'
+import { rateLimitedMessage } from '../utils/authError'
 
 const labelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', margin: '0 0 6px' } as const
 const smallButton = (color: string, background: string, border: string) =>
@@ -63,7 +64,7 @@ export function PasskeySection() {
       setSecretOpen(false)
       await load()
     } catch (e: unknown) {
-      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       const kind = serverMsg ? 'other' : ceremonyErrorKind(e)
       setError(kind === 'cancelled' ? t.settings.passkeyCancelled
         : kind === 'exists' ? t.settings.passkeyExists
@@ -81,7 +82,7 @@ export function PasskeySection() {
       setPasskeys(list => list.map(p => (p.id === id ? { ...p, name } : p)))
       setRenaming(null)
     } catch (e: unknown) {
-      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(serverMsg ?? t.auth.registerFailed)
     }
   }
@@ -92,7 +93,7 @@ export function PasskeySection() {
       await deletePasskey(id)
       await load()
     } catch (e: unknown) {
-      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(serverMsg ?? (e as Error)?.message ?? t.auth.registerFailed)
     }
   }

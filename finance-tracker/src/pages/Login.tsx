@@ -96,7 +96,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       }
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { error?: string; code?: string } } })?.response?.data
-      setError(authErrorMessage(err, t.auth.loginFailed, t.auth.tooManyAttempts))
+      setError(authErrorMessage(err, t.auth.loginFailed, t.auth))
       setNeedsVerification(data?.code === 'EMAIL_NOT_VERIFIED')
     } finally {
       setIsLoading(false)
@@ -144,8 +144,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         await completePasskeyLogin(options, true)
       } catch (err: unknown) {
         if (unmounted || ceremonyErrorKind(err) === 'cancelled') return // aborted / re-armed / dismissed
-        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-        setError(msg ?? t.auth.passkeyFailed)
+        setError(authErrorMessage(err, t.auth.passkeyFailed, t.auth))
         // That challenge is used up. Re-arm, but back off: a passkey whose
         // account is gone (or a misbehaving authenticator answering on its own)
         // must not spin a request loop. After 3 failures in a row only the
@@ -165,7 +164,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       clearTimeout(timer)
       WebAuthnAbortService.cancelCeremony()
     }
-  }, [completePasskeyLogin, t.auth.passkeyFailed])
+  }, [completePasskeyLogin, t.auth])
 
   // Passkey sign-in is usernameless: every passkey is a discoverable credential
   // (residentKey 'required'), so the browser offers the passkeys it holds for
@@ -186,8 +185,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
     } catch (err: unknown) {
       // The user dismissing the browser prompt is not an error worth showing
       if (ceremonyErrorKind(err) !== 'cancelled') {
-        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-        setError(msg ?? t.auth.passkeyFailed)
+        setError(authErrorMessage(err, t.auth.passkeyFailed, t.auth))
       }
       explicitPasskeyRef.current = false
       armRef.current() // fresh challenge + autofill again
@@ -212,12 +210,12 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       await loginWithPin(email, pin)
       setPinModalOpen(false)
     } catch (err: unknown) {
-      setPinError(authErrorMessage(err, t.auth.wrongPin, t.auth.tooManyAttempts))
+      setPinError(authErrorMessage(err, t.auth.wrongPin, t.auth))
       setPinValue('')
     } finally {
       setPinLoading(false)
     }
-  }, [email, loginWithPin, t.auth.wrongPin, t.auth.tooManyAttempts])
+  }, [email, loginWithPin, t.auth])
 
   // Trigger verification once 4 digits have actually committed to state —
   // never inside the setPinValue updater itself. React 18 StrictMode

@@ -656,6 +656,8 @@ export const pl: Translations = {
     loginFailed: 'Logowanie nie powiodło się',
     wrongPin: 'Nieprawidłowy PIN.',
     tooManyAttempts: 'Zbyt wiele prób. Spróbuj ponownie później.',
+    invalidCredentials: 'Nieprawidłowy e-mail lub hasło.',
+    accountDeactivated: 'Twoje konto jest dezaktywowane. Aby je przywrócić, skontaktuj się z pomocą techniczną.',
     loggingIn: 'Loguję...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',
