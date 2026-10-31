@@ -1,11 +1,52 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { VitePWA } from 'vite-plugin-pwa'
+import { VitePWA, type ManifestOptions } from 'vite-plugin-pwa'
+
+const base = process.env.VITE_BASE_URL || '/'
+
+// Home-screen shortcuts. The app reads ?action= once the user is signed in
+// (src/utils/shareIntent.ts). *_localized is honoured by Chrome/Edge 148+;
+// other browsers show the Slovak default.
+const shortcuts = [
+  {
+    name: 'Pridať výdavok',
+    name_localized: { cs: 'Přidat výdaj', en: 'Add expense', pl: 'Dodaj wydatek', hu: 'Kiadás hozzáadása' },
+    url: `${base}?action=add-expense`,
+    icons: [{ src: 'pwa-96x96.png', sizes: '96x96', type: 'image/png' }],
+  },
+  {
+    name: 'Pridať príjem',
+    name_localized: { cs: 'Přidat příjem', en: 'Add income', pl: 'Dodaj przychód', hu: 'Bevétel hozzáadása' },
+    url: `${base}?action=add-income`,
+    icons: [{ src: 'pwa-96x96.png', sizes: '96x96', type: 'image/png' }],
+  },
+  {
+    name: 'Ročný prehľad',
+    name_localized: { cs: 'Roční přehled', en: 'Yearly overview', pl: 'Przegląd roczny', hu: 'Éves áttekintés' },
+    url: `${base}?action=annual`,
+    icons: [{ src: 'pwa-96x96.png', sizes: '96x96', type: 'image/png' }],
+  },
+] as unknown as ManifestOptions['shortcuts']
+
+// Share sheet target: text/links become a prefilled expense, a camt.053 XML
+// opens the import. The POST is answered by public/share-target-sw.js inside
+// the service worker, so the shared data never reaches the server.
+const share_target = {
+  action: `${base}share-target`,
+  method: 'POST',
+  enctype: 'multipart/form-data',
+  params: {
+    title: 'title',
+    text: 'text',
+    url: 'url',
+    files: [{ name: 'file', accept: ['application/xml', 'text/xml', '.xml'] }],
+  },
+} as unknown as ManifestOptions['share_target']
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: process.env.VITE_BASE_URL || '/',
+  base,
   plugins: [
     react(),
     tailwindcss(),
@@ -37,9 +78,13 @@ export default defineConfig({
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
           { src: 'pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        shortcuts,
+        share_target,
       },
       workbox: {
         cleanupOutdatedCaches: true,
+        // Registers the share-target POST handler ahead of workbox's routes.
+        importScripts: ['share-target-sw.js'],
         // NOTE: with registerType: 'prompt' the SW must stay in the "waiting" state
         // until the user clicks "Aktualizovať". Setting skipWaiting/clientsClaim here
         // makes the SW self-activate immediately and omits the SKIP_WAITING message

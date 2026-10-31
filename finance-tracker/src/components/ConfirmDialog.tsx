@@ -9,9 +9,11 @@ interface ConfirmDialogProps {
   onCancel: () => void
   /** Non-destructive confirmation: neutral accent button labelled "Potvrdiť" instead of the red "Zmazať". */
   neutral?: boolean
+  /** Label of the confirm button, when neither "Zmazať" nor "Potvrdiť" fits. */
+  confirmLabel?: string
 }
 
-export function ConfirmDialog({ open, message, onConfirm, onCancel, neutral = false }: ConfirmDialogProps) {
+export function ConfirmDialog({ open, message, onConfirm, onCancel, neutral = false, confirmLabel }: ConfirmDialogProps) {
   const { t } = useTranslation()
 
   useEffect(() => {
@@ -55,7 +57,7 @@ export function ConfirmDialog({ open, message, onConfirm, onCancel, neutral = fa
             onClick={onConfirm}
             style={{ flex: 1, background: neutral ? 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))' : '#f52e1d', color: 'white', border: 'none', borderRadius: 8, minHeight: 44, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
           >
-            {neutral ? t.common.confirm : t.common.delete}
+            {confirmLabel ?? (neutral ? t.common.confirm : t.common.delete)}
           </button>
         </div>
       </div>
