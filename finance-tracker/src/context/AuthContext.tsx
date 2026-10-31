@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { setAccessToken, setInitializingAuth } from '../api/client'
-import { resolveTheme, type ThemePreference } from '../utils/theme'
+import { resolveTheme, storedThemePreference, type ThemePreference } from '../utils/theme'
 import {
   login as apiLogin,
   register as apiRegister,
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginWithGoogle = useCallback(async (googleAccessToken: string) => {
-    const { user: me, accessToken, sessionId } = await apiGoogleLogin(googleAccessToken) as { user: AuthUser; accessToken: string; sessionId?: string }
+    const { user: me, accessToken, sessionId } = await apiGoogleLogin(googleAccessToken, storedThemePreference()) as { user: AuthUser; accessToken: string; sessionId?: string }
     setAccessToken(accessToken)
     noteSignedInUser(me.id)
     setUser(me)
@@ -238,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (email: string, password: string, name: string, gdprConsent: boolean) => {
     // Registration now sends verification email; user is NOT logged in yet
-    await apiRegister(email, password, name, gdprConsent)
+    await apiRegister(email, password, name, gdprConsent, storedThemePreference())
   }, [])
 
   const loginAsGuest = useCallback(() => {

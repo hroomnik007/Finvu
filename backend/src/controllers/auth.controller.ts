@@ -74,11 +74,18 @@ function rejectDemo(req: AuthRequest, res: Response): boolean {
 // Verification links stay valid for a week; "resend" issues a fresh one.
 const VERIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+export const THEMES = ["dark", "light", "system"] as const;
+export type Theme = (typeof THEMES)[number];
+// Theme the visitor picked on the login/register screen; stored on the new
+// account so the DB column default doesn't flip it back after sign-up.
+const themeSchema = z.enum(THEMES);
+
 const registerSchema = z.object({
   email: emailSchema,
   password: z.string().min(8),
   name: z.string().min(2).max(100),
   gdprConsent: z.boolean().refine(v => v === true, { message: "GDPR consent is required" }),
+  theme: themeSchema.optional(),
 });
 
 const loginSchema = z.object({
@@ -282,7 +289,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const { email, password, name } = body.data;
+  const { email, password, name, theme } = body.data;
 
   // Same answer whether or not the address is taken, so this endpoint can't be
   // used to find out who has an account. The owner gets a heads-up instead.
@@ -301,6 +308,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     .insert(users)
     .values({
       email, passwordHash: passwordHash, name, emailVerified: false,
+      ...(theme ? { theme } : {}),
       verificationToken: await hashToken(verificationToken),
       verificationExpiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
     })
@@ -778,7 +786,7 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
   };
   const VALID_PAGES = ['dashboard', 'income', 'variable-expenses', 'fixed-expenses', 'categories', 'settings'];
   const VALID_FORMATS = ['sk', 'en', 'de'];
-  const VALID_THEMES = ['dark', 'light', 'system'];
+  const VALID_THEMES: readonly string[] = THEMES;
   const VALID_LANGS = ['sk', 'cs', 'pl', 'hu', 'en'];
   const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   const update: Record<string, unknown> = { updatedAt: new Date() };
@@ -822,6 +830,10 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
     return;
   }
   const { sub: googleId, email, name } = verified;
+  // Only used when this sign-in creates the account; an invalid value is
+  // ignored rather than failing the login.
+  const parsedTheme = themeSchema.safeParse((req.body ?? {}).theme);
+  const signupTheme: Theme | undefined = parsedTheme.success ? parsedTheme.data : undefined;
 
   let [user] = await db.select().from(users).where(byEmail(email)).limit(1);
 
@@ -833,14 +845,14 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
   if (!user) {
     const [newUser] = await db
       .insert(users)
-      .values({ email, passwordHash: null, name, emailVerified: true, googleId })
-      .returning({ id: users.id, email: users.email, name: users.name, avatarUrl: users.avatarUrl, role: users.role, weeklyEmailEnabled: users.weeklyEmailEnabled });
+      .values({ email, passwordHash: null, name, emailVerified: true, googleId, ...(signupTheme ? { theme: signupTheme } : {}) })
+      .returning({ id: users.id, email: users.email, name: users.name, avatarUrl: users.avatarUrl, role: users.role, weeklyEmailEnabled: users.weeklyEmailEnabled, theme: users.theme });
 
     await db.insert(categories).values(
       DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: newUser.id, isDefault: true }))
     );
 
-    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false };
+    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: newUser.theme ?? 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false };
   } else if (!user.googleId) {
     // Google just proved control of this mailbox. If the account was registered
     // with a password but never verified, whoever registered it may not be the

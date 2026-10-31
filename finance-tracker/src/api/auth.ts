@@ -1,6 +1,7 @@
 import { apiClient, refreshAccessToken } from './client'
 import { announceAchievementUnlocks } from '../utils/achievementEvents'
 import type { AuthUser, UserSession } from '../types'
+import type { ThemePreference } from '../utils/theme'
 
 export async function login(email: string, password: string): Promise<{ user: AuthUser; accessToken: string }> {
   const { data } = await apiClient.post('/api/auth/login', { email, password })
@@ -12,8 +13,9 @@ export async function register(
   password: string,
   name: string,
   gdprConsent: boolean,
+  theme?: ThemePreference,
 ): Promise<{ message: string }> {
-  const { data } = await apiClient.post('/api/auth/register', { email, password, name, gdprConsent })
+  const { data } = await apiClient.post('/api/auth/register', { email, password, name, gdprConsent, ...(theme ? { theme } : {}) })
   return data
 }
 
@@ -84,8 +86,9 @@ export async function updateWeeklyEmail(enabled: boolean): Promise<{ weeklyEmail
   return data
 }
 
-export async function googleLogin(accessToken: string): Promise<{ user: import('../types').AuthUser; accessToken: string }> {
-  const { data } = await apiClient.post('/api/auth/google', { accessToken })
+export async function googleLogin(accessToken: string, theme?: ThemePreference): Promise<{ user: import('../types').AuthUser; accessToken: string }> {
+  // theme only matters if this Google sign-in creates the account
+  const { data } = await apiClient.post('/api/auth/google', { accessToken, ...(theme ? { theme } : {}) })
   return data
 }
 
