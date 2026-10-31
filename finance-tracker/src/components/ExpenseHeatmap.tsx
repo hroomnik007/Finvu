@@ -34,7 +34,7 @@ type TooltipState = {
 } | null
 
 export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavigate }: ExpenseHeatmapProps) {
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatLongDate } = useFormatters()
   const { t } = useTranslation()
   const [tooltip, setTooltip] = useState<TooltipState>(null)
   const [lastClickedDay, setLastClickedDay] = useState<string | null>(null)
@@ -192,9 +192,9 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
             boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>{tooltip.date}</div>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>{formatLongDate(tooltip.date, { weekday: 'short', day: 'numeric', month: 'long' })}</div>
           <div style={{ color: 'var(--aurora-rose)', fontWeight: 600, marginBottom: 6, fontFamily: "'Outfit', sans-serif" }}>
-            -{formatAmount(tooltip.amount)}
+            −{formatAmount(tooltip.amount)}
           </div>
           {tooltip.dayExpenses.slice(0, 3).map((exp, i) => {
             const cat = categories.find(c => c.id === exp.categoryId)

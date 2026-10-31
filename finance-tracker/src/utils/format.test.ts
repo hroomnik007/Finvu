@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDateLocale, formatMoney, formatMoneyParts, toLocalISO, formatMonthYearFrom } from './format'
+import { formatDateLocale, formatMoney, formatMoneyParts, toLocalISO, formatMonthYearFrom, withDisplayMinus, dayHeaderParts } from './format'
 
 describe('toLocalISO', () => {
   it('uses the local calendar date, not the UTC one', () => {
@@ -63,5 +63,24 @@ describe('formatMonthYearFrom', () => {
   it('uses the standalone month elsewhere', () => {
     expect(formatMonthYearFrom('2026-04-05', 'en-GB')).toBe('April 2026')
     expect(formatMonthYearFrom('2026-04-05', 'hu-HU')).toBe('2026. április')
+  })
+})
+
+describe('withDisplayMinus', () => {
+  it('swaps the hyphen-minus of a negative amount for U+2212', () => {
+    expect(withDisplayMinus('-12,50 €')).toBe('\u221212,50 €')
+    expect(withDisplayMinus('-€12.50')).toBe('\u2212€12.50')
+    expect(withDisplayMinus(formatMoney(-5, 'sk-SK'))).toBe('\u22125,00\u00a0€')
+  })
+  it('leaves positives and non-amount hyphens alone', () => {
+    expect(withDisplayMinus('12,50 €')).toBe('12,50 €')
+    expect(withDisplayMinus('Jan-Mar')).toBe('Jan-Mar')
+  })
+})
+
+describe('dayHeaderParts', () => {
+  it('gives the day number, capitalized weekday and full date', () => {
+    expect(dayHeaderParts('2026-10-31', 'sk-SK')).toEqual({ dayNum: 31, weekday: 'Sobota', full: '31. októbra 2026' })
+    expect(dayHeaderParts('2026-10-31', 'en-GB')).toEqual({ dayNum: 31, weekday: 'Saturday', full: '31 October 2026' })
   })
 })

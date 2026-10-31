@@ -724,6 +724,11 @@ export const sk = {
     notSet: 'Nenastavené',
     // Under the date of a recurring item: the month it starts counting in
     validFrom: 'Platí od {month}',
+    txCount: { one: 'transakcia', few: 'transakcie', many: 'transakcií' },
+    perMonthShort: '/mes.',
+    perYearShort: '/rok',
+    dueBy: 'do {date}',
+    autoMonthly: 'automaticky +{amount}/mes.',
     unknownDevice: 'Neznáme zariadenie',
     prevYear: 'Predchádzajúci rok',
     nextYear: 'Nasledujúci rok',

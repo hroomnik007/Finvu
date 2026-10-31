@@ -19,7 +19,9 @@ import { useCategories } from '../hooks/useCategories'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
-import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
+import { useTranslation, getLocalizedMonthNames } from '../i18n'
+import { dayHeaderParts } from '../utils/format'
+import { pluralCount } from '../utils/plural'
 import { defaultEntryDate } from '../utils/entryDefaults'
 import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
 import { useUndoableDelete } from '../hooks/useUndoableDelete'
@@ -253,16 +255,13 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   , [variableExpenses, activeCategory])
 
   const dayGroups = useMemo(() => {
-    const dayNames = getLocalizedDayNames(locale)
-    const monthNames = getLocalizedMonthNames(locale)
-    return filteredSorted.reduce<Array<{ date: string; dayNum: number; dayName: string; monthName: string; items: VariableExpense[]; dayTotal: number }>>((acc, e) => {
+    return filteredSorted.reduce<Array<{ date: string; dayNum: number; weekday: string; full: string; items: VariableExpense[]; dayTotal: number }>>((acc, e) => {
       const last = acc[acc.length - 1]
       if (last?.date === e.date) {
         last.items.push(e)
         last.dayTotal += e.amount
       } else {
-        const d = new Date(e.date + 'T00:00:00')
-        acc.push({ date: e.date, dayNum: d.getDate(), dayName: dayNames[d.getDay()], monthName: monthNames[d.getMonth()], items: [e], dayTotal: e.amount })
+        acc.push({ date: e.date, ...dayHeaderParts(e.date, locale), items: [e], dayTotal: e.amount })
       }
       return acc
     }, [])
@@ -349,15 +348,15 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 </div>
               </GlassCard>
             ) : (
-              dayGroups.map(({ date, dayNum, dayName, monthName, items, dayTotal }) => {
+              dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => {
                 return (
                   <div key={date} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{dayName}, {monthName}</span>
+                        <span title={full} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
                       </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{items.length} tx · -{formatAmount(dayTotal)}</span>
+                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{pluralCount(items.length, t.common.txCount, locale)} · −{formatAmount(dayTotal)}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {items.map(e => {
@@ -375,7 +374,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                                   <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
                                   <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
                                 </div>
-                                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>-{formatAmount(e.amount)}</span>
+                                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(e.amount)}</span>
                               </div>
                             </GlassCard>
                           </SwipeableRow>
@@ -399,14 +398,14 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 </div>
               </GlassCard>
             ) : (
-              dayGroups.map(({ date, dayNum, dayName, monthName, items, dayTotal }) => (
+              dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                 <div key={date} style={{ marginBottom: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{dayName}, {monthName}</span>
+                      <span title={full} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
                     </div>
-                    <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{items.length} tx · -{formatAmount(dayTotal)}</span>
+                    <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{pluralCount(items.length, t.common.txCount, locale)} · −{formatAmount(dayTotal)}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {items.map(e => {
@@ -424,7 +423,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
-                              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>-{formatAmount(e.amount)}</span>
+                              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
                               {!selectMode && <button onClick={() => openEdit(e)} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
                               {!selectMode && <button onClick={() => removeWithUndo(e.id!)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
                             </div>

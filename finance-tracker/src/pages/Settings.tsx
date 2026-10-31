@@ -1,3 +1,4 @@
+import { pluralForm as pluralFormOf } from '../utils/plural'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -233,10 +234,7 @@ export function SettingsPage() {
   const { settings, updateSettings } = useSettingsContext()
   const { t, locale } = useTranslation()
   const CURRENCIES = useMemo(() => currencyOptions(locale), [locale])
-  const pluralForm = (n: number, one: string, few: string, many: string) => {
-    const rule = new Intl.PluralRules(locale).select(n)
-    return rule === 'one' ? one : rule === 'few' ? few : many
-  }
+  const pluralForm = (n: number, one: string, few: string, many: string) => pluralFormOf(n, { one, few, many }, locale)
   const { user, updateMonthlyEmail, refreshUser, logout } = useAuth()
   const { setupPin, hasPin, removePin } = usePinLockContext()
 

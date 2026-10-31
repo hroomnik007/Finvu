@@ -1,6 +1,6 @@
 import { useSettingsContext } from '../context/SettingsContext'
 import { useTranslation } from '../i18n'
-import { formatMoney, formatMoneyParts, formatNumber, formatDateLocale } from '../utils/format'
+import { formatMoney, formatMoneyParts, formatNumber, formatDateLocale, withDisplayMinus } from '../utils/format'
 
 // One place for UI formatting: amounts use the active language's number
 // conventions (Intl) and the user's currency; dates use the active language.
@@ -9,9 +9,13 @@ export function useFormatters() {
   const { locale } = useTranslation()
   const currency = settings.currency || 'EUR'
 
-  const formatAmount = (amount: number): string => formatMoney(amount, locale, currency)
+  // Display only: negatives use the typographic minus (U+2212).
+  const formatAmount = (amount: number): string => withDisplayMinus(formatMoney(amount, locale, currency))
 
-  const formatAmountParts = (amount: number) => formatMoneyParts(amount, locale, currency)
+  const formatAmountParts = (amount: number) => {
+    const p = formatMoneyParts(amount, locale, currency)
+    return { ...p, main: withDisplayMinus(p.main) }
+  }
 
   const formatNum = (value: number, options?: Intl.NumberFormatOptions): string => formatNumber(value, locale, options)
 

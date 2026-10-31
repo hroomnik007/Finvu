@@ -726,6 +726,11 @@ export const hu: Translations = {
     notSet: 'Nincs beállítva',
     // Under the date of a recurring item: the month it starts counting in
     validFrom: 'Érvényes ettől: {month}',
+    txCount: { one: 'tranzakció', few: 'tranzakció', many: 'tranzakció' },
+    perMonthShort: '/hó',
+    perYearShort: '/év',
+    dueBy: 'határidő: {date}',
+    autoMonthly: 'automatikusan +{amount}/hó',
     unknownDevice: 'Ismeretlen eszköz',
     prevYear: 'Előző év',
     nextYear: 'Következő év',

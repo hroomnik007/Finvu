@@ -93,3 +93,28 @@ export function formatMonthYearFrom(value: string | Date, locale: string = DEFAU
   }
   return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(d)
 }
+
+/**
+ * Display-only minus: Intl uses ASCII hyphen-minus for negatives in most
+ * locales; the typographic minus (U+2212) reads better next to digits. Never
+ * use this for values that are parsed again (inputs, CSV, API payloads).
+ */
+export function withDisplayMinus(s: string): string {
+  return s.replace(/-(?=[\d\u00a0\u202f\s]*[\p{Sc}\d])/u, '\u2212')
+}
+
+/**
+ * The one day-header format used by every day-grouped list: the day number
+ * (shown large), the capitalized weekday, and a full localized date for
+ * titles/aria-labels. E.g. sk: { dayNum: 31, weekday: 'Sobota', full: '31. októbra 2026' }.
+ */
+export function dayHeaderParts(value: string | Date, locale: string = DEFAULT_LOCALE): { dayNum: number; weekday: string; full: string } {
+  const d = toDate(value)
+  if (Number.isNaN(d.getTime())) return { dayNum: 0, weekday: '', full: typeof value === 'string' ? value : '' }
+  const wd = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(d)
+  return {
+    dayNum: d.getDate(),
+    weekday: wd.charAt(0).toLocaleUpperCase(locale) + wd.slice(1),
+    full: new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(d),
+  }
+}

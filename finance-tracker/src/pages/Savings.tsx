@@ -538,6 +538,8 @@ function GoalCard({
   desktop?: boolean
 }) {
   const [active, setActive] = useState(false)
+  const common = useTranslation().t.common
+  const { formatLongDate } = useFormatters()
   const rawPct = goal.targetAmount > 0 ? (goal.savedAmount / goal.targetAmount) * 100 : 0
   const pct = Math.min(100, rawPct)
   const isCompleted = pct >= 100
@@ -558,7 +560,7 @@ function GoalCard({
         </span>
       )
     } else {
-      deadlineEl = <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>do {goal.deadline}</span>
+      deadlineEl = <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{common.dueBy.replace('{date}', formatLongDate(goal.deadline))}</span>
     }
   }
 
@@ -619,7 +621,7 @@ function GoalCard({
         {!isCompleted && (
           <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '2px 0 0' }}>
             {t.remaining} {formatAmount(Math.max(0, goal.targetAmount - goal.savedAmount))}
-            {monthly > 0 && ` · auto +${formatAmount(monthly)}/mes.`}
+            {monthly > 0 && ` · ${common.autoMonthly.replace('{amount}', formatAmount(monthly))}`}
           </p>
         )}
       </div>

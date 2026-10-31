@@ -6,6 +6,7 @@ import { getCategoryRules, saveCategoryRule, deleteCategoryRule } from '../api/c
 import { useCategories } from '../hooks/useCategories'
 import { matchRule, suggestKeyword } from '../utils/importRules'
 import { useTranslation } from '../i18n'
+import { useFormatters } from '../hooks/useFormatters'
 import { SettingsDropdown } from './SettingsDropdown'
 import type { ParseResult } from 'papaparse'
 // pdf.js worker: referenced as an asset URL so the worker file is emitted but its
@@ -409,6 +410,7 @@ function parseMBank(rows: CsvRow[]): ImportRow[] {
 
 export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProps) {
   const { t } = useTranslation()
+  const { formatAmount, formatDate } = useFormatters()
   const [format, setFormat] = useState<BankFormat>('revolut')
   const [rows, setRows] = useState<ImportRow[]>([])
   const [importing, setImporting] = useState(false)
@@ -694,7 +696,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                     <span style={{ fontSize: 18, flexShrink: 0 }}>{row.type === 'income' ? '💰' : '💸'}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description || '—'}</p>
-                      <p style={{ fontSize: 12, color: 'var(--text3)', margin: '1px 0 0' }}>{row.date}</p>
+                      <p style={{ fontSize: 12, color: 'var(--text3)', margin: '1px 0 0' }}>{formatDate(row.date)}</p>
                       <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
                         <select
                           value={row.categoryId ?? ''}
@@ -718,7 +720,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                       </div>
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: row.type === 'income' ? '#34D399' : '#F87171', flexShrink: 0 }}>
-                      {row.type === 'income' ? '+' : '-'}{row.amount.toFixed(2)} €
+                      {row.type === 'income' ? '+' : '−'}{formatAmount(row.amount)}
                     </span>
                   </div>
                 ))}

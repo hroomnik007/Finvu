@@ -726,6 +726,11 @@ export const cs: Translations = {
     notSet: 'Nenastaveno',
     // Under the date of a recurring item: the month it starts counting in
     validFrom: 'Platí od {month}',
+    txCount: { one: 'transakce', few: 'transakce', many: 'transakcí' },
+    perMonthShort: '/měs.',
+    perYearShort: '/rok',
+    dueBy: 'do {date}',
+    autoMonthly: 'automaticky +{amount}/měs.',
     unknownDevice: 'Neznámé zařízení',
     prevYear: 'Předchozí rok',
     nextYear: 'Následující rok',

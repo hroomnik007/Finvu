@@ -236,8 +236,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                 </span>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: 8 }}>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-lo)' }}>{formatAmount(catAmt)}<span style={{ fontSize: 12, color: 'var(--aurora-faint)' }}>/mes.</span></span>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{formatAmount(catAmt * 12)} / rok</span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-lo)' }}>{formatAmount(catAmt)}<span style={{ fontSize: 12, color: 'var(--aurora-faint)' }}>{t.common.perMonthShort}</span></span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{formatAmount(catAmt * 12)}{t.common.perYearShort}</span>
                 </div>
               </div>
             )

@@ -12,7 +12,9 @@ import { HeroCard } from '../components/HeroCard'
 import { useIncomes } from '../hooks/useIncomes'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
-import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
+import { useTranslation, getLocalizedMonthNames } from '../i18n'
+import { dayHeaderParts } from '../utils/format'
+import { pluralCount } from '../utils/plural'
 import type { Translations } from '../i18n'
 import { todayISO } from '../utils/format'
 import { dateForRecurringToggle, defaultEntryDate } from '../utils/entryDefaults'
@@ -186,21 +188,19 @@ export function IncomePage({ month, year }: IncomePageProps) {
 
   const recurringTotal = recurringIncomes.reduce((s, i) => s + i.amount, 0)
   const oneTimeTotal = totalAmount - recurringTotal
-  const dayNames = getLocalizedDayNames(locale)
   const monthNames = getLocalizedMonthNames(locale)
   const rawMonthName = monthNames[month - 1] ?? ''
   const MONTH_NAME = rawMonthName.charAt(0).toLocaleUpperCase(locale) + rawMonthName.slice(1)
 
   const animatedTotal = useCountUp(totalAmount, 800)
 
-  const dayGroups = sorted.reduce<Array<{ date: string; dayNum: number; dayName: string; monthName: string; items: Income[]; dayTotal: number }>>((acc, income) => {
+  const dayGroups = sorted.reduce<Array<{ date: string; dayNum: number; weekday: string; full: string; items: Income[]; dayTotal: number }>>((acc, income) => {
     const last = acc[acc.length - 1]
     if (last?.date === income.date) {
       last.items.push(income)
       last.dayTotal += income.amount
     } else {
-      const d = new Date(income.date + 'T00:00:00')
-      acc.push({ date: income.date, dayNum: d.getDate(), dayName: dayNames[d.getDay()], monthName: monthNames[d.getMonth()], items: [income], dayTotal: income.amount })
+      acc.push({ date: income.date, ...dayHeaderParts(income.date, locale), items: [income], dayTotal: income.amount })
     }
     return acc
   }, [])
@@ -267,14 +267,14 @@ export function IncomePage({ month, year }: IncomePageProps) {
             <>
               {/* Mobile: day-grouped GlassCard rows */}
               <div className="lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }} onClick={() => setOpenSwipeId(null)}>
-                {dayGroups.map(({ date, dayNum, dayName, monthName, items, dayTotal }) => (
+                {dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                   <div key={date} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{dayName}, {monthName}</span>
+                        <span title={full} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
                       </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{items.length} tx · +{formatAmount(dayTotal)}</span>
+                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{pluralCount(items.length, t.common.txCount, locale)} · +{formatAmount(dayTotal)}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {items.map(income => (
@@ -307,14 +307,14 @@ export function IncomePage({ month, year }: IncomePageProps) {
 
               {/* Desktop: day-grouped GlassCard rows */}
               <div className="hidden lg:block">
-                {dayGroups.map(({ date, dayNum, dayName, monthName, items, dayTotal }) => (
+                {dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                   <div key={date} style={{ marginBottom: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{dayName}, {monthName}</span>
+                        <span title={full} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
                       </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{items.length} tx · +{formatAmount(dayTotal)}</span>
+                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{pluralCount(items.length, t.common.txCount, locale)} · +{formatAmount(dayTotal)}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {items.map(income => (

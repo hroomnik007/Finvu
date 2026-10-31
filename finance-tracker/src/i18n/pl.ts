@@ -726,6 +726,11 @@ export const pl: Translations = {
     notSet: 'Nie ustawiono',
     // Under the date of a recurring item: the month it starts counting in
     validFrom: 'Obowiązuje od {month}',
+    txCount: { one: 'transakcja', few: 'transakcje', many: 'transakcji' },
+    perMonthShort: '/mies.',
+    perYearShort: '/rok',
+    dueBy: 'do {date}',
+    autoMonthly: 'automatycznie +{amount}/mies.',
     unknownDevice: 'Nieznane urządzenie',
     prevYear: 'Poprzedni rok',
     nextYear: 'Następny rok',
