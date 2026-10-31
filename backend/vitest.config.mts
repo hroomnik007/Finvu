@@ -1,8 +1,10 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
+    // *.int.test.ts need a real database: npm run test:integration
+    exclude: [...configDefaults.exclude, "src/**/*.int.test.ts"],
     // config/env.ts validates these at import time; the unit tests never connect.
     env: {
       DATABASE_URL: "postgresql://test:test@localhost:5432/test",

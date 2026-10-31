@@ -1196,6 +1196,11 @@ export async function getSessions(req: AuthRequest, res: Response): Promise<void
 
 export async function deleteSession(req: AuthRequest, res: Response): Promise<void> {
   const { id } = req.params as { id: string }
+  // A malformed id would make Postgres throw (500); treat it as not found
+  if (!UUID_RE.test(id)) {
+    res.status(404).json({ error: 'Session not found' })
+    return
+  }
   const [session] = await db
     .select({ id: userSessions.id, userId: userSessions.userId })
     .from(userSessions)
