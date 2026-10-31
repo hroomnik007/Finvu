@@ -9,6 +9,10 @@ import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import AmountInput from '../components/AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
+import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
+import { groupByDay, signedAmount } from '../utils/groupByDay'
+import { dayHeaderParts } from '../utils/format'
+import { pluralCount } from '../utils/plural'
 
 const PAGE = 50
 
@@ -37,9 +41,9 @@ function parseAmount(raw: string): number | undefined {
 }
 
 export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { user } = useAuth()
-  const { formatAmount, formatDate } = useFormatters()
+  const { formatAmount } = useFormatters()
   const [text, setText] = useState('')
   const [debounced, setDebounced] = useState('')
   const [type, setType] = useState<TypeFilter>('all')
@@ -130,25 +134,37 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
               {isFetching && !data ? '…' : results.length === 0 ? t.search.none : t.search.count.replace('{n}', String(total))}
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {results.map(r => {
-                const label = r.isFixed ? parseDescription(r.description, 1).label : r.description ?? ''
-                const income = r.type === 'income'
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {groupByDay(results, r => r.date, r => (r.type === 'income' ? r.amount : -r.amount)).map(group => {
+                const { dayNum, weekday, full } = dayHeaderParts(group.date, locale)
+                // Search spans months/years, so the header also names the month.
+                const monthYear = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(group.date + 'T12:00:00'))
                 return (
-                  <GlassCard key={r.id} radius={14} style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)' }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label || '—'}</span>
-                        {r.isFixed && <Repeat size={11} color="var(--aurora-faint)" aria-label={t.search.fixed} />}
-                      </div>
-                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {formatDate(r.date)}{r.categoryName ? ` · ${r.categoryName}` : ''}
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: income ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', whiteSpace: 'nowrap' }}>
-                      {income ? '+' : '−'}{formatAmount(r.amount)}
-                    </div>
-                  </GlassCard>
+                  <div key={group.date} style={{ marginBottom: 12 }}>
+                    <DayHeader dayNum={dayNum} weekday={`${weekday} · ${monthYear}`} full={full} summary={`${pluralCount(group.items.length, t.common.txCount, locale)} · ${signedAmount(group.total, formatAmount)}`} />
+                    <DenseCard>
+                      {group.items.map(r => {
+                        const label = r.isFixed ? parseDescription(r.description, 1).label : r.description ?? ''
+                        const income = r.type === 'income'
+                        return (
+                          <DenseRow key={r.id} style={{ padding: '10px 14px' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)' }}>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label || '—'}</span>
+                                {r.isFixed && <Repeat size={11} color="var(--aurora-faint)" aria-label={t.search.fixed} />}
+                              </div>
+                              {r.categoryName && (
+                                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categoryName}</div>
+                              )}
+                            </div>
+                            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: income ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', whiteSpace: 'nowrap' }}>
+                              {income ? '+' : '\u2212'}{formatAmount(r.amount)}
+                            </div>
+                          </DenseRow>
+                        )
+                      })}
+                    </DenseCard>
+                  </div>
                 )
               })}
             </div>

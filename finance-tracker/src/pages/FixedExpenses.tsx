@@ -19,6 +19,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
 import type { FixedExpense, Category } from '../types'
+import { DenseCard, DenseRow } from '../components/DenseList'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
@@ -559,14 +560,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               const badge = countdownBadge(daysUntil)
               const monthAbbr = MONTHS_SK[month - 1] ?? ''
               return (
-                <SwipeableRow key={expense.id} onDelete={() => setDeleteId(expense.id!)} isOpen={openSwipeId === expense.id} onOpen={() => setOpenSwipeId(expense.id!)}>
-
-                  <GlassCard
-                    radius={16}
-                    onClick={() => openEdit(expense)}
-                    className="expense-row"
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', opacity: isPast ? 0.65 : 1 }}
-                  >
+                <SwipeableRow key={expense.id} radius={0} onDelete={() => setDeleteId(expense.id!)} isOpen={openSwipeId === expense.id} onOpen={() => setOpenSwipeId(expense.id!)}>
+                  <DenseRow onClick={() => openEdit(expense)} className="expense-row" style={{ opacity: isPast ? 0.65 : 1 }}>
                     {/* Date tile */}
                     <div style={{
                       width: 46, height: 46, borderRadius: 12, flexShrink: 0,
@@ -595,10 +590,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       )}
                     </div>
                     <div className="expense-actions hidden lg:flex" style={{ alignItems: 'center', gap: 2, flexShrink: 0 }} onClick={ev => ev.stopPropagation()}>
-                      <button onClick={() => openEdit(expense)} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
-                      <button onClick={() => setDeleteId(expense.id!)} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
+                      <button onClick={() => openEdit(expense)} aria-label={t.common.edit} title={t.common.edit} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
+                      <button onClick={() => setDeleteId(expense.id!)} aria-label={t.common.delete} title={t.common.delete} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
                     </div>
-                  </GlassCard>
+                  </DenseRow>
                 </SwipeableRow>
               )
             }
@@ -612,7 +607,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                         {t.expenses.fixed.upcoming}
                       </div>
                     )}
-                    {upcomingList.map(e => renderCard(e, false))}
+                    <DenseCard>{upcomingList.map(e => renderCard(e, false))}</DenseCard>
                   </>
                 )}
                 {pastList.length > 0 && (
@@ -620,7 +615,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                     <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', marginBottom: 2, marginTop: 8 }}>
                       {t.expenses.paidThisMonth}
                     </div>
-                    {pastList.map(e => renderCard(e, true))}
+                    <DenseCard>{pastList.map(e => renderCard(e, true))}</DenseCard>
                   </>
                 )}
               </div>

@@ -951,3 +951,15 @@ html.compact .card { padding: var(--card-padding); }
   }
   .amount-input-wrap input { font-size: 36px !important; }
 }
+
+/* Dense day-grouped lists: one card per day, rows separated by hairlines. */
+.dense-card {
+  background: var(--aurora-panel);
+  border: 1px solid var(--aurora-gline);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--aurora-card-shadow);
+}
+.dense-card > * + * { border-top: 1px solid var(--aurora-gline); }
+.dense-row { background: var(--aurora-panel); transition: background 0.12s; }
+@media (hover: hover) { .dense-row:hover { background: var(--aurora-hover); } }

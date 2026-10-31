@@ -23,6 +23,7 @@ import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedMonthNames } from '../i18n'
 import { dayHeaderParts } from '../utils/format'
 import { pluralCount } from '../utils/plural'
+import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import { defaultEntryDate } from '../utils/entryDefaults'
 import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
 import { useUndoableDelete } from '../hooks/useUndoableDelete'
@@ -96,7 +97,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const { categories, addCategory } = useCategories()
   const quickCategories = useCategoriesByUsage(categories)
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
-  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
   const feedback = useSaveFeedback()
 
@@ -350,42 +351,33 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 </div>
               </GlassCard>
             ) : (
-              dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => {
-                return (
-                  <div key={date} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span title={full} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
-                      </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{pluralCount(items.length, t.common.txCount, locale)} · −{formatAmount(dayTotal)}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {items.map(e => {
-                        const cat = getCategoryById(e.categoryId)
-                        const name = e.note || cat?.name || t.expenses.variable.defaultExpense
-                        const subtitle = e.note ? `${cat?.name ?? '—'} · ${formatDate(e.date)}` : formatDate(e.date)
-                        return (
-                          <SwipeableRow key={e.id} onDelete={() => removeWithUndo(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
-                            <GlassCard radius={18} onClick={() => rowClick(e)} style={{ cursor: 'pointer', outline: selectedIds.has(e.id!) ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{ width: 38, height: 38, borderRadius: 13, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                  {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
-                                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
-                                </div>
-                                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(e.amount)}</span>
-                              </div>
-                            </GlassCard>
-                          </SwipeableRow>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })
+              dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
+                <div key={date} style={{ marginBottom: 16 }}>
+                  <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · −${formatAmount(dayTotal)}`} />
+                  <DenseCard>
+                    {items.map(e => {
+                      const cat = getCategoryById(e.categoryId)
+                      const name = e.note || cat?.name || t.expenses.variable.defaultExpense
+                      // The day header carries the date; the row keeps just the category.
+                      const subtitle = e.note ? (cat?.name ?? '—') : ''
+                      return (
+                        <SwipeableRow key={e.id} radius={0} onDelete={() => removeWithUndo(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
+                          <DenseRow onClick={() => rowClick(e)} selected={selectedIds.has(e.id!)}>
+                            <div style={{ width: 38, height: 38, borderRadius: 12, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
+                              {subtitle && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
+                            </div>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(e.amount)}</span>
+                          </DenseRow>
+                        </SwipeableRow>
+                      )
+                    })}
+                  </DenseCard>
+                </div>
+              ))
             )}
           </div>
 
@@ -403,38 +395,30 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
             ) : (
               dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                 <div key={date} style={{ marginBottom: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                      <span title={full} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
-                    </div>
-                    <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{pluralCount(items.length, t.common.txCount, locale)} · −{formatAmount(dayTotal)}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · −${formatAmount(dayTotal)}`} />
+                  <DenseCard>
                     {items.map(e => {
                       const cat = getCategoryById(e.categoryId)
                       const name = e.note || cat?.name || t.expenses.variable.defaultExpense
-                      const subtitle = e.note ? `${cat?.name ?? '—'} · ${formatDate(e.date)}` : formatDate(e.date)
+                      const subtitle = e.note ? (cat?.name ?? '—') : ''
                       return (
-                        <GlassCard key={e.id} radius={18} onClick={() => rowClick(e)} style={{ cursor: 'pointer', outline: selectedIds.has(e.id!) ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 38, height: 38, borderRadius: 13, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
-                              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
-                              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
-                              {!selectMode && <button onClick={() => openEdit(e)} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
-                              {!selectMode && <button onClick={() => removeWithUndo(e.id!)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
-                            </div>
+                        <DenseRow key={e.id} onClick={() => rowClick(e)} selected={selectedIds.has(e.id!)}>
+                          <div style={{ width: 38, height: 38, borderRadius: 12, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
                           </div>
-                        </GlassCard>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
+                            {subtitle && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
+                            {!selectMode && <button onClick={() => openEdit(e)} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
+                            {!selectMode && <button onClick={() => removeWithUndo(e.id!)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
+                          </div>
+                        </DenseRow>
                       )
                     })}
-                  </div>
+                  </DenseCard>
                 </div>
               ))
             )}

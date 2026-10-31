@@ -9,13 +9,15 @@ interface SwipeableRowProps {
   fullSwipeDelete?: boolean
   isOpen?: boolean
   onOpen?: () => void
+  /** Corner radius of the row; 0 for rows inside a DenseCard. */
+  radius?: number
 }
 
 const REVEAL_PX = 80
 const FULL_SWIPE_RATIO = 0.5  // 50% of item width
 const VELOCITY_THRESHOLD = 0.5 // px/ms
 
-export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = true, isOpen, onOpen }: SwipeableRowProps) {
+export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = true, isOpen, onOpen, radius = 16 }: SwipeableRowProps) {
   const { t } = useTranslation()
   const wrapRef = useRef<HTMLDivElement>(null)
   const onDeleteRef = useRef(onDelete)
@@ -126,7 +128,7 @@ export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = t
       style={{
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: 16,
+        borderRadius: radius,
         width: '100%',
         WebkitTransform: 'translateZ(0)',
         transform: 'translateZ(0)',
@@ -139,7 +141,7 @@ export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = t
           position: 'absolute', right: 0, top: 0, bottom: 0, width: REVEAL_PX,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: pastHalf ? '#DC2626' : '#ef4444',
-          borderRadius: '0 16px 16px 0',
+          borderRadius: `0 ${radius}px ${radius}px 0`,
           transition: 'background 0.15s',
         }}>
           <button

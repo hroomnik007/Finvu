@@ -16,6 +16,7 @@ import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedMonthNames } from '../i18n'
 import { dayHeaderParts } from '../utils/format'
 import { pluralCount } from '../utils/plural'
+import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import type { Translations } from '../i18n'
 import { todayISO } from '../utils/format'
 import { dateForRecurringToggle, defaultEntryDate } from '../utils/entryDefaults'
@@ -105,7 +106,7 @@ function FormBody({ form, setForm, t, adding }: FormBodyProps) {
 export function IncomePage({ month, year }: IncomePageProps) {
   const { incomes, isLoading: listLoading, isError: listError, refetch: listRetry, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
   const listFailed = listError && incomes.length === 0
-  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
   const feedback = useSaveFeedback()
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -271,38 +272,27 @@ export function IncomePage({ month, year }: IncomePageProps) {
               <div className="lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }} onClick={() => setOpenSwipeId(null)}>
                 {dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                   <div key={date} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span title={full} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
-                      </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{pluralCount(items.length, t.common.txCount, locale)} · +{formatAmount(dayTotal)}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · +${formatAmount(dayTotal)}`} />
+                    <DenseCard>
                       {items.map(income => (
-                        <SwipeableRow key={income.id} onDelete={() => requestDelete(income)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
-                          <GlassCard radius={18} onClick={() => openEdit(income)} style={{ cursor: 'pointer' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <div style={{ width: 38, height: 38, borderRadius: 13, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.label}</span>
-                                  {income.recurring && (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                      <Repeat size={8} /> {t.income.recurringBadge}
-                                    </span>
-                                  )}
-                                </div>
-                                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{formatDate(income.date)}</div>
-                              </div>
-                              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', flexShrink: 0 }}>+{formatAmount(income.amount)}</span>
+                        <SwipeableRow key={income.id} radius={0} onDelete={() => requestDelete(income)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
+                          <DenseRow onClick={() => openEdit(income)}>
+                            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
                             </div>
-                          </GlassCard>
+                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.label}</span>
+                              {income.recurring && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  <Repeat size={8} /> {t.income.recurringBadge}
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', flexShrink: 0 }}>+{formatAmount(income.amount)}</span>
+                          </DenseRow>
                         </SwipeableRow>
                       ))}
-                    </div>
+                    </DenseCard>
                   </div>
                 ))}
               </div>
@@ -311,40 +301,29 @@ export function IncomePage({ month, year }: IncomePageProps) {
               <div className="hidden lg:block">
                 {dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                   <div key={date} style={{ marginBottom: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span title={full} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
-                      </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{pluralCount(items.length, t.common.txCount, locale)} · +{formatAmount(dayTotal)}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · +${formatAmount(dayTotal)}`} />
+                    <DenseCard>
                       {items.map(income => (
-                        <GlassCard key={income.id} radius={18} onClick={() => openEdit(income)} style={{ cursor: 'pointer' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 38, height: 38, borderRadius: 13, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <DenseRow key={income.id} onClick={() => openEdit(income)}>
+                            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.label}</span>
-                                {income.recurring && (
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    <Repeat size={8} /> {t.income.recurringBadge}
-                                  </span>
-                                )}
-                              </div>
-                              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{formatDate(income.date)}</div>
+                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.label}</span>
+                              {income.recurring && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  <Repeat size={8} /> {t.income.recurringBadge}
+                                </span>
+                              )}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', marginRight: 8 }}>+{formatAmount(income.amount)}</span>
-                              <button onClick={() => openEdit(income)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
-                              <button onClick={() => requestDelete(income)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
-                            </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', marginRight: 8 }}>+{formatAmount(income.amount)}</span>
+                            <button onClick={() => openEdit(income)} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
+                            <button onClick={() => requestDelete(income)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
                           </div>
-                        </GlassCard>
+                        </DenseRow>
                       ))}
-                    </div>
+                    </DenseCard>
                   </div>
                 ))}
               </div>
