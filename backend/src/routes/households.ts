@@ -24,7 +24,7 @@ const joinLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste neskôr." },
+  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
 });
 
 router.post("/", createHousehold);

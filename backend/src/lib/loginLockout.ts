@@ -7,7 +7,7 @@ import { createHash } from "crypto";
 // password, PIN and admin login — Google and passkey sign-in are unaffected.
 export { MAX_FAILURES, WINDOW_MS, LOCK_MS } from "./lockoutPolicy";
 
-export const LOCKED_RESPONSE = { error: "Príliš veľa pokusov. Skúste neskôr.", code: "TOO_MANY_ATTEMPTS" } as const;
+export const LOCKED_RESPONSE = { error: "Príliš veľa pokusov. Skús to neskôr.", code: "TOO_MANY_ATTEMPTS" } as const;
 
 // Keyed by the e-mail itself (hashed), not the user id, so an address with no
 // account is counted and locked exactly like one that exists.

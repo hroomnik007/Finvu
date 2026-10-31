@@ -30,7 +30,7 @@ const DEMO_INVITE_CODE = "DEMO2026";
 async function ensureNoActiveHousehold(userId: string, res: Response): Promise<boolean> {
   const [u] = await db.select({ householdId: users.householdId }).from(users).where(eq(users.id, userId)).limit(1);
   if (u?.householdId) {
-    res.status(409).json({ error: "Najprv opustite aktuálnu domácnosť." });
+    res.status(409).json({ error: "Najprv opusti aktuálnu domácnosť." });
     return false;
   }
   await db.delete(householdMembers).where(eq(householdMembers.userId, userId));
@@ -62,7 +62,7 @@ async function assertMember(householdId: number, userId: string, res: Response):
     ))
     .limit(1);
   if (!membership) {
-    res.status(403).json({ error: "Nie ste členom tohto domácnosti." });
+    res.status(403).json({ error: "Nie si členom tejto domácnosti." });
     return false;
   }
   return true;
@@ -141,7 +141,7 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
     .limit(1);
 
   if (existing) {
-    res.status(409).json({ error: "Ste už členom tejto domácnosti." });
+    res.status(409).json({ error: "Už si členom tejto domácnosti." });
     return;
   }
 
@@ -202,7 +202,7 @@ export async function getMyHousehold(req: AuthRequest, res: Response): Promise<v
     .limit(1);
 
   if (!user?.householdId) {
-    res.status(404).json({ error: "Nie ste členom žiadnej domácnosti." });
+    res.status(404).json({ error: "Nie si členom žiadnej domácnosti." });
     return;
   }
 
@@ -453,7 +453,7 @@ export async function leaveHousehold(req: AuthRequest, res: Response): Promise<v
     .limit(1);
 
   if (!user?.householdId) {
-    res.status(400).json({ error: "Nie ste členom žiadnej domácnosti." });
+    res.status(400).json({ error: "Nie si členom žiadnej domácnosti." });
     return;
   }
 
@@ -568,7 +568,7 @@ export async function removeMember(req: AuthRequest, res: Response): Promise<voi
   if (!(await assertOwner(householdId, req.userId!, res))) return;
 
   if (memberId === req.userId) {
-    res.status(400).json({ error: "Seba nemôžete odstrániť. Použite Opustiť domácnosť." });
+    res.status(400).json({ error: "Seba nemôžeš odstrániť. Použi Opustiť domácnosť." });
     return;
   }
 

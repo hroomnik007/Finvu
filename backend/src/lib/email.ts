@@ -22,28 +22,28 @@ export function verificationEmailHtml(token: string): string {
   const link = `${env.APP_URL}/#verify-email?token=${token}`;
   return `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-      <h2 style="color:#7C3AED">Vitajte vo Finvu!</h2>
-      <p>Kliknite na odkaz nižšie pre overenie vášho emailu:</p>
+      <h2 style="color:#7C3AED">Vitaj vo Finvu!</h2>
+      <p>Klikni na odkaz nižšie a over svoj email:</p>
       <a href="${link}" style="display:inline-block;background:#7C3AED;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">
         Overiť email
       </a>
-      <p style="color:#666;font-size:13px">Odkaz je platný na jedno použitie. Ak ste sa nezaregistrovali, ignorujte tento email.</p>
+      <p style="color:#666;font-size:13px">Odkaz je platný na jedno použitie. Ak si sa neregistroval/a, tento email ignoruj.</p>
     </div>
   `;
 }
 
 export function resetPasswordEmailText(token: string): string {
   const link = `${env.APP_URL}/#reset-password?token=${token}`;
-  return `Dobrý deň,
+  return `Ahoj,
 
-Dostali sme žiadosť o obnovu hesla pre váš účet FinVu.
+Dostali sme žiadosť o obnovu hesla k tvojmu účtu FinVu.
 
-Kliknite na odkaz nižšie pre nastavenie nového hesla:
+Klikni na odkaz nižšie a nastav si nové heslo:
 ${link}
 
 Odkaz je platný 1 hodinu.
 
-Ak ste túto žiadosť nezaslali, ignorujte tento email.
+Ak si o obnovu nežiadal/a, tento email ignoruj.
 
 Tím FinVu`;
 }
@@ -53,14 +53,14 @@ export function resetPasswordEmailHtml(token: string): string {
   return `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
       <h2 style="color:#7C3AED">Obnova hesla — FinVu</h2>
-      <p>Dobrý deň,</p>
-      <p>Dostali sme žiadosť o obnovu hesla pre váš účet FinVu.</p>
-      <p>Kliknite na odkaz nižšie pre nastavenie nového hesla:</p>
+      <p>Ahoj,</p>
+      <p>Dostali sme žiadosť o obnovu hesla k tvojmu účtu FinVu.</p>
+      <p>Klikni na odkaz nižšie a nastav si nové heslo:</p>
       <a href="${link}" style="display:inline-block;background:#7C3AED;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">
         Obnoviť heslo
       </a>
       <p style="color:#666;font-size:13px">Odkaz je platný 1 hodinu.</p>
-      <p style="color:#666;font-size:13px">Ak ste túto žiadosť nezaslali, ignorujte tento email.</p>
+      <p style="color:#666;font-size:13px">Ak si o obnovu nežiadal/a, tento email ignoruj.</p>
       <p>Tím FinVu</p>
     </div>
   `;
@@ -74,12 +74,12 @@ export function accountExistsEmailHtml(): string {
   return `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
       <h2 style="color:#7C3AED">Finvu — účet už existuje</h2>
-      <p>Niekto sa práve pokúsil zaregistrovať s touto emailovou adresou, ale účet s ňou už máte.</p>
-      <p>Ak ste to boli vy, stačí sa prihlásiť. Ak si nepamätáte heslo, na prihlasovacej stránke si ho môžete obnoviť.</p>
+      <p>Niekto sa práve pokúsil zaregistrovať s touto emailovou adresou, ale účet s ňou už máš.</p>
+      <p>Ak si to bol/a ty, stačí sa prihlásiť. Ak si nepamätáš heslo, na prihlasovacej stránke si ho môžeš obnoviť.</p>
       <a href="${loginLink}" style="display:inline-block;background:#7C3AED;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">
         Prihlásiť sa
       </a>
-      <p style="color:#666;font-size:13px">Ak ste to neboli vy, tento email môžete ignorovať. Váš účet sa nezmenil.</p>
+      <p style="color:#666;font-size:13px">Ak si to nebol/a ty, tento email môžeš ignorovať. Tvoj účet sa nezmenil.</p>
     </div>
   `;
 }

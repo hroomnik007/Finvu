@@ -5,7 +5,7 @@ const axiosErr = (status: number, data: unknown) => ({ response: { status, data 
 
 describe('authErrorMessage', () => {
   it('translates the lockout by its code', () => {
-    const err = axiosErr(429, { error: 'Príliš veľa pokusov. Skúste neskôr.', code: 'TOO_MANY_ATTEMPTS' })
+    const err = axiosErr(429, { error: 'Príliš veľa pokusov. Skús to neskôr.', code: 'TOO_MANY_ATTEMPTS' })
     expect(authErrorMessage(err, 'fallback', 'Too many attempts.')).toBe('Too many attempts.')
   })
   it('keeps the server message otherwise', () => {

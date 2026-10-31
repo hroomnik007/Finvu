@@ -21,7 +21,7 @@ const registerLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste neskôr." },
+  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
 });
 
 const loginLimiter = rateLimit({
@@ -29,7 +29,7 @@ const loginLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste neskôr." },
+  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
 });
 
 const pinLoginLimiter = rateLimit({
@@ -37,7 +37,7 @@ const pinLoginLimiter = rateLimit({
   max: 8,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov PIN. Skúste za 10 minút." },
+  message: { error: "Príliš veľa pokusov PIN. Skús to znova o 10 minút." },
 });
 
 // Not an auth endpoint with sensitive failure consequences (it only ever
@@ -48,7 +48,7 @@ const pinDeviceStatusLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste za 10 minút." },
+  message: { error: "Príliš veľa pokusov. Skús to znova o 10 minút." },
 });
 
 // GET /webauthn/authenticate-options is intentionally unauthenticated (a
@@ -60,7 +60,7 @@ const webauthnOptionsLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste za 10 minút." },
+  message: { error: "Príliš veľa pokusov. Skús to znova o 10 minút." },
 });
 
 const generalLimiter = rateLimit({
@@ -68,7 +68,7 @@ const generalLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste neskôr." },
+  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
 })
 
 // Re-authentication endpoints (current password / current PIN are checked in
@@ -79,7 +79,7 @@ const sensitiveLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste neskôr." },
+  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
 });
 
 // /methods has its own budget: it shares nothing with verify/forgot/reset, so
@@ -89,7 +89,7 @@ const methodsLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste neskôr." },
+  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
 });
 
 const webauthnVerifyLimiter = rateLimit({
@@ -97,7 +97,7 @@ const webauthnVerifyLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skúste za 10 minút." },
+  message: { error: "Príliš veľa pokusov. Skús to znova o 10 minút." },
 });
 
 const refreshLimiter = rateLimit({
@@ -105,7 +105,7 @@ const refreshLimiter = rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Príliš veľa pokusov. Skúste neskôr.' },
+  message: { error: 'Príliš veľa pokusov. Skús to neskôr.' },
 });
 
 const sessionCheckLimiter = rateLimit({
@@ -113,7 +113,7 @@ const sessionCheckLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Príliš veľa pokusov. Skúste neskôr.' },
+  message: { error: 'Príliš veľa pokusov. Skús to neskôr.' },
 });
 
 // Separate from loginLimiter: pingSession fires every 60s while the app is
@@ -125,7 +125,7 @@ const pingLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Príliš veľa pokusov. Skúste neskôr.' },
+  message: { error: 'Príliš veľa pokusov. Skús to neskôr.' },
 });
 
 const router = Router();

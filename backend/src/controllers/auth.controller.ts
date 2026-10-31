@@ -280,7 +280,7 @@ export async function issueTokens(res: Response, userId: string, email: string, 
   return { accessToken, sessionId };
 }
 
-const REGISTER_OK_MSG = "Skontrolujte email. Poslali sme vám odkaz na pokračovanie.";
+const REGISTER_OK_MSG = "Skontroluj email. Poslali sme ti odkaz na pokračovanie.";
 
 export async function register(req: Request, res: Response): Promise<void> {
   const body = registerSchema.safeParse(req.body);
@@ -318,7 +318,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: user.id, isDefault: true }))
   );
 
-  await sendEmail(email, "Finvu — Overte váš email", verificationEmailHtml(verificationToken));
+  await sendEmail(email, "Finvu — Over svoj email", verificationEmailHtml(verificationToken));
 
   res.status(201).json({ message: REGISTER_OK_MSG });
 }
@@ -356,12 +356,12 @@ export async function login(req: Request, res: Response): Promise<void> {
   await clearFailures(lockKey);
 
   if (!user.emailVerified) {
-    res.status(403).json({ error: "Prosím overte svoj email pred prihlásením.", code: "EMAIL_NOT_VERIFIED" });
+    res.status(403).json({ error: "Pred prihlásením si prosím over email.", code: "EMAIL_NOT_VERIFIED" });
     return;
   }
 
   if (user.isDeactivated) {
-    res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json({ error: "Tvoj účet je deaktivovaný. Pre reaktiváciu kontaktuj podporu.", code: "ACCOUNT_DEACTIVATED" });
     return;
   }
 
@@ -617,7 +617,7 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
     .set({ emailVerified: true, verificationToken: null, verificationExpiresAt: null })
     .where(eq(users.id, user.id));
 
-  res.json({ message: "Email bol úspešne overený. Môžete sa prihlásiť." });
+  res.json({ message: "Email bol úspešne overený. Môžeš sa prihlásiť." });
 }
 
 // Lets a user whose verification mail never arrived (or whose registration
@@ -638,7 +638,7 @@ export async function resendVerification(req: Request, res: Response): Promise<v
       await db.update(users)
         .set({ verificationToken: await hashToken(verificationToken), verificationExpiresAt: new Date(Date.now() + VERIFICATION_TTL_MS) })
         .where(eq(users.id, user.id));
-      await sendEmail(email, "Finvu — Overte váš email", verificationEmailHtml(verificationToken));
+      await sendEmail(email, "Finvu — Over svoj email", verificationEmailHtml(verificationToken));
     }
   }
   res.json({ message: OK_MSG });
@@ -838,7 +838,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
   let [user] = await db.select().from(users).where(byEmail(email)).limit(1);
 
   if (user?.isDeactivated) {
-    res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json({ error: "Tvoj účet je deaktivovaný. Pre reaktiváciu kontaktuj podporu.", code: "ACCOUNT_DEACTIVATED" });
     return;
   }
 
@@ -891,7 +891,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
 
   if (user.passwordHash) {
     if (typeof body.currentPassword !== "string" || !body.currentPassword) {
-      res.status(400).json({ error: "Pre zmazanie účtu zadajte aktuálne heslo." });
+      res.status(400).json({ error: "Pre zmazanie účtu zadaj aktuálne heslo." });
       return;
     }
     const valid = await bcrypt.compare(body.currentPassword, user.passwordHash);
@@ -901,7 +901,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
     }
   } else if (body.passkey !== undefined) {
     if (!(await verifyPasskeyReauth(userId, body.passkey))) {
-      res.status(401).json({ error: "Overenie passkey zlyhalo. Skúste to znova." });
+      res.status(401).json({ error: "Overenie passkey zlyhalo. Skús to znova." });
       return;
     }
   } else if (body.pin !== undefined) {
@@ -934,11 +934,11 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
       return;
     }
     if (!user.googleId || google.sub !== user.googleId) {
-      res.status(401).json({ error: "Prihláste sa Google účtom, ktorý patrí k tomuto účtu." });
+      res.status(401).json({ error: "Prihlás sa Google účtom, ktorý patrí k tomuto účtu." });
       return;
     }
     if (google.expiresIn < FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN) {
-      res.status(401).json({ error: "Prihlásenie cez Google je príliš staré. Skúste to znova." });
+      res.status(401).json({ error: "Prihlásenie cez Google je príliš staré. Skús to znova." });
       return;
     }
   } else {
@@ -948,7 +948,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
       .from(webauthnCredentials)
       .where(eq(webauthnCredentials.userId, userId));
     const methods = [n > 0 && "passkey", user.pinHash && "pin", user.googleId && "google"].filter(Boolean);
-    res.status(400).json({ error: "Pre zmazanie účtu potvrďte svoju totožnosť.", code: "REAUTH_REQUIRED", methods });
+    res.status(400).json({ error: "Pre zmazanie účtu potvrď svoju totožnosť.", code: "REAUTH_REQUIRED", methods });
     return;
   }
 
@@ -1014,7 +1014,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
   }
 
   if (user.isDeactivated) {
-    res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json({ error: "Tvoj účet je deaktivovaný. Pre reaktiváciu kontaktuj podporu.", code: "ACCOUNT_DEACTIVATED" });
     return;
   }
 
