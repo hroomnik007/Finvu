@@ -121,7 +121,7 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
           }}
         >
           {/* Close button */}
-          <button
+          <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close}
             onClick={handleComplete}
             style={{
               position: 'absolute',

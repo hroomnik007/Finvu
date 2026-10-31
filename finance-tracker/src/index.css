@@ -971,3 +971,20 @@ html.compact .card { padding: var(--card-padding); }
   .annual-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
   .annual-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
 }
+
+/* Touch-target expander: grows the clickable area to at least 44x44 with an
+   invisible pseudo-element, so small icon buttons keep their look. Inline
+   position (absolute/fixed) still wins over the relative here. */
+.hit-44,
+.btn-icon { position: relative; }
+.hit-44::before,
+.btn-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+  border-radius: inherit;
+}

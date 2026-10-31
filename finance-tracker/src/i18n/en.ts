@@ -760,6 +760,13 @@ export const en: Translations = {
     nextYear: 'Next year',
     continue: 'Continue',
     closePermanently: 'Close for good',
+    prevMonth: 'Previous month',
+    nextMonth: 'Next month',
+    dayDecrease: 'One day earlier',
+    dayIncrease: 'One day later',
+    iconOption: 'Icon {n}',
+    viewScope: 'Data view',
+    addNew: 'Add new item',
   },
   household: {
     sharedCategoriesTitle: 'Shared categories',

@@ -248,12 +248,15 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
       <div>
         <label style={labelStyle}>{t.savings.iconLabel}</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-          {PRESET_ICONS.map(icon => {
+          {PRESET_ICONS.map((icon, i) => {
             const Icon = SAVINGS_ICON_MAP[icon] ?? Target
             const selected = formIcon === icon
             return (
               <button
                 key={icon}
+                type="button"
+                aria-label={t.common.iconOption.replace('{n}', String(i + 1))}
+                aria-pressed={selected}
                 onClick={() => setFormIcon(icon)}
                 style={{
                   width: 38, height: 38, borderRadius: 10,

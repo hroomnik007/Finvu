@@ -166,7 +166,7 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{t.pin.identityTitle}</h2>
-            <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={18} /></button>
+            <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={18} /></button>
           </div>
 
           <div style={{ padding: '32px 24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
@@ -254,7 +254,7 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{title}</h2>
-          <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={18} /></button>
+          <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={18} /></button>
         </div>
 
         <div style={{ padding: '32px 24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32 }}>

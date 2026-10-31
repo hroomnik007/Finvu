@@ -351,6 +351,8 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
 
         {/* Expand/collapse toggle */}
         <button
+          type="button"
+          className="hit-44"
           onClick={onToggle}
           aria-label={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
           style={{

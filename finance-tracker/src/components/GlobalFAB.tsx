@@ -483,7 +483,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
               onChange={e => setVarNewCatName(e.target.value)}
               style={{ ...finputStyle, flex: 1 }}
             />
-            <button
+            <button className="hit-44" aria-label={t.common.cancel} title={t.common.cancel}
               type="button"
               onClick={() => { setVarNewCatMode(false); setVarNewCatName('') }}
               style={{ width: 38, borderRadius: 12, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -539,6 +539,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
             <button
               type="button"
+              className="hit-44"
+              aria-label={t.common.dayDecrease}
               onClick={() => setFixDay(d => String(Math.max(1, parseInt(d || '1') - 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
@@ -546,6 +548,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{fixDay}</span>
             <button
               type="button"
+              className="hit-44"
+              aria-label={t.common.dayIncrease}
               onClick={() => setFixDay(d => String(Math.min(31, parseInt(d || '1') + 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >+</button>
@@ -575,13 +579,15 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         />
 
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '2px 2px 4px' }}>
-          {PRESET_ICONS.map(em => {
+          {PRESET_ICONS.map((em, i) => {
             const Icon = CATEGORY_ICON_MAP[em] ?? Tag
             const selected = catIcon === em
             return (
               <button
                 key={em}
                 type="button"
+                aria-label={t.common.iconOption.replace('{n}', String(i + 1))}
+                aria-pressed={selected}
                 onClick={() => setCatIcon(em)}
                 style={{
                   width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
@@ -640,13 +646,15 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         />
 
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '2px 2px 4px' }}>
-          {SAVINGS_PRESET_ICONS.map(em => {
+          {SAVINGS_PRESET_ICONS.map((em, i) => {
             const Icon = SAVINGS_ICON_MAP[em] ?? PiggyBank
             const selected = savIcon === em
             return (
               <button
                 key={em}
                 type="button"
+                aria-label={t.common.iconOption.replace('{n}', String(i + 1))}
+                aria-pressed={selected}
                 onClick={() => setSavIcon(em)}
                 style={{
                   width: 40, height: 40, borderRadius: '50%', flexShrink: 0,

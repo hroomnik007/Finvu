@@ -758,6 +758,13 @@ export const sk = {
     nextYear: 'Nasledujúci rok',
     continue: 'Pokračovať',
     closePermanently: 'Zavrieť natrvalo',
+    prevMonth: 'Predchádzajúci mesiac',
+    nextMonth: 'Nasledujúci mesiac',
+    dayDecrease: 'O deň skôr',
+    dayIncrease: 'O deň neskôr',
+    iconOption: 'Ikona {n}',
+    viewScope: 'Zobrazenie údajov',
+    addNew: 'Pridať novú položku',
   },
   household: {
     sharedCategoriesTitle: 'Spoločné kategórie',

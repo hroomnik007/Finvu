@@ -287,7 +287,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
       </HeroCard>
 
       {/* ── ČLENOVIA section header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--aurora-hi)', flexShrink: 0, margin: 0 }}>{ht.membersSection} ({memberCount})</p>
         {householdData && (
           leavePending ? (
@@ -304,19 +304,20 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
               >{leaveLoading ? '...' : ht.confirmBtn}</button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
               {householdData.invite_code && (
                 <button
                   onClick={() => setInviteOpen(true)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' }}
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   {ht.inviteMember}
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => setLeavePending(true)}
-                style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid rgba(251,113,133,0.3)', background: 'transparent', color: 'var(--aurora-rose)', fontSize: 13, cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
+                style={{ padding: '5px 11px', borderRadius: 10, border: '1px solid var(--aurora-rose)', background: 'transparent', color: 'var(--aurora-rose)', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
               >{ht.leaveHousehold}</button>
             </div>
           )
@@ -364,7 +365,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                         <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{ht.confirmRemoveMember}</span>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(251,113,133,0.4)', background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>{ht.confirmBtn}</button>
-                          <button onClick={() => setRemovePendingId(null)} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>✕</button>
+                          <button type="button" className="hit-44" aria-label={t.common.cancel} title={t.common.cancel} onClick={() => setRemovePendingId(null)} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>✕</button>
                         </div>
                       </div>
                     ) : (
@@ -530,7 +531,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                 <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textAlign: 'center' }}>{ht.confirmRegenerateCode}</span>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={handleRegenerateCode} style={{ fontSize: 13, fontWeight: 600, padding: '8px 18px', borderRadius: 10, border: '1px solid rgba(251,113,133,0.4)', background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>{ht.confirmBtn}</button>
-                  <button onClick={() => setRegeneratePending(false)} style={{ fontSize: 13, padding: '8px 18px', borderRadius: 10, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>✕</button>
+                  <button type="button" aria-label={t.common.cancel} title={t.common.cancel} onClick={() => setRegeneratePending(false)} style={{ fontSize: 13, padding: '8px 18px', borderRadius: 10, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-lo)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}>✕</button>
                 </div>
               </div>
             ) : (

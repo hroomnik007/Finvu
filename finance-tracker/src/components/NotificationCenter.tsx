@@ -201,6 +201,8 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
       {/* Bell button */}
       <button
         ref={btnRef}
+        type="button"
+        className="hit-44"
         onClick={() => (open ? setOpen(false) : openDropdown())}
         aria-label={unreadCount > 0 ? t.notifications.unreadAria.replace('{n}', String(unreadCount)) : t.notifications.ariaLabel}
         aria-expanded={open}

@@ -760,6 +760,13 @@ export const cs: Translations = {
     nextYear: 'Následující rok',
     continue: 'Pokračovat',
     closePermanently: 'Zavřít natrvalo',
+    prevMonth: 'Předchozí měsíc',
+    nextMonth: 'Následující měsíc',
+    dayDecrease: 'O den dřív',
+    dayIncrease: 'O den později',
+    iconOption: 'Ikona {n}',
+    viewScope: 'Zobrazení údajů',
+    addNew: 'Přidat novou položku',
   },
   household: {
     sharedCategoriesTitle: 'Společné kategorie',

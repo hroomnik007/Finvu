@@ -471,6 +471,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
+          aria-label={t.common.addNew}
+          title={t.common.addNew}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
@@ -538,7 +540,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
               onChange={e => setNewCatName(e.target.value)}
               style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none' }}
             />
-            <button
+            <button className="hit-44" aria-label={t.common.cancel} title={t.common.cancel}
               type="button"
               onClick={() => { setNewCatMode(false); setNewCatName('') }}
               style={{ width: 38, borderRadius: 12, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}

@@ -129,8 +129,8 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
             <GripVertical size={14} />
           </div>
           <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => onEdit(cat)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={13} /></button>
-            <button onClick={() => onDelete(cat.id!)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={13} /></button>
+            <button type="button" className="hit-44" aria-label={t.common.edit} title={t.common.edit} onClick={() => onEdit(cat)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={13} /></button>
+            <button type="button" className="hit-44" aria-label={t.common.delete} title={t.common.delete} onClick={() => onDelete(cat.id!)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={13} /></button>
           </div>
         </div>
       </div>
@@ -207,8 +207,8 @@ function SortableListCard(props: CardProps) {
         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(status.spent)}</span>
       )}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-        <button onClick={() => onEdit(cat)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={12} /></button>
-        <button onClick={() => onDelete(cat.id!)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={12} /></button>
+        <button type="button" className="hit-44" aria-label={t.common.edit} title={t.common.edit} onClick={() => onEdit(cat)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={12} /></button>
+        <button type="button" className="hit-44" aria-label={t.common.delete} title={t.common.delete} onClick={() => onDelete(cat.id!)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={12} /></button>
       </div>
     </div>
   )
@@ -725,6 +725,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
+          aria-label={t.common.addNew}
+          title={t.common.addNew}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
@@ -861,13 +863,15 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         )}
 
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '2px 2px 4px' }}>
-          {PRESET_ICONS.map(em => {
+          {PRESET_ICONS.map((em, i) => {
             const Icon = CATEGORY_ICON_MAP[em] ?? Tag
             const selected = icon === em
             return (
               <button
                 key={em}
                 type="button"
+                aria-label={t.common.iconOption.replace('{n}', String(i + 1))}
+                aria-pressed={selected}
                 onClick={() => setIcon(em)}
                 style={{
                   width: 40, height: 40, borderRadius: '50%', flexShrink: 0,

@@ -253,7 +253,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(115deg,transparent 30%,var(--aurora-glass) 50%,transparent 70%)', pointerEvents: 'none' }} />
 
           {/* Close button */}
-          <button
+          <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close}
             onClick={onClose}
             style={{ position: 'absolute', top: 16, right: 16, width: 30, height: 30, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', color: 'var(--aurora-lo)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}
           >

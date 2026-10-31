@@ -84,8 +84,12 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
   const monthNav = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 3, flexShrink: 0 }}>
       <button
+        type="button"
+        className="hit-44"
         onClick={prevMonth}
         disabled={!canGoPrev}
+        aria-label={t.common.prevMonth}
+        title={t.common.prevMonth}
         style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: canGoPrev ? 'pointer' : 'default', color: canGoPrev ? 'var(--aurora-lo)' : 'var(--aurora-faint)', borderRadius: 7 }}
         onMouseEnter={e => { if (canGoPrev) (e.currentTarget as HTMLElement).style.background = 'var(--aurora-hover)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
@@ -95,7 +99,7 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
       <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", whiteSpace: 'nowrap', padding: '0 8px', minWidth: 96, textAlign: 'center' }}>
         {t.months[month - 1]} {year}
       </span>
-      <button onClick={nextMonth} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-lo)', borderRadius: 7 }}
+      <button type="button" className="hit-44" onClick={nextMonth} aria-label={t.common.nextMonth} title={t.common.nextMonth} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-lo)', borderRadius: 7 }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--aurora-hover)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
       >
@@ -105,10 +109,13 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
   )
 
   const familyToggle = (
-    <div style={{ display: 'flex', borderRadius: 20, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', padding: 2, gap: 2 }}>
+    <div role="group" aria-label={t.common.viewScope} style={{ display: 'flex', borderRadius: 20, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', padding: 2, gap: 2 }}>
       {(['personal', 'family'] as const).map(v => (
         <button
           key={v}
+          type="button"
+          className="hit-44"
+          aria-pressed={dashView === v}
           onClick={() => onDashViewChange(v)}
           style={{
             height: 26, padding: '0 10px', borderRadius: 18, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
@@ -149,6 +156,8 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
 
   const themeToggleBtn = (
     <button
+      type="button"
+      className="hit-44"
       onClick={onToggleTheme}
       style={{
         width: 36, height: 36, borderRadius: '50%',

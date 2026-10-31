@@ -760,6 +760,13 @@ export const hu: Translations = {
     nextYear: 'Következő év',
     continue: 'Tovább',
     closePermanently: 'Végleges bezárás',
+    prevMonth: 'Előző hónap',
+    nextMonth: 'Következő hónap',
+    dayDecrease: 'Egy nappal korábban',
+    dayIncrease: 'Egy nappal később',
+    iconOption: '{n}. ikon',
+    viewScope: 'Adatnézet',
+    addNew: 'Új tétel hozzáadása',
   },
   household: {
     sharedCategoriesTitle: 'Közös kategóriák',

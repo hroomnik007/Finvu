@@ -66,9 +66,9 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.annual.title}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button type="button" aria-label={String(year - 1)} onClick={() => setYear(y => y - 1)} style={arrow}><ChevronLeft size={16} /></button>
+            <button type="button" className="hit-44" aria-label={t.common.prevYear} title={t.common.prevYear} onClick={() => setYear(y => y - 1)} style={arrow}><ChevronLeft size={16} /></button>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 16, color: 'var(--aurora-hi)', minWidth: 44, textAlign: 'center' }}>{year}</span>
-            <button type="button" aria-label={String(year + 1)} onClick={() => setYear(y => y + 1)} disabled={year >= currentYear} style={{ ...arrow, opacity: year >= currentYear ? 0.4 : 1 }}><ChevronRight size={16} /></button>
+            <button type="button" className="hit-44" aria-label={t.common.nextYear} title={t.common.nextYear} onClick={() => setYear(y => y + 1)} disabled={year >= currentYear} style={{ ...arrow, opacity: year >= currentYear ? 0.4 : 1 }}><ChevronRight size={16} /></button>
           </div>
         </div>
 
