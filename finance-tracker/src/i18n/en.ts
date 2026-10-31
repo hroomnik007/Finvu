@@ -888,6 +888,10 @@ export const en: Translations = {
     deleteDeposit: 'Delete deposit',
   },
   notifications: {
+    budgetTitle: '{name} limit',
+    budgetDesc: '{pct}% of {limit} limit',
+    savingsDesc: '{pct}% of {target} goal',
+    unreadAria: 'Notifications, {n} unread',
     title: 'Notifications',
     markAll: 'Mark all',
     clear: 'Clear',

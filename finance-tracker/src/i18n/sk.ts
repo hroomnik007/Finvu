@@ -886,6 +886,10 @@ export const sk = {
     deleteDeposit: 'Zmazať vklad',
   },
   notifications: {
+    budgetTitle: 'Limit {name}',
+    budgetDesc: '{pct} % z limitu {limit}',
+    savingsDesc: '{pct} % z cieľa {target}',
+    unreadAria: 'Notifikácie, neprečítané: {n}',
     title: 'Notifikácie',
     markAll: 'Označiť všetky',
     clear: 'Vyčistiť',

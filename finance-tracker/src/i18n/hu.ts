@@ -888,6 +888,10 @@ export const hu: Translations = {
     deleteDeposit: 'Befizetés törlése',
   },
   notifications: {
+    budgetTitle: '{name} keret',
+    budgetDesc: 'a(z) {limit} keret {pct}%-a',
+    savingsDesc: 'a(z) {target} cél {pct}%-a',
+    unreadAria: 'Értesítések, olvasatlan: {n}',
     title: 'Értesítések',
     markAll: 'Összes megjelölése',
     clear: 'Törlés',

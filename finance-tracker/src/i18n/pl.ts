@@ -888,6 +888,10 @@ export const pl: Translations = {
     deleteDeposit: 'Usuń wpłatę',
   },
   notifications: {
+    budgetTitle: 'Limit {name}',
+    budgetDesc: '{pct}% limitu {limit}',
+    savingsDesc: '{pct}% celu {target}',
+    unreadAria: 'Powiadomienia, nieprzeczytane: {n}',
     title: 'Powiadomienia',
     markAll: 'Oznacz wszystkie',
     clear: 'Wyczyść',

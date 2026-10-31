@@ -10,12 +10,14 @@ import type { Translations } from '../i18n/sk'
 import { subscribeAchievementUnlocks } from '../utils/achievementEvents'
 import { subscribeNotificationsRefresh } from '../utils/notificationEvents'
 import { getAchievementMeta } from '../data/achievements'
+import { notificationView, type NotificationView } from '../utils/notificationView'
 
 interface Notification {
   id: string
   icon: LucideIcon
   title: string
-  body: string
+  /** Short text on the detail line, after the amount when there is one. */
+  desc: string
   time: string
   read: boolean
   color: string
@@ -37,7 +39,7 @@ function achievementNotification(key: string, t: Translations): Notification {
     id: `${ACHIEVEMENT_NOTIF_PREFIX}${key}`,
     icon: Trophy,
     title: t.achievements.notificationTitle.replace('{name}', name),
-    body: '',
+    desc: '',
     time: t.notifications.today,
     read: false,
     color: meta?.color ?? '#FBBF24',
@@ -70,7 +72,7 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
   function openDropdown() {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      const width = Math.min(320, window.innerWidth - 32)
+      const width = Math.min(360, window.innerWidth - 24)
       const left = Math.max(12, Math.min(r.right - width, window.innerWidth - width - 12))
       setDropPos({ top: r.bottom + 8, left, width })
     }
@@ -104,65 +106,10 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
+  const KIND_ICON: Record<NotificationView['kind'], LucideIcon> = { budget: AlertTriangle, fixedDue: Calendar, income: TrendingUp, savings: Target }
   function feedItemToNotification(item: NotificationFeedItem): Notification {
-    switch (item.kind) {
-      case 'budget': {
-        const pct = Math.round((item.spent / item.limit) * 100)
-        return {
-          id: item.id,
-          icon: AlertTriangle,
-          title: `Limit ${item.categoryName} ${pct}%`,
-          body: t.notifications.spentOf.replace('{spent}', formatAmount(item.spent)).replace('{limit}', formatAmount(item.limit)),
-          time: t.notifications.today,
-          read: false,
-          color: pct >= 100 ? 'var(--aurora-rose)' : 'var(--aurora-amber)',
-          amount: `${Math.round(item.spent)} / ${Math.round(item.limit)} €`,
-          target: 'variable-expenses',
-        }
-      }
-      case 'fixedDue': {
-        const timeStr = item.daysUntil === 0 ? t.notifications.today : item.daysUntil === 1 ? t.notifications.tomorrow : t.notifications.inDays.replace('{n}', String(item.daysUntil))
-        return {
-          id: item.id,
-          icon: Calendar,
-          title: `${item.label} ${timeStr}`,
-          body: t.notifications.dueDay.replace('{n}', String(item.dayOfMonth)),
-          time: timeStr,
-          read: false,
-          color: '#60A5FA',
-          amount: formatAmount(item.amount),
-          target: 'fixed-expenses',
-        }
-      }
-      case 'income': {
-        const timeStr = item.daysAgo === 0 ? t.notifications.today : item.daysAgo === 1 ? t.notifications.yesterday : t.notifications.daysAgo.replace('{n}', String(item.daysAgo))
-        return {
-          id: item.id,
-          icon: TrendingUp,
-          title: t.notifications.incomeReceived,
-          body: `${item.description ?? t.notifications.incomeDefault} — ${formatAmount(item.amount)}`,
-          time: timeStr,
-          read: item.daysAgo > 0,
-          color: '#34d399',
-          amount: `+${formatAmount(item.amount)}`,
-          target: 'income',
-        }
-      }
-      case 'savings': {
-        const pct = Math.round((item.savedAmount / item.targetAmount) * 100)
-        return {
-          id: item.id,
-          icon: Target,
-          title: `${item.name} ${pct}%`,
-          body: t.notifications.goalRemaining.replace('{amount}', formatAmount(Math.max(0, item.targetAmount - item.savedAmount))),
-          time: t.notifications.currentTime,
-          read: true,
-          color: '#2DD4BF',
-          amount: `${formatAmount(item.savedAmount)} / ${formatAmount(item.targetAmount)}`,
-          target: 'savings',
-        }
-      }
-    }
+    const v = notificationView(item, t, formatAmount)
+    return { id: item.id, icon: KIND_ICON[v.kind], title: v.title, desc: v.desc, time: v.time, read: v.read, color: v.color, amount: v.amount, target: v.target }
   }
 
   async function generateNotifications(silent = false) {
@@ -255,7 +202,9 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
       <button
         ref={btnRef}
         onClick={() => (open ? setOpen(false) : openDropdown())}
-        aria-label={t.notifications.ariaLabel}
+        aria-label={unreadCount > 0 ? t.notifications.unreadAria.replace('{n}', String(unreadCount)) : t.notifications.ariaLabel}
+        aria-expanded={open}
+        aria-haspopup="dialog"
         style={{
           width: 36, height: 36, borderRadius: '50%',
           background: open ? 'var(--aurora-hover)' : 'var(--aurora-glass)',
@@ -291,12 +240,13 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
         <div ref={dropdownRef} style={{
           position: 'fixed', top: dropPos.top, left: dropPos.left,
           width: dropPos.width,
-          maxHeight: 'min(480px, 70svh)',
+          // Fits between the trigger and the bottom nav; the list scrolls.
+          maxHeight: `min(520px, calc(100svh - ${dropPos.top}px - var(--nav-clearance, 0px) - 12px))`,
           display: 'flex', flexDirection: 'column',
-          background: 'var(--aurora-glass)',
+          // Opaque surface (was translucent glass, content bled through).
+          background: 'var(--aurora-panel)',
           border: '1px solid var(--aurora-gline)', borderRadius: 20,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.35)', zIndex: 9000,
+          boxShadow: '0 18px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.25)', zIndex: 9000,
           animation: 'fadeUp 0.18s ease both', overflow: 'hidden',
         }}>
           {/* Header */}
@@ -334,11 +284,14 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)' }}>{t.notifications.emptyTitle}</div>
             </div>
           ) : (
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
               {notifications.map((n, i) => (
                 <div
                   key={n.id}
                   onClick={() => handleItemClick(n)}
+                  role={n.target ? 'button' : undefined}
+                  tabIndex={n.target ? 0 : undefined}
+                  onKeyDown={e => { if (n.target && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleItemClick(n) } }}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 11,
                     padding: '13px 16px',
@@ -370,15 +323,12 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
                       <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: n.read ? 500 : 700, color: 'var(--aurora-hi)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{n.title}</p>
                       <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', flexShrink: 0, whiteSpace: 'nowrap' }}>{n.time}</p>
                     </div>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', lineHeight: 1.45, marginBottom: n.amount ? 4 : 0 }}>{n.body}</p>
-                    {n.amount && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: n.color }}>{n.amount}</span>
-                        {n.target && <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>· {t.notifications.openLink}</span>}
-                      </div>
-                    )}
-                    {!n.amount && n.target && (
-                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', fontWeight: 600, marginTop: 4 }}>{t.notifications.openLink}</p>
+                    {(n.amount || n.desc) && (
+                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {n.amount && <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: n.color }}>{n.amount}</span>}
+                        {n.amount && n.desc && ' · '}
+                        {n.desc}
+                      </p>
                     )}
                   </div>
                   {/* Unread dot */}
