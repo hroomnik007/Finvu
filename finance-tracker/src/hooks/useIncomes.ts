@@ -44,46 +44,43 @@ export async function fetchIncomes(
   trackingStart: string | null | undefined,
   scope: DataScope = 'personal',
 ): Promise<Income[]> {
-  try {
-    const monthStr = month !== undefined && year !== undefined
-      ? `${year}-${String(month).padStart(2, '0')}`
-      : undefined
-    const data = await getAllTransactions({ type: 'income', month: monthStr, scope })
+  // Errors propagate so the page can show an error + retry instead of "no data".
+  const monthStr = month !== undefined && year !== undefined
+    ? `${year}-${String(month).padStart(2, '0')}`
+    : undefined
+  const data = await getAllTransactions({ type: 'income', month: monthStr, scope })
 
-    if (monthStr) {
-      const trackingYM = trackingStart ? trackingStart.substring(0, 7) : null
-      if (trackingYM && monthStr < trackingYM) {
-        return data.filter(t => !t.isFixed).map(toIncome)
-      }
-      // No month filter here by design: a recurring income created in any past
-      // month must appear in every subsequent month. The backend month param
-      // filters by creation date, not recurrence — adding it would hide older
-      // recurring incomes. Client-side filter on line below enforces t.date <= monthStr.
-      const recurring = await getAllTransactions({ type: 'income', isFixed: true, scope })
-      // A recurring income is a series (same owner and description): only its
-      // latest price dated up to this month counts, and only while not ended.
-      const latest = new Map<string, ApiTransaction>()
-      for (const t of recurring) {
-        if (t.date.substring(0, 7) > monthStr) continue
-        if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
-        // Same series key and same-date tie-break as the backend cards and
-        // household stats (owner + description, later-created row wins).
-        const key = `${t.userId}|${t.description ?? ''}`
-        const cur = latest.get(key)
-        if (!cur || isNewerRow(t, cur)) latest.set(key, t)
-      }
-      const extra = [...latest.values()]
-        .filter(t => !isEndedInMonth(t.endedOn, monthStr))
-        .map(t => t.date.substring(0, 7) !== monthStr
-          ? { ...t, date: adjustDateToMonth(t.date, month!, year!) }
-          : t
-        )
-      return [...data.filter(t => !t.isFixed), ...extra].map(toIncome)
+  if (monthStr) {
+    const trackingYM = trackingStart ? trackingStart.substring(0, 7) : null
+    if (trackingYM && monthStr < trackingYM) {
+      return data.filter(t => !t.isFixed).map(toIncome)
     }
-    return data.map(toIncome)
-  } catch {
-    return []
+    // No month filter here by design: a recurring income created in any past
+    // month must appear in every subsequent month. The backend month param
+    // filters by creation date, not recurrence — adding it would hide older
+    // recurring incomes. Client-side filter on line below enforces t.date <= monthStr.
+    const recurring = await getAllTransactions({ type: 'income', isFixed: true, scope })
+    // A recurring income is a series (same owner and description): only its
+    // latest price dated up to this month counts, and only while not ended.
+    const latest = new Map<string, ApiTransaction>()
+    for (const t of recurring) {
+      if (t.date.substring(0, 7) > monthStr) continue
+      if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
+      // Same series key and same-date tie-break as the backend cards and
+      // household stats (owner + description, later-created row wins).
+      const key = `${t.userId}|${t.description ?? ''}`
+      const cur = latest.get(key)
+      if (!cur || isNewerRow(t, cur)) latest.set(key, t)
+    }
+    const extra = [...latest.values()]
+      .filter(t => !isEndedInMonth(t.endedOn, monthStr))
+      .map(t => t.date.substring(0, 7) !== monthStr
+        ? { ...t, date: adjustDateToMonth(t.date, month!, year!) }
+        : t
+      )
+    return [...data.filter(t => !t.isFixed), ...extra].map(toIncome)
   }
+  return data.map(toIncome)
 }
 
 export function useIncomes(month?: number, year?: number, scope: DataScope = 'personal') {
@@ -91,7 +88,7 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
   const qc = useQueryClient()
   const qKey = incomeQueryKey(month, year, user?.tracking_start_date, scope)
 
-  const { data: incomes = [] } = useQuery({
+  const { data: incomes = [], isLoading, isError, refetch } = useQuery({
     queryKey: qKey,
     queryFn: () => fetchIncomes(month, year, user?.tracking_start_date, scope),
     enabled: !!user,
@@ -140,5 +137,5 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
     await invalidate()
   }, [invalidate])
 
-  return { incomes, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome }
+  return { incomes, isLoading, isError, refetch, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome }
 }

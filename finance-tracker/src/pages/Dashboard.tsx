@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, CalendarRange, X, Tag, Target, LayoutTemplate } from 'lucide-react'
 import { ExpenseHeatmap } from '../components/ExpenseHeatmap'
@@ -8,6 +8,7 @@ import { StreakBadge } from '../components/StreakBadge'
 import { StreakModal } from '../components/StreakModal'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
+import { HeroAmountPlaceholder, QueryError, Skeleton } from '../components/QueryState'
 import { DailyBudgetCard } from '../components/DailyBudgetCard'
 import { dailyBudget } from '../utils/dailyBudget'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
@@ -93,10 +94,10 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
 
   // Family view lists every sharing member's rows; the server falls back to the
   // caller's own rows when they have no household / sharing is off.
-  const { incomes: allIncomes } = useIncomes(month, year, dashView)
-  const { fixedExpenses: allMonthFixedExpenses } = useFixedExpenses(month, year, dashView)
+  const { incomes: allIncomes, isLoading: incLoading, isError: incError, refetch: incRetry } = useIncomes(month, year, dashView)
+  const { fixedExpenses: allMonthFixedExpenses, isLoading: fixLoading, isError: fixError, refetch: fixRetry } = useFixedExpenses(month, year, dashView)
   const { fixedExpenses: allFixedExpenses } = useFixedExpenses(undefined, undefined, dashView)
-  const { variableExpenses: allVariableExpenses } = useVariableExpenses(month, year, dashView)
+  const { variableExpenses: allVariableExpenses, isLoading: varLoading, isError: varError, refetch: varRetry } = useVariableExpenses(month, year, dashView)
   const { categories } = useCategories()
   // A fixed expense only counts once its due day in the viewed month has
   // actually passed — see isFixedExpenseDue.
@@ -192,11 +193,19 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     enabled: !!user,
   })
 
-  const { data: summaryCards = null } = useQuery({
+  const { data: summaryCards = null, isLoading: sumLoading, isError: sumError, refetch: sumRetry } = useQuery({
     queryKey: ['summaryCards', year, month, dashView],
     queryFn: () => getSummaryCards(year, month, dashView),
     enabled: !!user,
   })
+
+  // Loading / error must not look like "no data" (0,00 €, "Žiadne výdavky").
+  const dashLoading = incLoading || fixLoading || varLoading || (sumLoading && !summaryCards)
+  const dashFailed = !dashLoading && (incError || fixError || varError || (sumError && !summaryCards))
+  const retryDash = () => Promise.all([incRetry(), fixRetry(), varRetry(), sumRetry()])
+  const heroValue = (node: ReactNode) => dashLoading
+    ? <Skeleton width={64} height={14} style={{ marginTop: 2 }} />
+    : dashFailed ? <span style={{ color: 'var(--aurora-faint)' }}>—</span> : node
 
   const todayStr = formatLongDate(new Date())
 
@@ -345,6 +354,7 @@ const upcomingFixed = useMemo(() => {
       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
         {t.dashboard.balance} · {t.months[month - 1]} {year}
       </div>
+      {dashFailed ? <QueryError compact onRetry={retryDash} /> : dashLoading ? <HeroAmountPlaceholder error={false} /> : (
       <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
         {balanceSettled ? (
           <span style={{
@@ -363,6 +373,7 @@ const upcomingFixed = useMemo(() => {
           {balanceParts.rest}
         </span>
       </div>
+      )}
       <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
         <div
           onClick={() => onNavigate('income')}
@@ -371,7 +382,7 @@ const upcomingFixed = useMemo(() => {
           style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         >
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.income}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{formatAmount(animatedIncome)}</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedIncome))}</div>
         </div>
         <div
           onClick={() => onNavigate('variable-expenses')}
@@ -380,11 +391,11 @@ const upcomingFixed = useMemo(() => {
           style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         >
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.expenses}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', lineHeight: 1.15, wordBreak: 'break-word' }}>{formatAmount(animatedExpenses)}</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedExpenses))}</div>
         </div>
         <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.savingsRate}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{savRate}%</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{heroValue(`${savRate}%`)}</div>
         </div>
       </div>
     </HeroCard>
@@ -413,7 +424,18 @@ const upcomingFixed = useMemo(() => {
   )
 
   const pieChartCard = (
-    <CategoryDonutCard data={pieData} title={t.dashboard.expensesByCategory} total={totalExpenses} />
+    dashLoading || dashFailed ? (
+      <GlassCard radius={20} style={{ padding: 20 }}>
+        <div role={dashLoading ? 'status' : undefined} aria-busy={dashLoading || undefined} aria-label={dashLoading ? t.common.loading : undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700 }}>{t.dashboard.expensesByCategory}</div>
+          {dashLoading
+            ? <Skeleton width={180} height={180} radius={90} />
+            : <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: '40px 0' }}>{t.common.loadFailed}</p>}
+        </div>
+      </GlassCard>
+    ) : (
+      <CategoryDonutCard data={pieData} title={t.dashboard.expensesByCategory} total={totalExpenses} />
+    )
   )
 
   const heatmapCard = (

@@ -30,22 +30,19 @@ export function variableExpenseQueryKey(month: number | undefined, year: number 
 }
 
 export async function fetchVariableExpenses(month?: number, year?: number, scope: DataScope = 'personal'): Promise<VariableExpense[]> {
-  try {
-    const monthStr = month !== undefined && year !== undefined
-      ? `${year}-${String(month).padStart(2, '0')}`
-      : undefined
-    const data = await getAllTransactions({ type: 'expense', isFixed: false, month: monthStr, scope })
-    return data.map(toVariableExpense)
-  } catch {
-    return []
-  }
+  // Errors propagate so the page can show an error + retry instead of "no data".
+  const monthStr = month !== undefined && year !== undefined
+    ? `${year}-${String(month).padStart(2, '0')}`
+    : undefined
+  const data = await getAllTransactions({ type: 'expense', isFixed: false, month: monthStr, scope })
+  return data.map(toVariableExpense)
 }
 
 export function useVariableExpenses(month?: number, year?: number, scope: DataScope = 'personal') {
   const { user } = useAuth()
   const qc = useQueryClient()
 
-  const { data: variableExpenses = [] } = useQuery({
+  const { data: variableExpenses = [], isLoading, isError, refetch } = useQuery({
     queryKey: variableExpenseQueryKey(month, year, scope),
     queryFn: () => fetchVariableExpenses(month, year, scope),
     enabled: !!user,
@@ -85,5 +82,5 @@ export function useVariableExpenses(month?: number, year?: number, scope: DataSc
     await invalidate()
   }, [invalidate])
 
-  return { variableExpenses, addVariableExpense, updateVariableExpense, deleteVariableExpense }
+  return { variableExpenses, isLoading, isError, refetch, addVariableExpense, updateVariableExpense, deleteVariableExpense }
 }

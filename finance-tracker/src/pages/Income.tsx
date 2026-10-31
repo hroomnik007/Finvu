@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DateInput } from '../components/DateInput'
 import { CsvImportModal } from '../components/CsvImportModal'
 import { GlassCard } from '../components/GlassCard'
+import { HeroAmountPlaceholder, ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { useIncomes } from '../hooks/useIncomes'
 import { useFormatters } from '../hooks/useFormatters'
@@ -88,7 +89,8 @@ function FormBody({ form, setForm, t }: FormBodyProps) {
 
 
 export function IncomePage({ month, year }: IncomePageProps) {
-  const { incomes, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
+  const { incomes, isLoading: listLoading, isError: listError, refetch: listRetry, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
+  const listFailed = listError && incomes.length === 0
   const { formatAmount, formatAmountParts, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
   const feedback = useSaveFeedback()
@@ -195,6 +197,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
               {t.income.title} · {MONTH_NAME} {year}
             </div>
+            {listLoading || listFailed ? <HeroAmountPlaceholder error={listFailed} /> : (
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
               <span style={{
                 fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
@@ -207,6 +210,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                 {formatAmountParts(animatedTotal).rest}
               </span>
             </div>
+            )}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.income.recurringLabel}</div>
@@ -229,7 +233,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
           </GlassCard>
 
           {/* List / empty state */}
-          {sorted.length === 0 ? (
+          {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : sorted.length === 0 ? (
             <GlassCard radius={18}>
               <div className="empty-state">
                 <PiggyBank size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />

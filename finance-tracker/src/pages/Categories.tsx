@@ -24,6 +24,7 @@ import { BulkBar } from '../components/BulkBar'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { GlassCard } from '../components/GlassCard'
+import { ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useCategories } from '../hooks/useCategories'
@@ -290,7 +291,8 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
 }
 
 export function CategoriesPage({ showToast }: { showToast: (msg: string) => void }) {
-  const { categories, addCategory, updateCategory, deleteCategory, reload } = useCategories()
+  const { categories, isLoading: listLoading, isError: listError, refetch: listRetry, addCategory, updateCategory, deleteCategory, reload } = useCategories()
+  const listFailed = listError && categories.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
   const feedback = useSaveFeedback()
@@ -615,7 +617,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             </div>
           </HeroCard>
 
-          {categories.length === 0 ? (
+          {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : categories.length === 0 ? (
             <GlassCard radius={18}>
               <div className="empty-state">
                 <Tag size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />

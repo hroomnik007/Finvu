@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { DateInput } from '../components/DateInput'
 import { CsvImportModal } from '../components/CsvImportModal'
 import { GlassCard } from '../components/GlassCard'
+import { HeroAmountPlaceholder, ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useFixedExpenses } from '../hooks/useFixedExpenses'
@@ -83,8 +84,9 @@ function CategoryCircle({ icon: Icon, label, selected, accent, onClick }: {
 
 
 export function VariableExpensesPage({ month, year, showToast }: VariableExpensesPageProps) {
-  const { variableExpenses, addVariableExpense, updateVariableExpense, deleteVariableExpense } =
+  const { variableExpenses, isLoading: listLoading, isError: listError, refetch: listRetry, addVariableExpense, updateVariableExpense, deleteVariableExpense } =
     useVariableExpenses(month, year)
+  const listFailed = listError && variableExpenses.length === 0
   const { fixedExpenses } = useFixedExpenses(month, year)
   const { categories, addCategory } = useCategories()
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
@@ -279,6 +281,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
               {t.expenses.variable.title} · {MONTH_NAME_VAR} {year}
             </div>
+            {listLoading || listFailed ? <HeroAmountPlaceholder error={listFailed} /> : (
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
               <span style={{
                 fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
@@ -291,8 +294,9 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 {formatAmountParts(animatedFilteredTotal).rest}
               </span>
             </div>
+            )}
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 12 }}>
-              {t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length))}
+              {listLoading || listFailed ? '\u00a0' : t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length))}
             </div>
           </HeroCard>
 
@@ -326,7 +330,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
           {/* Mobile: day-grouped GlassCard rows */}
           <div className="lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }} onClick={() => setOpenSwipeId(null)}>
-            {filteredSorted.length === 0 ? (
+            {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : filteredSorted.length === 0 ? (
               <GlassCard radius={18}>
                 <div className="empty-state">
                   <Receipt size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
@@ -376,7 +380,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
           {/* Desktop: day-grouped GlassCard rows */}
           <div className="hidden lg:block">
-            {filteredSorted.length === 0 ? (
+            {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : filteredSorted.length === 0 ? (
               <GlassCard radius={20}>
                 <div className="empty-state">
                   <Receipt size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />

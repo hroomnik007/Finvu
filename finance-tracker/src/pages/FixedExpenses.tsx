@@ -9,6 +9,7 @@ import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CsvImportModal } from '../components/CsvImportModal'
 import { GlassCard } from '../components/GlassCard'
+import { ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { useFixedExpenses, isEndedInMonth } from '../hooks/useFixedExpenses'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
@@ -66,7 +67,8 @@ interface FixedExpensesPageProps {
 }
 
 export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
-  const { fixedExpenses: allFixed, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense } = useFixedExpenses(undefined, undefined, 'personal', true)
+  const { fixedExpenses: allFixed, isLoading: listLoading, isError: listError, refetch: listRetry, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense } = useFixedExpenses(undefined, undefined, 'personal', true)
+  const listFailed = listError && allFixed.length === 0
   const nowYM = useMemo(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }, [])
   // Running items drive the totals and lists; ended ones sit in their own section
   const fixedExpenses = useMemo(() => allFixed.filter(e => !isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
@@ -529,7 +531,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
           {/* Expense list — upcoming/past split (mobile: hidden while calendar view is active) */}
           <div className={mobileView === 'list' ? undefined : 'hidden lg:block'}>
-          {fixedExpenses.length === 0 ? (
+          {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : fixedExpenses.length === 0 ? (
             <GlassCard radius={18}>
               <div className="empty-state">
                 <Lock size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />

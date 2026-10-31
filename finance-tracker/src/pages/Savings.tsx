@@ -5,6 +5,7 @@ import { CompactModal } from '../components/CompactModal'
 import { SavingsDetailModal } from '../components/SavingsDetailModal'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { GlassCard } from '../components/GlassCard'
+import { ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { useSavings } from '../hooks/useSavings'
 import { useFormatters } from '../hooks/useFormatters'
@@ -64,7 +65,8 @@ function goalMonthly(goal: SavingsGoal): number {
 }
 
 export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
-  const { goals, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal, reload: reloadGoals } = useSavings()
+  const { goals, isLoading: listLoading, isError: listError, refetch: listRetry, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal, reload: reloadGoals } = useSavings()
+  const listFailed = listError && goals.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
   const feedback = useSaveFeedback()
@@ -394,7 +396,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         </HeroCard>
 
         {/* Goals grid */}
-        {goals.length === 0 ? (
+        {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : goals.length === 0 ? (
           <GlassCard radius={20} style={{ textAlign: 'center', padding: '48px 24px' }}>
             <PiggyBank size={40} color="var(--aurora-faint)" style={{ marginBottom: 12 }} />
             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>{t.savings.noGoals}</p>
