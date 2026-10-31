@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import {
   LayoutDashboard, TrendingUp, CreditCard, Settings,
-  Receipt, Lock, Tag, Search, ChevronLeft, ChevronRight, ChevronDown, PiggyBank,
+  Receipt, Lock, Tag, Search, ChevronLeft, ChevronRight, ChevronDown, PiggyBank, CalendarRange,
 } from 'lucide-react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
@@ -296,6 +296,20 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
               {isExpanded && t.nav.savings}
             </button>
           )}
+
+          {/* Ročný prehľad */}
+          <button
+            onClick={() => handleChange('annual')}
+            className="t-nav"
+            style={navItemStyle(current === 'annual')}
+            onMouseEnter={e => hoverOn(e, current === 'annual')}
+            onMouseLeave={e => hoverOff(e, current === 'annual')}
+            aria-label={t.nav.annual}
+            aria-current={current === 'annual' ? 'page' : undefined}
+          >
+            <CalendarRange size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+            {isExpanded && t.nav.annual}
+          </button>
 
           {/* Domácnosť */}
           {user?.household_enabled && (

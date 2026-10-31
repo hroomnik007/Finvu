@@ -1003,6 +1003,10 @@ export const pl: Translations = {
     fixed: 'Cykliczne',
   },
   annual: {
+    chartTitle: 'Przychody i wydatki według miesięcy',
+    barAria: '{month}: przychody {income}, wydatki {expense}',
+    barAriaEmpty: '{month}: brak danych',
+    chartAria: 'Wykres przychodów i wydatków za rok {year}',
     title: 'Przegląd roczny',
     month: 'Miesiąc',
     balance: 'Saldo',

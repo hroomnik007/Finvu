@@ -1003,6 +1003,10 @@ export const cs: Translations = {
     fixed: 'Pravidelné',
   },
   annual: {
+    chartTitle: 'Příjmy a výdaje po měsících',
+    barAria: '{month}: příjmy {income}, výdaje {expense}',
+    barAriaEmpty: '{month}: bez údajů',
+    chartAria: 'Graf příjmů a výdajů za rok {year}',
     title: 'Roční přehled',
     month: 'Měsíc',
     balance: 'Rozdíl',

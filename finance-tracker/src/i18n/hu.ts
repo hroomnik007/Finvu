@@ -1003,6 +1003,10 @@ export const hu: Translations = {
     fixed: 'Rendszeres',
   },
   annual: {
+    chartTitle: 'Bevételek és kiadások havonta',
+    barAria: '{month}: bevétel {income}, kiadás {expense}',
+    barAriaEmpty: '{month}: nincs adat',
+    chartAria: 'Bevételek és kiadások grafikonja, {year}',
     title: 'Éves áttekintés',
     month: 'Hónap',
     balance: 'Egyenleg',

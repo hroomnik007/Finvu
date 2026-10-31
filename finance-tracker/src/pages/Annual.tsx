@@ -4,12 +4,16 @@ import { ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import { GlassCard } from '../components/GlassCard'
 import { QueryError, Skeleton } from '../components/QueryState'
 import { getMonthlySeries } from '../api/transactions'
-import { annualCsv, savingsRatePct, yearCategories, yearTotals } from '../utils/annual'
+import { annualCsv, annualRows, savingsRatePct, yearCategories, yearTotals } from '../utils/annual'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 
 const th: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', padding: '6px 6px', textAlign: 'right' }
 const td: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap' }
+// First column stays put while the table scrolls sideways on narrow screens.
+const stickyCol: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 1, background: 'var(--aurora-panel)', textAlign: 'left' }
+const statLabel: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--aurora-faint)', marginBottom: 4 }
+const sectionTitle: React.CSSProperties = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: 0 }
 
 function downloadCsv(content: string, filename: string) {
   const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8;' }))
@@ -21,7 +25,7 @@ function downloadCsv(content: string, filename: string) {
 }
 
 export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { formatAmount } = useFormatters()
   const currentYear = new Date().getFullYear()
   const [year, setYear] = useState(currentYear)
@@ -36,6 +40,13 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
   const maxCat = Math.max(1, ...categories.map(c => c.total))
   const balance = totals.income - totals.expense
   const rate = savingsRatePct(totals.income, totals.expense)
+  const rows = annualRows(year, months)
+  const shortMonth = (i: number) => {
+    const m = new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(year, i, 15)).replace(/\.$/, '')
+    return m.charAt(0).toLocaleUpperCase(locale) + m.slice(1)
+  }
+  const signed = (v: number) => `${v >= 0 ? '+' : '\u2212'}${formatAmount(Math.abs(v))}`
+  const dash = <><span aria-hidden="true">—</span><span className="sr-only">{formatAmount(0)}</span></>
 
   function exportCsv() {
     downloadCsv(
@@ -51,7 +62,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px var(--page-pad-bottom-nofab)' }}>
-      <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.annual.title}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -79,53 +90,79 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
           <QueryError onRetry={refetch} />
         ) : (
           <>
-          <GlassCard radius={18} style={{ padding: '14px 16px' }}>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              {([
-                [t.dashboard.income, `+${formatAmount(totals.income)}`, 'var(--aurora-emerald)'],
-                [t.dashboard.expenses, `−${formatAmount(totals.expense)}`, 'var(--aurora-rose)'],
-                [t.annual.balance, `${balance >= 0 ? '+' : '−'}${formatAmount(Math.abs(balance))}`, balance >= 0 ? 'var(--aurora-emerald)' : 'var(--aurora-rose)'],
-                ...(rate !== null ? [[t.dashboard.savingsRate, `${rate} %`, 'var(--aurora-hi)']] : []),
-              ] as [string, string, string][]).map(([label, value, color]) => (
-                <div key={label} style={{ flex: '1 1 120px' }}>
-                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--aurora-faint)', marginBottom: 2 }}>{label}</div>
-                  <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color }}>{value}</div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
+          <div className="annual-stats">
+            {([
+              [t.dashboard.income, `+${formatAmount(totals.income)}`, 'var(--aurora-emerald)'],
+              [t.dashboard.expenses, `\u2212${formatAmount(totals.expense)}`, 'var(--aurora-rose)'],
+              [t.annual.balance, signed(balance), balance >= 0 ? 'var(--aurora-emerald)' : 'var(--aurora-rose)'],
+              ...(rate !== null ? [[t.dashboard.savingsRate, `${rate} %`, 'var(--aurora-hi)']] : []),
+            ] as [string, string, string][]).map(([label, value, color]) => (
+              <GlassCard key={label} radius={16} style={{ padding: '14px 16px' }}>
+                <div style={statLabel}>{label}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+              </GlassCard>
+            ))}
+          </div>
 
-          <GlassCard radius={18} style={{ padding: '8px 10px', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 360 }}>
-              <thead>
-                <tr>
-                  <th style={{ ...th, textAlign: 'left' }}>{t.annual.month}</th>
-                  <th style={th}>{t.dashboard.income}</th>
-                  <th style={th}>{t.dashboard.expenses}</th>
-                  <th style={th}>{t.annual.balance}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {months.map(m => {
-                  const b = m.income - m.expense
+          <div className="annual-grid">
+            <GlassCard radius={18} style={{ padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p id="annual-chart-title" style={sectionTitle}>{t.annual.chartTitle}</p>
+              <div role="group" aria-labelledby="annual-chart-title" aria-description={t.annual.chartAria.replace('{year}', String(year))} style={{ display: 'flex', alignItems: 'stretch', gap: 2, flex: 1, minHeight: 190 }}>
+                {rows.map(r => {
+                  const name = t.months[r.index]
+                  const label = r.empty
+                    ? t.annual.barAriaEmpty.replace('{month}', name)
+                    : t.annual.barAria.replace('{month}', name).replace('{income}', formatAmount(r.income)).replace('{expense}', formatAmount(r.expense))
                   return (
-                    <tr key={m.month} style={{ borderTop: '1px solid var(--aurora-gline)' }}>
-                      <td style={{ ...td, textAlign: 'left' }}>{t.months[Number(m.month.slice(5, 7)) - 1]}</td>
-                      <td style={{ ...td, color: 'var(--aurora-emerald)' }}>{formatAmount(m.income)}</td>
-                      <td style={{ ...td, color: 'var(--aurora-rose)' }}>{formatAmount(m.expense)}</td>
-                      <td style={{ ...td, fontWeight: 700, color: b >= 0 ? 'var(--aurora-hi)' : 'var(--aurora-rose)' }}>{b >= 0 ? '' : '−'}{formatAmount(Math.abs(b))}</td>
-                    </tr>
+                    <div key={r.month} role="img" aria-label={label} title={label} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <div aria-hidden="true" style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 2, borderBottom: '1px solid var(--aurora-gline)' }}>
+                        <div style={{ width: '38%', maxWidth: 14, height: `max(2px, ${r.incomePct}%)`, borderRadius: '3px 3px 0 0', background: 'var(--aurora-emerald)', opacity: r.income > 0 ? 1 : 0.35 }} />
+                        <div style={{ width: '38%', maxWidth: 14, height: `max(2px, ${r.expensePct}%)`, borderRadius: '3px 3px 0 0', background: 'var(--aurora-rose)', opacity: r.expense > 0 ? 1 : 0.35 }} />
+                      </div>
+                      <span aria-hidden="true" style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: r.empty ? 'var(--aurora-faint)' : 'var(--aurora-lo)', opacity: r.empty ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '100%' }}>{shortMonth(r.index)}</span>
+                    </div>
                   )
                 })}
-                <tr style={{ borderTop: '2px solid var(--aurora-gline)' }}>
-                  <td style={{ ...td, textAlign: 'left', fontWeight: 700 }}>{t.annual.total}</td>
-                  <td style={{ ...td, fontWeight: 700, color: 'var(--aurora-emerald)' }}>{formatAmount(totals.income)}</td>
-                  <td style={{ ...td, fontWeight: 700, color: 'var(--aurora-rose)' }}>{formatAmount(totals.expense)}</td>
-                  <td style={{ ...td, fontWeight: 700 }}>{balance >= 0 ? '' : '−'}{formatAmount(Math.abs(balance))}</td>
-                </tr>
-              </tbody>
-            </table>
-          </GlassCard>
+              </div>
+              <div aria-hidden="true" style={{ display: 'flex', gap: 16, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--aurora-emerald)' }} />{t.dashboard.income}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--aurora-rose)' }} />{t.dashboard.expenses}</span>
+              </div>
+            </GlassCard>
+
+            <GlassCard radius={18} style={{ padding: '8px 10px', overflowX: 'auto', background: 'var(--aurora-panel)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
+                <caption className="sr-only">{t.annual.title} {year}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ ...th, ...stickyCol }}>{t.annual.month}</th>
+                    <th scope="col" style={th}>{t.dashboard.income}</th>
+                    <th scope="col" style={th}>{t.dashboard.expenses}</th>
+                    <th scope="col" style={th}>{t.annual.balance}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(r => {
+                    const faint = r.empty ? { color: 'var(--aurora-faint)', opacity: 0.6 } : null
+                    return (
+                      <tr key={r.month} style={{ borderTop: '1px solid var(--aurora-gline)' }}>
+                        <th scope="row" style={{ ...td, ...stickyCol, fontWeight: 500, ...faint }}>{t.months[r.index]}</th>
+                        <td style={{ ...td, color: 'var(--aurora-emerald)', ...faint }}>{r.income > 0 ? formatAmount(r.income) : dash}</td>
+                        <td style={{ ...td, color: 'var(--aurora-rose)', ...faint }}>{r.expense > 0 ? `\u2212${formatAmount(r.expense)}` : dash}</td>
+                        <td style={{ ...td, fontWeight: 700, color: r.balance >= 0 ? 'var(--aurora-hi)' : 'var(--aurora-rose)', ...faint }}>{r.empty ? dash : signed(r.balance)}</td>
+                      </tr>
+                    )
+                  })}
+                  <tr style={{ borderTop: '2px solid var(--aurora-gline)' }}>
+                    <th scope="row" style={{ ...td, ...stickyCol, fontWeight: 700 }}>{t.annual.total}</th>
+                    <td style={{ ...td, fontWeight: 700, color: 'var(--aurora-emerald)' }}>{formatAmount(totals.income)}</td>
+                    <td style={{ ...td, fontWeight: 700, color: 'var(--aurora-rose)' }}>{totals.expense > 0 ? `\u2212${formatAmount(totals.expense)}` : dash}</td>
+                    <td style={{ ...td, fontWeight: 700 }}>{signed(balance)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </GlassCard>
+          </div>
 
           {categories.length > 0 && (
             <GlassCard radius={18} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

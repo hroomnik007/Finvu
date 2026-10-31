@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { annualCsv, savingsRatePct, yearCategories, yearTotals } from './annual'
+import { annualCsv, annualRows, savingsRatePct, yearCategories, yearTotals } from './annual'
 import type { SeriesMonth } from '../api/transactions'
 
 const months: SeriesMonth[] = [
@@ -25,5 +25,23 @@ describe('annual helpers', () => {
     expect(csv).toContain('"Január 2026",2000.00,1500.00,500.00')
     expect(csv).toContain('"Spolu",4000.00,2500.00,1500.00')
     expect(csv).toContain(`"'=SUM(A1)",50.00`)
+  })
+})
+
+describe('annualRows', () => {
+  it('fills all 12 months and marks empty ones', () => {
+    const rows = annualRows(2026, [
+      { month: '2026-08', income: 4680, expense: 1585.1 },
+      { month: '2026-11', income: 4000, expense: 0 },
+    ])
+    expect(rows).toHaveLength(12)
+    expect(rows[0]).toMatchObject({ month: '2026-01', empty: true, incomePct: 0, expensePct: 0 })
+    expect(rows[7]).toMatchObject({ month: '2026-08', empty: false, incomePct: 100, balance: 3094.9 })
+    expect(rows[7].expensePct).toBeCloseTo(33.9, 1)
+    expect(rows[10]).toMatchObject({ empty: false, expense: 0, expensePct: 0 })
+  })
+  it('ignores months from another year and handles an all-empty year', () => {
+    const rows = annualRows(2026, [{ month: '2025-12', income: 10, expense: 5 }])
+    expect(rows.every(r => r.empty && r.incomePct === 0)).toBe(true)
   })
 })

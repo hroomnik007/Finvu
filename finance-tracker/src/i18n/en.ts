@@ -1003,6 +1003,10 @@ export const en: Translations = {
     fixed: 'Recurring',
   },
   annual: {
+    chartTitle: 'Income and expenses by month',
+    barAria: '{month}: income {income}, expenses {expense}',
+    barAriaEmpty: '{month}: no data',
+    chartAria: 'Income and expenses chart for {year}',
     title: 'Annual overview',
     month: 'Month',
     balance: 'Balance',

@@ -1001,6 +1001,10 @@ export const sk = {
     fixed: 'Pravidelné',
   },
   annual: {
+    chartTitle: 'Príjmy a výdavky po mesiacoch',
+    barAria: '{month}: príjmy {income}, výdavky {expense}',
+    barAriaEmpty: '{month}: bez údajov',
+    chartAria: 'Graf príjmov a výdavkov za rok {year}',
     title: 'Ročný prehľad',
     month: 'Mesiac',
     balance: 'Rozdiel',
