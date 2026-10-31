@@ -46,9 +46,33 @@ export default defineConfig({
         // listener, so the prompt's updateServiceWorker(true) → messageSkipWaiting()
         // has nothing to talk to and the page never reloads. Leave them off.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Export/import libraries (xlsx, jsPDF and its helpers, pdf.js, the PDF
+        // font) are big and only loaded when the user exports or imports a file.
+        // They are left out of the install-time precache and cached on first use
+        // by the lazy-chunks rule below, so the app shell still works offline.
+        globIgnores: [
+          '**/xlsx-*.js',
+          '**/pdf-*.js',
+          '**/jspdf*.js',
+          '**/html2canvas-*.js',
+          '**/index.es-*.js',
+          '**/purify.es-*.js',
+          '**/pdfFont-*.js',
+          '**/papaparse*.js',
+        ],
         // index.html loads /theme-init.js?v=N; match it to the precached file offline.
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/],
         runtimeCaching: [
+          {
+            // Hashed file names never change content, so cache-first is safe.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /\/assets\/[^/]+\.m?js$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'lazy-chunks',
+              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 60 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',

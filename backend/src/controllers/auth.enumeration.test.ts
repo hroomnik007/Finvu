@@ -23,11 +23,13 @@ vi.mock("../db", () => {
     },
   };
 });
+vi.mock("../lib/lockoutStore", () => import("../test/memoryLockoutStore"));
 const sendEmail = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("../lib/email", async (orig) => ({ ...(await orig<typeof import("../lib/email")>()), sendEmail }));
 
 const { register, login, getAuthMethods } = await import("./auth.controller");
 const { errorHandler } = await import("../middleware/errorHandler");
+const lockouts = await import("../test/memoryLockoutStore");
 
 function fakeRes() {
   const out: { status: number; body: unknown } = { status: 200, body: undefined };
@@ -44,7 +46,7 @@ const req = (body: unknown, query: Record<string, string> = {}) =>
 const passwordHash = bcrypt.hashSync("correct-horse", 4);
 const baseUser = { id: "u1", email: "a@b.sk", name: "A", emailVerified: true, isDeactivated: false, googleId: null };
 
-beforeEach(() => { state.selects = []; sendEmail.mockClear(); });
+beforeEach(() => { state.selects = []; lockouts.rows.clear(); sendEmail.mockClear(); });
 
 describe("GET /api/auth/methods", () => {
   it("answers the same for every email, without looking anything up", async () => {

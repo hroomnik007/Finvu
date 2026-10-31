@@ -36,6 +36,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { resetDemoAccount, DEMO_EMAIL } from "../lib/resetDemo";
 import { parseImageDataUrl, saveAvatarFile, deleteAvatarFiles } from "../lib/avatarStorage";
 import { releaseOwnedHouseholds } from "../lib/household";
+import { isLocked, recordFailure, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
 
 // Emails are stored and matched lower-case. Legacy rows may still be mixed-case,
 // so lookups go through byEmail() (case-insensitive) instead of plain equality.
@@ -124,7 +125,7 @@ export function userPublic(u: {
   };
 }
 
-// PIN device-binding + lockout helpers — shared by pinLogin/updatePin/removePin.
+// PIN device-binding helpers — shared by pinLogin/updatePin/removePin.
 
 async function issuePinDeviceToken(res: Response, userId: string, req: Request): Promise<void> {
   const token = generatePinDeviceToken();
@@ -189,20 +190,6 @@ export async function pinDeviceStatus(req: Request, res: Response): Promise<void
     .where(and(eq(pinDeviceTokens.tokenHash, tokenHash), gt(pinDeviceTokens.expiresAt, new Date())))
     .limit(1);
   res.json({ deviceRegistered: !!row });
-}
-
-const PIN_LOCKOUT_THRESHOLD = 5;
-const PIN_LOCKOUT_MS = 15 * 60 * 1000;
-
-async function registerPinFailure(userId: string, currentAttempts: number): Promise<void> {
-  const attempts = currentAttempts + 1;
-  if (attempts >= PIN_LOCKOUT_THRESHOLD) {
-    await db.update(users)
-      .set({ pinFailedAttempts: 0, pinLockedUntil: new Date(Date.now() + PIN_LOCKOUT_MS) })
-      .where(eq(users.id, userId));
-  } else {
-    await db.update(users).set({ pinFailedAttempts: attempts }).where(eq(users.id, userId));
-  }
 }
 
 function parseUA(ua: string): { deviceName: string; browser: string } {
@@ -332,6 +319,16 @@ export async function login(req: Request, res: Response): Promise<void> {
 
   const { email, password } = body.data;
 
+  // Per-account lockout, keyed by the e-mail so it works the same whether or
+  // not the account exists. Checked before the user lookup: a locked address
+  // gets the same answer, after the same work, either way — and even the right
+  // password is refused until the lock runs out.
+  const lockKey = passwordKey(normalizeEmail(email));
+  if (await isLocked(lockKey)) {
+    res.status(429).json(LOCKED_RESPONSE);
+    return;
+  }
+
   const [user] = await db.select().from(users).where(byEmail(email)).limit(1);
 
   // Unknown email, a Google-only account and a wrong password all get the same
@@ -339,9 +336,11 @@ export async function login(req: Request, res: Response): Promise<void> {
   // them apart either.
   const valid = await bcrypt.compare(password, user?.passwordHash ?? await dummyPasswordHash());
   if (!user || !user.passwordHash || !valid) {
+    await recordFailure(lockKey);
     res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
     return;
   }
+  await clearFailures(lockKey);
 
   if (!user.emailVerified) {
     res.status(403).json({ error: "Prosím overte svoj email pred prihlásením.", code: "EMAIL_NOT_VERIFIED" });
@@ -681,12 +680,15 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
   }
 
   const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_ROUNDS);
-  await db
+  const [resetUser] = await db
     .update(users)
     // Receiving the reset link proves control of the mailbox, so an account
     // that was registered but never verified becomes usable here too.
-    .set({ passwordHash, pinHash: null, pinFailedAttempts: 0, pinLockedUntil: null, emailVerified: true, verificationToken: null })
-    .where(eq(users.id, resetRecord.userId));
+    .set({ passwordHash, pinHash: null, emailVerified: true, verificationToken: null })
+    .where(eq(users.id, resetRecord.userId))
+    .returning({ email: users.email });
+  // The link also proves who this is, so a lock from earlier guesses goes too.
+  if (resetUser) await clearFailures(passwordKey(normalizeEmail(resetUser.email)));
 
   await db.delete(passwordResetTokens).where(eq(passwordResetTokens.id, resetRecord.id));
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, resetRecord.userId));
@@ -716,13 +718,21 @@ export async function adminLogin(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  // There is one admin account, so one lock for it.
+  if (await isLocked(ADMIN_KEY)) {
+    res.status(429).json(LOCKED_RESPONSE);
+    return;
+  }
+
   const userOk = safeCompare(username, env.ADMIN_USERNAME);
   const passOk = safeCompare(password, env.ADMIN_PASSWORD);
 
   if (!userOk || !passOk) {
+    await recordFailure(ADMIN_KEY);
     res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
     return;
   }
+  await clearFailures(ADMIN_KEY);
 
   const token = signAdminToken();
   const csrfToken = randomBytes(32).toString("hex");
@@ -868,7 +878,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
       DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: newUser.id, isDefault: true }))
     );
 
-    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false, pinFailedAttempts: 0, pinLockedUntil: null };
+    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false };
   } else if (!user.googleId) {
     // Google just proved control of this mailbox. If the account was registered
     // with a password but never verified, whoever registered it may not be the
@@ -939,19 +949,11 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Per-account lockout (independent of the IP-based pinLoginLimiter below) —
-  // checked before touching the PIN hash at all. Same generic message as a
-  // wrong PIN so a caller can't distinguish "locked" from "just wrong".
-  if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
-    res.status(401).json(GENERIC_FAIL);
-    return;
-  }
-
   // Device binding: a correct PIN from a browser that never completed PIN
   // setup (no valid pinDevice cookie) is rejected outright, before the PIN is
   // even compared — this is what turns "email + 4 digits from anywhere" into
   // "email + 4 digits from a device that was already trusted". Deliberately
-  // does NOT count against pin_failed_attempts: it reveals nothing about the
+  // does NOT count towards the PIN lockout: it reveals nothing about the
   // PIN itself, so penalizing it would let an attacker lock a legitimate user
   // out just by omitting the cookie.
   const deviceOk = await verifyAndSlidePinDeviceToken(res, user.id, req);
@@ -960,9 +962,19 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  // Per-account lockout (on top of the IP-based pinLoginLimiter), checked
+  // before the PIN is compared. It comes after the device check on purpose:
+  // only a device already bound to this account can see "locked", so the
+  // answer reveals nothing to anyone else.
+  const lockKey = pinKey(user.id);
+  if (await isLocked(lockKey)) {
+    res.status(429).json(LOCKED_RESPONSE);
+    return;
+  }
+
   const valid = await bcrypt.compare(pin, user.pinHash);
   if (!valid) {
-    await registerPinFailure(user.id, user.pinFailedAttempts ?? 0);
+    await recordFailure(lockKey);
     res.status(401).json(GENERIC_FAIL);
     return;
   }
@@ -972,9 +984,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  if (user.pinFailedAttempts) {
-    await db.update(users).set({ pinFailedAttempts: 0 }).where(eq(users.id, user.id));
-  }
+  await clearFailures(lockKey);
 
   const { accessToken, sessionId } = await issueTokens(res, user.id, user.email, req);
   res.json({ user: userPublic(user), accessToken, sessionId });
@@ -1020,15 +1030,15 @@ export async function updatePin(req: AuthRequest, res: Response): Promise<void> 
   const isSamePin = !!user.pinHash && await bcrypt.compare(pin, user.pinHash);
 
   if (isSamePin) {
-    await db.update(users).set({
-      pinFailedAttempts: 0, pinLockedUntil: null, updatedAt: new Date(),
-    }).where(eq(users.id, userId));
+    await db.update(users).set({ updatedAt: new Date() }).where(eq(users.id, userId));
+    await clearFailures(pinKey(userId));
     await issuePinDeviceToken(res, userId, req);
   } else {
     const pinHash = await bcrypt.hash(pin, env.BCRYPT_ROUNDS);
     await db.update(users).set({
-      pinHash, pinFailedAttempts: 0, pinLockedUntil: null, updatedAt: new Date(),
+      pinHash, updatedAt: new Date(),
     }).where(eq(users.id, userId));
+    await clearFailures(pinKey(userId));
 
     // A changed PIN invalidates every device previously bound to the old one —
     // this browser/device gets a fresh token, everyone else must re-set-up.
@@ -1057,7 +1067,7 @@ export async function removePin(req: AuthRequest, res: Response): Promise<void> 
   }
 
   await db.update(users).set({
-    pinHash: null, pinFailedAttempts: 0, pinLockedUntil: null, updatedAt: new Date(),
+    pinHash: null, updatedAt: new Date(),
   }).where(eq(users.id, userId));
   await revokePinDeviceTokens(res, userId);
 
@@ -1142,7 +1152,7 @@ export async function changePassword(req: AuthRequest, res: Response): Promise<v
 
   const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_ROUNDS);
   await db.update(users).set({
-    passwordHash, pinHash: null, pinFailedAttempts: 0, pinLockedUntil: null, updatedAt: new Date(),
+    passwordHash, pinHash: null, updatedAt: new Date(),
   }).where(eq(users.id, userId));
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
   await revokePinDeviceTokens(res, userId);
@@ -1186,6 +1196,11 @@ export async function getSessions(req: AuthRequest, res: Response): Promise<void
 
 export async function deleteSession(req: AuthRequest, res: Response): Promise<void> {
   const { id } = req.params as { id: string }
+  // A malformed id would make Postgres throw (500); treat it as not found
+  if (!UUID_RE.test(id)) {
+    res.status(404).json({ error: 'Session not found' })
+    return
+  }
   const [session] = await db
     .select({ id: userSessions.id, userId: userSessions.userId })
     .from(userSessions)

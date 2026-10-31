@@ -575,6 +575,7 @@ export const en: Translations = {
     googleError: 'Google sign-in failed. Please try again.',
     loginFailed: 'Login failed',
     wrongPin: 'Incorrect PIN.',
+    tooManyAttempts: 'Too many attempts. Try again later.',
     loggingIn: 'Signing in...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',

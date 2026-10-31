@@ -573,6 +573,7 @@ export const sk = {
     googleError: 'Google prihlásenie zlyhalo. Skúste znova.',
     loginFailed: 'Prihlásenie zlyhalo',
     wrongPin: 'Nesprávny PIN.',
+    tooManyAttempts: 'Príliš veľa pokusov. Skúste to znova neskôr.',
     loggingIn: 'Prihlasujem...',
     loginWithPin: 'PIN',
     loginWithPasskey: 'Passkey',

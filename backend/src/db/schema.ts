@@ -53,8 +53,6 @@ export const users = pgTable("users", {
   lastActiveAt: timestamp("last_active_at"),
   autoLockMinutes: integer("auto_lock_minutes"),
   isDeactivated: boolean("is_deactivated").default(false).notNull(),
-  pinFailedAttempts: integer("pin_failed_attempts").default(0).notNull(),
-  pinLockedUntil: timestamp("pin_locked_until"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -297,3 +295,13 @@ export const pinDeviceTokens = pgTable("pin_device_tokens", {
   expiresAt: timestamp("expires_at").notNull(),
 }, (t) => [index("pin_device_tokens_user_id_idx").on(t.userId)]);
 export type PinDeviceToken = typeof pinDeviceTokens.$inferSelect;
+
+// Failed sign-in attempts per account, independent of the per-IP rate limiters.
+// key is "pw:<sha256 of normalized email>" (also for e-mails with no account),
+// "pin:<user id>" or "admin". See lib/loginLockout.ts.
+export const loginLockouts = pgTable("login_lockouts", {
+  key: varchar("key", { length: 80 }).primaryKey(),
+  failedCount: integer("failed_count").notNull().default(0),
+  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull(),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+}, (t) => [index("login_lockouts_window_started_at_idx").on(t.windowStartedAt)]);

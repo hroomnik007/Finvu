@@ -3,6 +3,7 @@ import { and, isNotNull, lt, notExists, eq, gt } from "drizzle-orm";
 import { db } from "../db";
 import { refreshTokens, passwordResetTokens, pinDeviceTokens, sharedReports, userSessions, users } from "../db/schema";
 import { cleanupCutoffs } from "../lib/cleanupCutoffs";
+import { pruneLockouts } from "../lib/loginLockout";
 
 // Removes rows that can no longer be used: expired tokens, expired shared reports and
 // sessions that have been idle for months without a live refresh token.
@@ -43,6 +44,8 @@ export async function runCleanup(now: Date = new Date()): Promise<Record<string,
     .where(and(isNotNull(users.verificationToken), lt(users.verificationExpiresAt, cut.tokens)))
     .returning({ id: users.id });
   removed.verificationTokens = verification.length;
+
+  removed.loginLockouts = await pruneLockouts(now);
 
   return removed;
 }

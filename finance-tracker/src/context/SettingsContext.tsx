@@ -31,6 +31,11 @@ function loadSettings(): AppSettings {
   }
 }
 
+// The language the app will start in, before React renders (see main.tsx).
+export function initialLanguage(): string {
+  return loadSettings().language
+}
+
 function persistSettings(s: AppSettings) {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)) } catch { /* ignore */ }
 }

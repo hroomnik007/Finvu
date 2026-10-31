@@ -1,17 +1,56 @@
+import { useSyncExternalStore } from 'react'
 import { sk, type Translations } from './sk'
-import { en } from './en'
-import { cs } from './cs'
-import { pl } from './pl'
-import { hu } from './hu'
 import { useSettingsContext } from '../context/SettingsContext'
 
-export { sk, en, cs, pl, hu }
+export { sk }
 export type { Translations }
 
 const SUPPORTED_LANGS = ['sk', 'cs', 'pl', 'hu', 'en'] as const
 export type SupportedLang = (typeof SUPPORTED_LANGS)[number]
 
-const TRANSLATIONS: Record<SupportedLang, Translations> = { sk, cs, pl, hu, en }
+// Only Slovak ships in the main bundle (it is the base text and the fallback);
+// the other languages are separate chunks, loaded when they are first needed.
+// main.tsx waits for the starting language before the first render.
+const LOADERS: Record<Exclude<SupportedLang, 'sk'>, () => Promise<Translations>> = {
+  cs: () => import('./cs').then(m => m.cs),
+  pl: () => import('./pl').then(m => m.pl),
+  hu: () => import('./hu').then(m => m.hu),
+  en: () => import('./en').then(m => m.en),
+}
+
+const loaded: Partial<Record<SupportedLang, Translations>> = { sk }
+const pending = new Map<SupportedLang, Promise<void>>()
+const listeners = new Set<() => void>()
+let version = 0
+
+export function resolveLang(language: string | undefined | null): SupportedLang {
+  return (SUPPORTED_LANGS as readonly string[]).includes(language ?? '') ? (language as SupportedLang) : 'en'
+}
+
+// Resolves once the language is available. A failed load (e.g. offline before
+// the chunk was ever cached) is not fatal: Slovak is shown and the next call retries.
+export function loadLanguage(language: string | undefined | null): Promise<void> {
+  const lang = resolveLang(language)
+  if (loaded[lang]) return Promise.resolve()
+  let p = pending.get(lang)
+  if (!p) {
+    p = LOADERS[lang as Exclude<SupportedLang, 'sk'>]()
+      .then(tr => {
+        loaded[lang] = tr
+        version++
+        listeners.forEach(l => l())
+      })
+      .catch(() => {})
+      .finally(() => pending.delete(lang))
+    pending.set(lang, p)
+  }
+  return p
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => { listeners.delete(listener) }
+}
 
 const LOCALE_MAP: Record<SupportedLang, string> = {
   sk: 'sk-SK', cs: 'cs-CZ', pl: 'pl-PL', hu: 'hu-HU', en: 'en-GB',
@@ -19,10 +58,12 @@ const LOCALE_MAP: Record<SupportedLang, string> = {
 
 export function useTranslation() {
   const { settings } = useSettingsContext()
-  const lang = (SUPPORTED_LANGS as readonly string[]).includes(settings.language)
-    ? (settings.language as SupportedLang)
-    : 'en'
-  return { t: TRANSLATIONS[lang], lang, locale: LOCALE_MAP[lang] }
+  const lang = resolveLang(settings.language)
+  useSyncExternalStore(subscribe, () => version)
+  const tr = loaded[lang]
+  // A language picked later loads from the precache in a moment; Slovak until then.
+  if (!tr) void loadLanguage(lang)
+  return { t: tr ?? sk, lang, locale: LOCALE_MAP[lang] }
 }
 
 // ── Localized date names (replaces hardcoded Slovak day/month arrays) ──────
