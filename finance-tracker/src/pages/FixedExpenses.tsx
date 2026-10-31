@@ -671,6 +671,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         title={editing ? t.expenses.fixed.editTitle : t.expenses.fixed.newTitle}
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={handleSave}
+        autoFocusAmount={!editing}
         submitDisabled={!label.trim() || !amount}
         onImportCsv={editing ? undefined : () => { closeSheet(); setTimeout(() => setCsvOpen(true), 150) }}
       >

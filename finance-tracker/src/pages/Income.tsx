@@ -15,6 +15,7 @@ import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
 import type { Translations } from '../i18n'
 import { todayISO } from '../utils/format'
+import { defaultEntryDate } from '../utils/entryDefaults'
 import { getAllTransactions } from '../api/allTransactions'
 import type { Income } from '../types'
 import { SwipeableRow } from '../components/SwipeableRow'
@@ -34,10 +35,10 @@ interface FormState {
   recurring: boolean
 }
 
-const makeEmpty = (): FormState => ({
+const makeEmpty = (month: number, year: number): FormState => ({
   amount: '',
   label: '',
-  date: todayISO(),
+  date: defaultEntryDate(month, year),
   recurring: false,
 })
 
@@ -96,7 +97,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
   const feedback = useSaveFeedback()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<Income | null>(null)
-  const [form, setForm] = useState<FormState>(makeEmpty())
+  const [form, setForm] = useState<FormState>(() => makeEmpty(month, year))
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [csvOpen, setCsvOpen] = useState(false)
   const [yearlyIncome, setYearlyIncome] = useState(0)
@@ -121,7 +122,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
       .catch(() => {})
   }, [year])
 
-  const openAdd = () => { setEditing(null); setIsCorrection(false); setEndOpen(false); setForm(makeEmpty()); setSheetOpen(true) }
+  const openAdd = () => { setEditing(null); setIsCorrection(false); setEndOpen(false); setForm(makeEmpty(month, year)); setSheetOpen(true) }
   const openEdit = (income: Income) => {
     setEditing(income)
     setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
@@ -350,6 +351,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
         title={editing ? t.income.editTitle : t.income.addTitle}
         accent="#34D399" accent2="#22D3EE"
         onSubmit={handleSave}
+        autoFocusAmount={!editing}
         submitDisabled={!form.label.trim() || !form.amount}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >

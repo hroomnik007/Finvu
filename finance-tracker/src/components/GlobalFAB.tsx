@@ -15,7 +15,8 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
-import { todayISO } from '../utils/format'
+import { defaultEntryDate } from '../utils/entryDefaults'
+import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
 import AmountInput from './AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
 
@@ -133,6 +134,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   const { addVariableExpense, deleteVariableExpense, variableExpenses } = useVariableExpenses(month, year)
   const { addFixedExpense } = useFixedExpenses()
   const { categories, addCategory } = useCategories()
+  const quickCategories = useCategoriesByUsage(categories)
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses })
   const { addGoal } = useSavings()
   const { formatAmount } = useFormatters()
@@ -144,14 +146,14 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   // ── Income form state ─────────────────────────────────────────────────────
   const [incAmt, setIncAmt] = useState('')
   const [incLabel, setIncLabel] = useState('')
-  const [incDate, setIncDate] = useState(todayISO())
+  const [incDate, setIncDate] = useState(() => defaultEntryDate(month, year))
   const [incRecurring, setIncRecurring] = useState(false)
 
   // ── Variable expense form state ───────────────────────────────────────────
   const [varAmt, setVarAmt] = useState('')
   const [varCatId, setVarCatId] = useState('')
   const [varNote, setVarNote] = useState('')
-  const [varDate, setVarDate] = useState(todayISO())
+  const [varDate, setVarDate] = useState(() => defaultEntryDate(month, year))
   const [varNewCatMode, setVarNewCatMode] = useState(false)
   const [varNewCatName, setVarNewCatName] = useState('')
 
@@ -177,9 +179,9 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   function openModal(type: ModalType) {
     setTimeout(() => {
       if (type === 'income') {
-        setIncAmt(''); setIncLabel(''); setIncDate(todayISO()); setIncRecurring(false)
+        setIncAmt(''); setIncLabel(''); setIncDate(defaultEntryDate(month, year)); setIncRecurring(false)
       } else if (type === 'variable') {
-        setVarAmt(''); setVarCatId(''); setVarNote(''); setVarDate(todayISO())
+        setVarAmt(''); setVarCatId(''); setVarNote(''); setVarDate(defaultEntryDate(month, year))
         setVarNewCatMode(false); setVarNewCatName('')
       } else if (type === 'fixed') {
         setFixLabel(''); setFixAmt(''); setFixDay('1'); setFixCatId('')
@@ -398,6 +400,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         accent="#34D399" accent2="#22D3EE"
         onSubmit={saveIncome}
         submitDisabled={!incLabel.trim() || !incAmt}
+        autoFocusAmount
       >
         <AmountField value={incAmt} onChange={setIncAmt} accent="#34D399" />
         <input
@@ -422,6 +425,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         accent="#FB7185" accent2="#f43f5e"
         onSubmit={saveVariable}
         submitDisabled={varNewCatMode ? !varNewCatName.trim() || !varAmt : !varCatId || !varAmt}
+        autoFocusAmount
       >
         <AmountField value={varAmt} onChange={setVarAmt} accent="#FB7185" />
 
@@ -439,7 +443,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
 
         {!varNewCatMode ? (
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {categories.map(c => (
+            {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
                 icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
@@ -492,6 +496,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={saveFixed}
         submitDisabled={!fixLabel.trim() || !fixAmt}
+        autoFocusAmount
       >
         <AmountField value={fixAmt} onChange={setFixAmt} accent="#FBBF24" />
         <input
@@ -502,7 +507,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         />
         {categories.length > 0 && (
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {categories.map(c => (
+            {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
                 icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
@@ -607,6 +612,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         accent="#A855F7" accent2="#8B5CF6"
         onSubmit={saveSavingsGoal}
         submitDisabled={!savName.trim() || !savTarget}
+        autoFocusAmount
       >
         <input
           type="text" placeholder={t.savings.namePlaceholder}

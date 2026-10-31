@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { X, Check, FileUp, Loader2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from '../i18n'
@@ -22,11 +22,13 @@ interface CompactModalProps {
   onImportCsv?: () => void
   children: React.ReactNode
   maxWidth?: number
+  /** Focus the first amount field when the modal opens (add forms). */
+  autoFocusAmount?: boolean
 }
 
 export function CompactModal({
   open, onClose, icon: Icon, iconColor, iconBg, title,
-  accent, accent2, onSubmit, submitDisabled, submitting, onImportCsv, children, maxWidth = 420,
+  accent, accent2, onSubmit, submitDisabled, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount,
 }: CompactModalProps) {
   const { t } = useTranslation()
   const guard = useSubmitGuard()
@@ -50,6 +52,27 @@ export function CompactModal({
     return () => document.removeEventListener('keydown', handler)
   }, [open, requestClose])
 
+  const panelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open || !autoFocusAmount) return
+    const id = requestAnimationFrame(() => {
+      panelRef.current?.querySelector<HTMLInputElement>('input[inputmode="decimal"]')?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [open, autoFocusAmount])
+
+  // Enter in a single-line field saves (same guard as the button: ignored while
+  // disabled or a save is pending). Not in textareas, on buttons or mid-IME.
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return
+    const el = e.target as HTMLElement
+    if (el.tagName !== 'INPUT' && el.tagName !== 'SELECT') return
+    const type = (el as HTMLInputElement).type
+    if (type === 'checkbox' || type === 'radio' || type === 'button' || type === 'submit') return
+    e.preventDefault()
+    handleSubmit()
+  }
+
   if (!open) return null
 
   return (
@@ -67,6 +90,8 @@ export function CompactModal({
     >
       <div
         className="modal-in"
+        ref={panelRef}
+        onKeyDown={onKeyDown}
         style={{
           width: '100%', maxWidth,
           background: 'var(--aurora-panel)',

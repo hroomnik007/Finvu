@@ -20,7 +20,8 @@ import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
-import { todayISO } from '../utils/format'
+import { defaultEntryDate } from '../utils/entryDefaults'
+import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
 import type { VariableExpense, BudgetStatus } from '../types'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
@@ -41,7 +42,7 @@ interface VarForm {
   date: string
 }
 
-const emptyForm = (): VarForm => ({ amount: '', categoryId: '', note: '', date: todayISO() })
+const emptyForm = (month: number, year: number): VarForm => ({ amount: '', categoryId: '', note: '', date: defaultEntryDate(month, year) })
 
 const getBudgetBarColor = (pct: number, autoLimit = false) => {
   if (autoLimit) return '#22c55e'
@@ -89,6 +90,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const listFailed = listError && variableExpenses.length === 0
   const { fixedExpenses } = useFixedExpenses(month, year)
   const { categories, addCategory } = useCategories()
+  const quickCategories = useCategoriesByUsage(categories)
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
   const { formatAmount, formatAmountParts, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
@@ -96,7 +98,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<VariableExpense | null>(null)
-  const [form, setForm] = useState<VarForm>(emptyForm())
+  const [form, setForm] = useState<VarForm>(() => emptyForm(month, year))
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [newCatMode, setNewCatMode] = useState(false)
   const [newCatName, setNewCatName] = useState('')
@@ -169,7 +171,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const openAdd = () => {
     setEditing(null)
-    setForm(emptyForm())
+    setForm(emptyForm(month, year))
     setNewCatMode(false)
     setNewCatName('')
     setSheetOpen(true)
@@ -488,6 +490,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         title={editing ? t.expenses.variable.editTitle : t.expenses.variable.addTitle}
         accent="#FB7185" accent2="#f43f5e"
         onSubmit={handleSave}
+        autoFocusAmount={!editing}
         submitDisabled={newCatMode ? !newCatName.trim() || !form.amount : !form.categoryId || !form.amount}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
@@ -515,7 +518,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
         {!newCatMode ? (
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {categories.map(c => (
+            {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
                 icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
