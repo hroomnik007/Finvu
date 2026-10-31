@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Plus, X, ArrowUp, ArrowDown, Lock, Tag, Repeat, PiggyBank } from 'lucide-react'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
@@ -107,15 +107,24 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
   )
 }
 
+/** Opens an add modal from outside (home-screen shortcut, share sheet). `id` changes per request. */
+export interface FabLaunch {
+  id: number
+  type: 'income' | 'variable'
+  amount?: string
+  note?: string
+}
+
 interface GlobalFABProps {
   month: number
   year: number
   showToast: (msg: string) => void
   currentPage: string
   openTrigger?: number
+  launch?: FabLaunch | null
 }
 
-export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: GlobalFABProps) {
+export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, launch }: GlobalFABProps) {
   const [activeModal, setActiveModal] = useState<ModalType>(null)
   const [showTypeSelector, setShowTypeSelector] = useState(false)
   const [isMobile] = useState(() => window.innerWidth < 1024)
@@ -178,12 +187,12 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   const [savDeadline, setSavDeadline] = useState('')
 
   // ── Open / close helpers ──────────────────────────────────────────────────
-  function openModal(type: ModalType) {
+  function openModal(type: ModalType, prefill?: { amount?: string; note?: string }) {
     setTimeout(() => {
       if (type === 'income') {
-        setIncAmt(''); setIncLabel(''); setIncDate(todayISO()); setIncRecurring(false)
+        setIncAmt(prefill?.amount ?? ''); setIncLabel(prefill?.note ?? ''); setIncDate(todayISO()); setIncRecurring(false)
       } else if (type === 'variable') {
-        setVarAmt(''); setVarCatId(''); setVarNote(''); setVarDate(todayISO())
+        setVarAmt(prefill?.amount ?? ''); setVarCatId(''); setVarNote(prefill?.note ?? ''); setVarDate(todayISO())
         setVarNewCatMode(false); setVarNewCatName('')
       } else if (type === 'fixed') {
         setFixLabel(''); setFixAmt(''); setFixDay('1'); setFixCatId('')
@@ -197,6 +206,12 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   }
 
   function closeModal() { setActiveModal(null) }
+
+  // A new launch object means a new request; the form is prefilled, never saved.
+  useEffect(() => {
+    if (!launch) return
+    openModal(launch.type, { amount: launch.amount, note: launch.note })
+  }, [launch])
 
   // ── Save handlers ─────────────────────────────────────────────────────────
   async function saveIncome() {
