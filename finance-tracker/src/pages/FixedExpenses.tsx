@@ -23,6 +23,8 @@ import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
 import AmountInput from '../components/AmountInput'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
+import { ValidFromHint } from '../components/ValidFromHint'
+import { todayISO } from '../utils/format'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -728,6 +730,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
             <Repeat size={12} /> {t.expenses.fixed.recurringMonthly}
           </div>
         </div>
+        {/* A new fixed expense is dated today and counts from this month on. */}
+        {!editing && <ValidFromHint date={todayISO()} />}
 
         <input
           type="text"

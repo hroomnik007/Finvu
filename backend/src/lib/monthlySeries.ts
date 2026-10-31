@@ -1,4 +1,5 @@
 import { monthRows, totals, type RawTx } from "./monthlySummary";
+import type { StartMonths } from "./trackingStart";
 
 export interface SeriesMonth {
   /** YYYY-MM */
@@ -15,6 +16,8 @@ export interface SeriesOptions {
   userNames?: Map<string, string>;
   /** Category id → display info. Pass to include the category breakdown. */
   categoryInfo?: Map<string, { name: string; color: string | null }>;
+  /** Each user's first tracked month; earlier months are empty for that user. */
+  startMonths?: StartMonths;
 }
 
 // Every YYYY-MM from `from` to `to` inclusive.
@@ -38,7 +41,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 // running month only counts expenses already due. `txs` must be ascending by date.
 export function buildSeries(txs: RawTx[], from: string, to: string, today: Date, opts: SeriesOptions = {}): SeriesMonth[] {
   return monthsBetween(from, to).map((ym) => {
-    const rows = monthRows(txs, Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), today);
+    const rows = monthRows(txs, Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), today, opts.startMonths);
     const t = totals(rows);
     const item: SeriesMonth = { month: ym, income: round2(t.income), expense: round2(t.expense) };
 

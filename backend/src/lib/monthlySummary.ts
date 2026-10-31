@@ -1,4 +1,5 @@
 import { fixedDayOfMonth, isFixedDue, latestActiveSeries } from "./recurring";
+import { isTrackedMonth, type StartMonths } from "./trackingStart";
 
 // One amount the month counts: a one-off row, or a recurring series at the price
 // valid for the month.
@@ -54,8 +55,11 @@ function labelOf(description: string | null): string {
 // one-off rows dated in it plus every active recurring series. A finished month
 // counts all recurring expenses in full (their due day has passed); pass `today`
 // to count the running month like the app does — only the expenses already due.
-export function monthRows(txs: RawTx[], year: number, month: number, today?: Date): MonthRow[] {
+// With `starts`, a user's month before their tracking start is empty (see
+// trackingStart.ts); their recurring rows dated earlier still count afterwards.
+export function monthRows(txs: RawTx[], year: number, month: number, today?: Date, starts?: StartMonths): MonthRow[] {
   const ym = `${year}-${String(month).padStart(2, "0")}`;
+  if (starts) txs = txs.filter((t) => isTrackedMonth(starts, t.userId, ym));
   const toRow = (t: RawTx): MonthRow => ({
     userId: t.userId,
     type: t.type === "income" ? "income" : "expense",

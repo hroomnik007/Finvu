@@ -4,12 +4,15 @@ import { db } from "../db";
 import { users, transactions } from "../db/schema";
 import { sendEmail } from "../lib/email";
 import { recurringTotalsForMonth } from "../lib/recurring";
+import { startMonthOf } from "../lib/trackingStart";
 
 // Income / expenses of one user for [from, to] (inclusive, same calendar month),
 // counted like the app does: one-off rows by their date, plus recurring items
 // carried into the month (see recurringTotalsForMonth). `asOf` is the moment the
 // report is produced — it decides which recurring expenses have already fallen due.
-async function periodTotals(userId: string, from: string, to: string, asOf: Date): Promise<{ income: number; expense: number }> {
+// A month before the user's first tracked month (`startMonth`, YYYY-MM) is empty.
+export async function periodTotals(userId: string, from: string, to: string, asOf: Date, startMonth?: string | null): Promise<{ income: number; expense: number }> {
+  if (startMonth && from.slice(0, 7) < startMonth) return { income: 0, expense: 0 };
   const oneOff = await db
     .select({ type: transactions.type, amount: sql<string>`sum(${transactions.amount})` })
     .from(transactions)
@@ -58,12 +61,12 @@ async function sendMidMonthReports(): Promise<void> {
   const { from, to, label } = getMonthToMidRange();
 
   const subscribers = await db
-    .select({ id: users.id, email: users.email, name: users.name })
+    .select({ id: users.id, email: users.email, name: users.name, trackingStartDate: users.trackingStartDate, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.weeklyEmailEnabled, true));
 
   for (const user of subscribers) {
-    const { income: totalIncome, expense: totalExpense } = await periodTotals(user.id, from, to, new Date());
+    const { income: totalIncome, expense: totalExpense } = await periodTotals(user.id, from, to, new Date(), startMonthOf(user.trackingStartDate, user.createdAt));
     const balance = totalIncome - totalExpense;
 
     const html = `

@@ -16,6 +16,20 @@ export function defaultEntryDate(month: number, year: number, today: Date = new 
   return iso(year, month, isPast ? daysInMonth : Math.min(td, daysInMonth))
 }
 
+/**
+ * Date after the recurring toggle of an add form flips to `recurring`: a recurring
+ * item starts counting from its date, so it defaults to today even while a past
+ * month is viewed; a one-off goes back to the viewed month's default. A date the
+ * user picked themselves is kept.
+ */
+export function dateForRecurringToggle(current: string, recurring: boolean, month: number, year: number, today: Date = new Date()): string {
+  const viewed = defaultEntryDate(month, year, today)
+  const now = iso(today.getFullYear(), today.getMonth() + 1, today.getDate())
+  if (recurring && current === viewed) return now
+  if (!recurring && current === now) return viewed
+  return current
+}
+
 /** Categories ordered by how often they were used (most first), ties and unused A–Z. */
 export function sortCategoriesByUsage<C extends { id?: string; name: string }>(
   categories: readonly C[],

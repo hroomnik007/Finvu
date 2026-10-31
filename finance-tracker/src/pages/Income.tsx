@@ -15,7 +15,8 @@ import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
 import type { Translations } from '../i18n'
 import { todayISO } from '../utils/format'
-import { defaultEntryDate } from '../utils/entryDefaults'
+import { dateForRecurringToggle, defaultEntryDate } from '../utils/entryDefaults'
+import { ValidFromHint } from '../components/ValidFromHint'
 import { useUndoableDelete } from '../hooks/useUndoableDelete'
 import { getAllTransactions } from '../api/allTransactions'
 import type { Income } from '../types'
@@ -47,9 +48,11 @@ interface FormBodyProps {
   form: FormState
   setForm: React.Dispatch<React.SetStateAction<FormState>>
   t: Translations
+  /** Adding (not editing): the recurring toggle moves the date and shows "Platí od". */
+  adding?: { month: number; year: number }
 }
 
-function FormBody({ form, setForm, t }: FormBodyProps) {
+function FormBody({ form, setForm, t, adding }: FormBodyProps) {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
@@ -72,7 +75,12 @@ function FormBody({ form, setForm, t }: FormBodyProps) {
         <DateInput compact value={form.date} onChange={date => setForm(f => ({ ...f, date }))} />
         <button
           type="button"
-          onClick={() => setForm(f => ({ ...f, recurring: !f.recurring }))}
+          aria-pressed={form.recurring}
+          onClick={() => setForm(f => {
+            const recurring = !f.recurring
+            const date = adding ? dateForRecurringToggle(f.date, recurring, adding.month, adding.year) : f.date
+            return { ...f, recurring, date }
+          })}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: form.recurring ? 'linear-gradient(135deg,#34D399,#22D3EE)' : 'var(--aurora-glass)',
@@ -85,6 +93,7 @@ function FormBody({ form, setForm, t }: FormBodyProps) {
           <Repeat size={12} /> {t.income.recurringToggle}
         </button>
       </div>
+      {adding && form.recurring && <ValidFromHint date={form.date} />}
     </>
   )
 }
@@ -368,7 +377,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
         submitDisabled={!form.label.trim() || !form.amount}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
-        <FormBody form={form} setForm={setForm} t={t} />
+        <FormBody form={form} setForm={setForm} t={t} adding={editing ? undefined : { month, year }} />
         {editing?.recurring && (() => {
           const newAmount = (parseAmountInput(form.amount) ?? NaN)
           const priceChanged = Number.isFinite(newAmount) && newAmount > 0 && newAmount !== editing.amount

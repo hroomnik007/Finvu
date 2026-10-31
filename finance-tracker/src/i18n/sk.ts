@@ -722,6 +722,8 @@ export const sk = {
     deletedItem: 'Zmazané',
     deleteItemFailed: 'Nepodarilo sa zmazať. Položka zostala uložená.',
     notSet: 'Nenastavené',
+    // Under the date of a recurring item: the month it starts counting in
+    validFrom: 'Platí od {month}',
     unknownDevice: 'Neznáme zariadenie',
     prevYear: 'Predchádzajúci rok',
     nextYear: 'Nasledujúci rok',

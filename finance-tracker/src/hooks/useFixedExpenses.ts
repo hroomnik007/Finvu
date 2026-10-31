@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
+import { trackingStartOf } from '../utils/trackingStart'
 import type { FixedExpense, ApiTransaction } from '../types'
 import type { DataScope } from './useIncomes'
 import { todayISO } from '../utils/format'
@@ -126,7 +127,8 @@ export async function fetchFixedExpenses(
   const latestByIdentity = new Map<string, ApiTransaction>()
   for (const t of data) {
     if (t.date.substring(0, 7) > monthStr) continue
-    if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
+    // A row dated before the tracking start still counts from the start month
+    // on (the month gate above already empties the earlier months).
     // Per owner: two members can both have a bill with the same label.
     const key = `${t.userId}|${t.description ?? ''}`
     const existing = latestByIdentity.get(key)
@@ -138,11 +140,11 @@ export async function fetchFixedExpenses(
 export function useFixedExpenses(month?: number, year?: number, scope: DataScope = 'personal', includeEnded = false) {
   const { isAuthenticated, user } = useAuth()
   const qc = useQueryClient()
-  const qKey = fixedExpenseQueryKey(month, year, user?.tracking_start_date, scope, includeEnded)
+  const qKey = fixedExpenseQueryKey(month, year, trackingStartOf(user), scope, includeEnded)
 
   const { data: fixedExpenses = [], isLoading, isError, refetch } = useQuery({
     queryKey: qKey,
-    queryFn: () => fetchFixedExpenses(month, year, user?.tracking_start_date, scope, includeEnded),
+    queryFn: () => fetchFixedExpenses(month, year, trackingStartOf(user), scope, includeEnded),
     enabled: isAuthenticated,
   })
 
@@ -150,6 +152,7 @@ export function useFixedExpenses(month?: number, year?: number, scope: DataScope
     qc.invalidateQueries({ queryKey: ['fixedExpenses'] }),
     qc.invalidateQueries({ queryKey: ['summaryCards'] }),
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+    qc.invalidateQueries({ queryKey: ['monthlySeries'] }),
   ]), [qc])
 
   const addFixedExpense = useCallback(async (expense: Omit<FixedExpense, 'id'>): Promise<void> => {

@@ -77,3 +77,19 @@ export function toLocalISO(d: Date): string {
 export function todayISO(): string {
   return toLocalISO(new Date())
 }
+
+/**
+ * "apríla 2026" — month and year as used after "od"/"from": the genitive month
+ * name in sk/cs/pl (taken from a full date), the standalone form elsewhere.
+ */
+export function formatMonthYearFrom(value: string | Date, locale: string = DEFAULT_LOCALE): string {
+  const d = toDate(value)
+  if (Number.isNaN(d.getTime())) return ''
+  if (/^(sk|cs|pl)\b/.test(locale)) {
+    const parts = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(d)
+    const month = parts.find(p => p.type === 'month')?.value
+    const year = parts.find(p => p.type === 'year')?.value
+    if (month && year) return `${month} ${year}`
+  }
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(d)
+}

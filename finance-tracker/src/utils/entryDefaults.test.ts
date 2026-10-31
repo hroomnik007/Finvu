@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultEntryDate, recentMonths, sortCategoriesByUsage } from './entryDefaults'
+import { defaultEntryDate, recentMonths, sortCategoriesByUsage, dateForRecurringToggle } from './entryDefaults'
 
 const today = new Date(2026, 9, 31) // 31 Oct 2026
 
@@ -33,5 +33,19 @@ describe('sortCategoriesByUsage', () => {
 describe('recentMonths', () => {
   it('crosses the year boundary', () => {
     expect(recentMonths(2, 2026, 3)).toEqual([[2, 2026], [1, 2026], [12, 2025]])
+  })
+})
+
+describe('dateForRecurringToggle', () => {
+  const today = new Date(2026, 9, 31) // 31 Oct 2026
+  it('a recurring item defaults to today even while a past month is viewed', () => {
+    expect(dateForRecurringToggle('2026-03-31', true, 3, 2026, today)).toBe('2026-10-31')
+  })
+  it('switching back to one-off restores the viewed month default', () => {
+    expect(dateForRecurringToggle('2026-10-31', false, 3, 2026, today)).toBe('2026-03-31')
+  })
+  it('keeps a date the user picked', () => {
+    expect(dateForRecurringToggle('2026-03-12', true, 3, 2026, today)).toBe('2026-03-12')
+    expect(dateForRecurringToggle('2026-03-12', false, 3, 2026, today)).toBe('2026-03-12')
   })
 })

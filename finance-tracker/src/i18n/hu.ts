@@ -724,6 +724,8 @@ export const hu: Translations = {
     deletedItem: 'Törölve',
     deleteItemFailed: 'Nem sikerült törölni. A tétel megmaradt.',
     notSet: 'Nincs beállítva',
+    // Under the date of a recurring item: the month it starts counting in
+    validFrom: 'Érvényes ettől: {month}',
     unknownDevice: 'Ismeretlen eszköz',
     prevYear: 'Előző év',
     nextYear: 'Következő év',

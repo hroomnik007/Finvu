@@ -127,6 +127,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
     qc.invalidateQueries({ queryKey: ['variableExpenses'] }),
     qc.invalidateQueries({ queryKey: ['summaryCards'] }),
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+    qc.invalidateQueries({ queryKey: ['monthlySeries'] }),
   ])
   const applyBulkCategory = async (categoryId: string) => {
     setBulkBusy(true)

@@ -8,6 +8,8 @@ import { AuthRequest } from "../middleware/authenticate";
 import { generateInviteCode } from "../utils/inviteCode";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
+import { loadStartMonths } from "../lib/loadStartMonths";
+import { isTrackedMonth } from "../lib/trackingStart";
 import { recalcSharedForHousehold, syncSharedToNewMember, unshareAllFor } from "../lib/sharedCategories";
 import { fixedDayOfMonth, isFixedDue, isActiveInMonth } from "../lib/recurring";
 import { DEMO_EMAIL } from "../lib/resetDemo";
@@ -294,7 +296,16 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
   const start = `${year}-${month}-01`;
   const nextMonth = monthNum === 12 ? `${year + 1}-01-01` : `${year}-${String(monthNum + 1).padStart(2, "0")}-01`;
 
-  const members = familyMemberIds(householdId);
+  const memberIds = (await familyMemberIds(householdId)).map((r) => r.id);
+  // A month before a member's tracking start is empty for that member — one-off
+  // and recurring rows alike (same rule as the cards and the monthly series).
+  const ym = `${year}-${month}`;
+  const starts = await loadStartMonths(memberIds);
+  const members = memberIds.filter((id) => isTrackedMonth(starts, id, ym));
+  if (members.length === 0) {
+    res.json({ total_expenses: 0, total_income: 0, per_member: [] });
+    return;
+  }
 
   // One-off rows count in the month they are dated.
   const oneOff = await db

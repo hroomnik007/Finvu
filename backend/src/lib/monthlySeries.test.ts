@@ -40,4 +40,16 @@ describe("buildSeries", () => {
     ]);
     expect(s[0].categories?.find((c) => c.type === "expense" && c.name.trim().toLowerCase() === "jedlo")?.total).toBe(100);
   });
+
+  it("treats months before the tracking start as empty: January recurring income, start in April", () => {
+    const babka = [tx({ type: "income", amount: "200", description: "Babka", date: "2026-01-05", isFixed: true })];
+    const s = buildSeries(babka, "2026-01", "2026-06", today, { startMonths: new Map([["u1", "2026-04"]]) });
+    expect(s.map((m) => m.income)).toEqual([0, 0, 0, 200, 200, 200]);
+  });
+
+  it("applies each member's own start, one-off rows included", () => {
+    const s = buildSeries(txs, "2026-01", "2026-03", today, { startMonths: new Map([["u1", "2026-03"], ["u2", "2026-02"]]) });
+    expect(s.map((m) => m.income)).toEqual([0, 0, 2300]);
+    expect(s.map((m) => m.expense)).toEqual([0, 60, 650]);
+  });
 });

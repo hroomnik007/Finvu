@@ -42,3 +42,16 @@ describe('fetchIncomes recurring series', () => {
     expect(await fetchIncomes(9, 2026, null)).toHaveLength(0)
   })
 })
+
+describe('fetchIncomes vs tracking start', () => {
+  const babka = [row({ id: 'k', description: 'Babka', amount: 200, date: '2026-01-05' })]
+
+  it('a recurring income dated before the start counts from the start month on', async () => {
+    mockApi(babka)
+    expect(await fetchIncomes(3, 2026, '2026-04-01')).toHaveLength(0)
+    const april = await fetchIncomes(4, 2026, '2026-04-01')
+    expect(april).toHaveLength(1)
+    expect(april[0]).toMatchObject({ amount: 200, date: '2026-04-05' })
+    expect(await fetchIncomes(6, 2026, '2026-04-01')).toHaveLength(1)
+  })
+})

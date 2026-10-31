@@ -72,3 +72,13 @@ describe('fetchFixedExpenses', () => {
     expect(await fetchFixedExpenses(10, 2026, null)).toHaveLength(0)
   })
 })
+
+describe('fetchFixedExpenses vs tracking start', () => {
+  it('a bill dated before the start counts from the start month on', async () => {
+    getTransactions.mockResolvedValue({ data: [row({ id: 'r', date: '2026-01-05', amount: 650 })] })
+    expect(await fetchFixedExpenses(3, 2026, '2026-04-01')).toEqual([])
+    const may = await fetchFixedExpenses(5, 2026, '2026-04-01')
+    expect(may).toHaveLength(1)
+    expect(may[0].amount).toBe(650)
+  })
+})

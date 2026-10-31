@@ -53,6 +53,7 @@ import { PWAUpdateBanner } from './components/PWAUpdateBanner'
 import { TrackingDateOnboarding } from './components/TrackingDateOnboarding'
 import { CommandPalette } from './components/CommandPalette'
 import { updateUserSettings, sessionCheck } from './api/auth'
+import { trackingStartOf } from './utils/trackingStart'
 import {
   resolveTheme, applyAccentColor, applyBackgroundColor, bgColorStorageKey, defaultBgColor,
   DEFAULT_ACCENT_COLOR, type ThemePreference,
@@ -221,7 +222,7 @@ function App() {
         const loginDate = new Date()
         const m = loginDate.getMonth() + 1
         const y = loginDate.getFullYear()
-        const trackingStart = user?.tracking_start_date ?? null
+        const trackingStart = trackingStartOf(user)
         let cancelled = false
 
         const doNavigate = () => {

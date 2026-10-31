@@ -724,6 +724,8 @@ export const cs: Translations = {
     deletedItem: 'Smazáno',
     deleteItemFailed: 'Nepodařilo se smazat. Položka zůstala uložená.',
     notSet: 'Nenastaveno',
+    // Under the date of a recurring item: the month it starts counting in
+    validFrom: 'Platí od {month}',
     unknownDevice: 'Neznámé zařízení',
     prevYear: 'Předchozí rok',
     nextYear: 'Následující rok',

@@ -60,6 +60,7 @@ export function useVariableExpenses(month?: number, year?: number, scope: DataSc
     qc.invalidateQueries({ queryKey: ['variableExpenses'] }),
     qc.invalidateQueries({ queryKey: ['summaryCards'] }),
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+    qc.invalidateQueries({ queryKey: ['monthlySeries'] }),
   ]), [qc])
 
   const addVariableExpense = useCallback(async (expense: Omit<VariableExpense, 'id'>): Promise<string> => {

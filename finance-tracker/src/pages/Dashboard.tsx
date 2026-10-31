@@ -21,7 +21,8 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useSettingsContext } from '../context/SettingsContext'
 import { useAuth } from '../context/AuthContext'
-import { getSummary, getSummaryCards } from '../api/transactions'
+import { getMonthlySeries, getSummaryCards, type SeriesMonth } from '../api/transactions'
+import { trackingStartOf } from '../utils/trackingStart'
 import { updateUserSettings } from '../api/auth'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
@@ -29,7 +30,6 @@ import { useHousehold } from '../hooks/useHousehold'
 import { MemberAvatar } from '../components/MemberAvatar'
 import { useCountUp } from '../hooks/useCountUp'
 import type { Page } from '../App'
-import type { ApiSummary } from '../types'
 import type { Translations } from '../i18n/sk'
 import { todayISO } from '../utils/format'
 
@@ -171,24 +171,26 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     return [...groups.values()].filter(d => d.value > 0)
   }, [categories, variableExpenses, fixedExpenses])
 
+  const chartStart = trackingStartOf(user)
   const { data: chartData = [] } = useQuery({
-    queryKey: ['dashboardChart', month, year, user?.tracking_start_date ?? null, user?.createdAt ?? null, dashView],
+    queryKey: ['dashboardChart', month, year, chartStart, dashView],
     queryFn: async () => {
-      const src = user?.tracking_start_date ?? user?.createdAt
-      const minYear = src ? new Date(src).getFullYear() : 0
-      const minMonth = src ? new Date(src).getMonth() + 1 : 0
+      const minYear = chartStart ? Number(chartStart.slice(0, 4)) : 0
+      const minMonth = chartStart ? Number(chartStart.slice(5, 7)) : 0
       const months = getLast6Months(t.monthsShort).filter(m =>
         m.year > minYear || (m.year === minYear && m.month >= minMonth)
       )
-      const results = await Promise.all(months.map(m => getSummary(m.key, dashView).catch(() => null)))
-      return months.map((m, i) => {
-        const s: ApiSummary | null = results[i]
-        return {
-          label: m.label,
-          income: s?.totalIncome ?? 0,
-          expenses: s?.totalExpenses ?? 0,
-        }
-      })
+      if (months.length === 0) return []
+      // One request with the same recurring-item and tracking-start rules as the
+      // cards and the annual view (the per-month /summary counted a recurring
+      // item only in the month it was entered).
+      const series = await getMonthlySeries(months[0].key, months[months.length - 1].key, dashView).catch(() => null)
+      const byMonth = new Map<string, SeriesMonth>((series?.months ?? []).map(s => [s.month, s]))
+      return months.map(m => ({
+        label: m.label,
+        income: byMonth.get(m.key)?.income ?? 0,
+        expenses: byMonth.get(m.key)?.expense ?? 0,
+      }))
     },
     enabled: !!user,
   })

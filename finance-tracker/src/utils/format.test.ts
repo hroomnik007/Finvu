@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDateLocale, formatMoney, formatMoneyParts, toLocalISO } from './format'
+import { formatDateLocale, formatMoney, formatMoneyParts, toLocalISO, formatMonthYearFrom } from './format'
 
 describe('toLocalISO', () => {
   it('uses the local calendar date, not the UTC one', () => {
@@ -51,5 +51,17 @@ describe('formatDateLocale', () => {
   it('treats YYYY-MM-DD as a local date', () => {
     expect(formatDateLocale('2026-03-01', 'en-GB')).toBe('1 March 2026')
     expect(formatDateLocale('2026-03-01', 'sk-SK')).toBe('1. marca 2026')
+  })
+})
+
+describe('formatMonthYearFrom', () => {
+  it('uses the genitive month after "od" in sk/cs/pl', () => {
+    expect(formatMonthYearFrom('2026-04-05', 'sk-SK')).toBe('apríla 2026')
+    expect(formatMonthYearFrom('2026-04-05', 'cs-CZ')).toBe('dubna 2026')
+    expect(formatMonthYearFrom('2026-04-05', 'pl-PL')).toBe('kwietnia 2026')
+  })
+  it('uses the standalone month elsewhere', () => {
+    expect(formatMonthYearFrom('2026-04-05', 'en-GB')).toBe('April 2026')
+    expect(formatMonthYearFrom('2026-04-05', 'hu-HU')).toBe('2026. április')
   })
 })

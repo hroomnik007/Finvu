@@ -724,6 +724,8 @@ export const en: Translations = {
     deletedItem: 'Deleted',
     deleteItemFailed: "Couldn't delete. The item was kept.",
     notSet: 'Not set',
+    // Under the date of a recurring item: the month it starts counting in
+    validFrom: 'Valid from {month}',
     unknownDevice: 'Unknown device',
     prevYear: 'Previous year',
     nextYear: 'Next year',

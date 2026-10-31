@@ -724,6 +724,8 @@ export const pl: Translations = {
     deletedItem: 'Usunięto',
     deleteItemFailed: 'Nie udało się usunąć. Pozycja została zachowana.',
     notSet: 'Nie ustawiono',
+    // Under the date of a recurring item: the month it starts counting in
+    validFrom: 'Obowiązuje od {month}',
     unknownDevice: 'Nieznane urządzenie',
     prevYear: 'Poprzedni rok',
     nextYear: 'Następny rok',

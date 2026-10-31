@@ -15,7 +15,9 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
-import { defaultEntryDate } from '../utils/entryDefaults'
+import { dateForRecurringToggle, defaultEntryDate } from '../utils/entryDefaults'
+import { ValidFromHint } from './ValidFromHint'
+import { todayISO } from '../utils/format'
 import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
 import AmountInput from './AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
@@ -411,10 +413,20 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         />
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <DateInput compact value={incDate} onChange={setIncDate} />
-          <button type="button" onClick={() => setIncRecurring(r => !r)} style={pillChipStyle(incRecurring, '#34D399', '#22D3EE')}>
+          <button
+            type="button"
+            aria-pressed={incRecurring}
+            onClick={() => {
+              const next = !incRecurring
+              setIncRecurring(next)
+              setIncDate(d => dateForRecurringToggle(d, next, month, year))
+            }}
+            style={pillChipStyle(incRecurring, '#34D399', '#22D3EE')}
+          >
             <Repeat size={12} /> {t.income.recurringToggle}
           </button>
         </div>
+        {incRecurring && <ValidFromHint date={incDate} />}
       </CompactModal>
 
       {/* ── ADD VARIABLE EXPENSE modal ────────────────────────────────────── */}
@@ -538,6 +550,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
             <Repeat size={12} /> {t.expenses.fixed.recurringMonthly}
           </div>
         </div>
+        {/* A new fixed expense is dated today and counts from this month on. */}
+        <ValidFromHint date={todayISO()} />
       </CompactModal>
 
       {/* ── ADD CATEGORY modal ────────────────────────────────────────────── */}

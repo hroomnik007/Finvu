@@ -3,6 +3,7 @@ import { usePendingDeleteIds } from './useUndoableDelete'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
+import { trackingStartOf } from '../utils/trackingStart'
 import { isEndedInMonth, isNewerRow } from './useFixedExpenses'
 import type { Income, ApiTransaction } from '../types'
 import { getAllTransactions } from '../api/allTransactions'
@@ -66,7 +67,8 @@ export async function fetchIncomes(
     const latest = new Map<string, ApiTransaction>()
     for (const t of recurring) {
       if (t.date.substring(0, 7) > monthStr) continue
-      if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
+      // A row dated before the tracking start still counts from the start month
+    // on (the month gate above already empties the earlier months).
       // Same series key and same-date tie-break as the backend cards and
       // household stats (owner + description, later-created row wins).
       const key = `${t.userId}|${t.description ?? ''}`
@@ -87,11 +89,11 @@ export async function fetchIncomes(
 export function useIncomes(month?: number, year?: number, scope: DataScope = 'personal') {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const qKey = incomeQueryKey(month, year, user?.tracking_start_date, scope)
+  const qKey = incomeQueryKey(month, year, trackingStartOf(user), scope)
 
   const { data: incomesAll, isLoading, isError, refetch } = useQuery({
     queryKey: qKey,
-    queryFn: () => fetchIncomes(month, year, user?.tracking_start_date, scope),
+    queryFn: () => fetchIncomes(month, year, trackingStartOf(user), scope),
     enabled: !!user,
   })
   // Rows waiting in the delete-undo window are hidden (lib/pendingDelete).
@@ -106,6 +108,7 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
     qc.invalidateQueries({ queryKey: ['incomes'] }),
     qc.invalidateQueries({ queryKey: ['summaryCards'] }),
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+    qc.invalidateQueries({ queryKey: ['monthlySeries'] }),
   ]), [qc])
 
   const addIncome = useCallback(async (income: Omit<Income, 'id'>): Promise<string> => {

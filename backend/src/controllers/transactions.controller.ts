@@ -12,6 +12,8 @@ import { escapeLike } from "../lib/search";
 import { localDateISO } from "../lib/localDate";
 import { nextStreak } from "../lib/streak";
 import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows } from "../lib/recurring";
+import { earliestStart, isTrackedMonth, type StartMonths } from "../lib/trackingStart";
+import { loadStartMonths } from "../lib/loadStartMonths";
 
 // YYYY-MM-DD that is also a real calendar date (the bare regex let 2026-02-30
 // through to Postgres, which rejects it with a 500).
@@ -79,19 +81,13 @@ async function resolveUserHousehold(userId: string) {
   return u;
 }
 
-// Earliest trackingStartDate/createdAt across ALL members of a household — used so
-// a "family" scope balance sums each member's FULL history, not just from when the
-// currently logged-in member happened to join.
-async function getFamilyStartDate(householdId: number): Promise<string> {
-  const rows = await db
-    .select({ trackingStartDate: users.trackingStartDate, createdAt: users.createdAt })
-    .from(householdMembers)
-    .innerJoin(users, eq(householdMembers.userId, users.id))
-    .where(and(eq(householdMembers.householdId, householdId), eq(users.householdId, householdId)));
-
-  const dates = rows.map((r) => r.trackingStartDate ?? localDateISO(r.createdAt));
-  if (dates.length === 0) return localDateISO();
-  return dates.reduce((min, d) => (d < min ? d : min));
+// The users a personal or family figure covers: the caller, or every member of
+// their household who shares data (same set as the family lists).
+async function scopeUserIds(userId: string, householdId: number | null | undefined, isFamily: boolean): Promise<string[]> {
+  if (!isFamily || !householdId) return [userId];
+  const rows = await familyMemberIds(householdId);
+  const ids = rows.map((r) => r.id);
+  return ids.length > 0 ? ids : [userId];
 }
 
 function buildFilters(
@@ -590,13 +586,21 @@ export async function getSummary(req: AuthRequest, res: Response): Promise<void>
   const { month, scope } = query.data;
   const { start, end } = monthRange(month);
 
-  let baseFilter = eq(transactions.userId, req.userId!);
+  let ids = [req.userId!];
   if (scope === "family") {
     const userCtx = await resolveUserHousehold(req.userId!);
     if (userCtx?.householdEnabled && userCtx?.householdId) {
-      baseFilter = inArray(transactions.userId, familyMemberIds(userCtx.householdId));
+      ids = await scopeUserIds(req.userId!, userCtx.householdId, true);
     }
   }
+  // A month before a member's tracking start is empty for that member.
+  const starts = await loadStartMonths(ids);
+  const tracked = ids.filter((id) => isTrackedMonth(starts, id, month));
+  if (tracked.length === 0) {
+    res.json({ totalIncome: 0, totalExpenses: 0, balance: 0, byCategory: [] });
+    return;
+  }
+  const baseFilter = inArray(transactions.userId, tracked);
 
   const rows = await db
     .select({
@@ -652,7 +656,7 @@ export async function getSummary(req: AuthRequest, res: Response): Promise<void>
   });
 }
 
-// Cumulative balance from startDate through the end of (year, month), built
+// Cumulative balance from the tracking start through the end of (year, month), built
 // month by month with the SAME rules as the monthly cards: one-off rows count in
 // the month they are dated, while a recurring (isFixed) row is entered once and
 // counts in every month from its own date onwards — each series (user +
@@ -660,31 +664,40 @@ export async function getSummary(req: AuthRequest, res: Response): Promise<void>
 // recurring expenses only once their due day has arrived. Summing every row
 // once (the old behaviour) under-counted recurring items in all but their first
 // month, so the balance drifted away from the monthly income/expense figures.
+//
+// Each user counts from their own first tracked month (tracking start, or the
+// month the account was created): earlier months are empty for them, and a
+// recurring row dated before it counts from that month on.
 async function cumulativeBalance(
-  baseFilter: SQL,
-  startDate: string,
+  ids: string[],
+  starts: StartMonths,
   year: number,
   month: number,
 ): Promise<number> {
   const target = year * 12 + (month - 1);
-  const first = Number(startDate.slice(0, 4)) * 12 + (Number(startDate.slice(5, 7)) - 1);
+  const startYM = earliestStart(starts, ids);
+  if (!startYM) return 0;
+  const first = Number(startYM.slice(0, 4)) * 12 + (Number(startYM.slice(5, 7)) - 1);
   if (!(first <= target)) return 0;
   // Guard against absurd start dates; ~100 years of months is more than enough.
   const firstMonth = Math.max(first, target - 1200);
   const { end } = monthRange(`${year}-${String(month).padStart(2, "0")}`);
+  const owner = inArray(transactions.userId, ids);
 
   const oneOff = await db
     .select({
+      userId: transactions.userId,
       ym: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`,
       type: transactions.type,
       total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
     })
     .from(transactions)
-    .where(and(baseFilter, gte(transactions.date, startDate), lt(transactions.date, end), eq(transactions.isFixed, false)))
-    .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM')`, transactions.type);
+    .where(and(owner, gte(transactions.date, `${startYM}-01`), lt(transactions.date, end), eq(transactions.isFixed, false)))
+    .groupBy(transactions.userId, sql`to_char(${transactions.date}, 'YYYY-MM')`, transactions.type);
 
   const oneOffByMonth = new Map<string, { income: number; expense: number }>();
   for (const r of oneOff) {
+    if (!isTrackedMonth(starts, r.userId, r.ym)) continue;
     const entry = oneOffByMonth.get(r.ym) ?? { income: 0, expense: 0 };
     if (r.type === "income") entry.income += parseFloat(r.total);
     else entry.expense += parseFloat(r.total);
@@ -701,12 +714,12 @@ async function cumulativeBalance(
       endedOn: transactions.endedOn,
     })
     .from(transactions)
-    .where(and(baseFilter, eq(transactions.isFixed, true), lt(transactions.date, end)))
+    .where(and(owner, eq(transactions.isFixed, true), lt(transactions.date, end)))
     // Same tie-break as the cards and the household stats: of two rows of one
     // series on the same date, the later-created one wins.
     .orderBy(transactions.date, transactions.createdAt, transactions.id);
 
-  return cumulativeBalanceFromRows(oneOffByMonth, fixedRows, firstMonth, target, new Date());
+  return cumulativeBalanceFromRows(oneOffByMonth, fixedRows, firstMonth, target, new Date(), starts);
 }
 
 export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promise<void> {
@@ -722,8 +735,6 @@ export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promis
     .select({
       householdId: users.householdId,
       householdEnabled: users.householdEnabled,
-      trackingStartDate: users.trackingStartDate,
-      createdAt: users.createdAt,
     })
     .from(users)
     .where(eq(users.id, req.userId!))
@@ -733,15 +744,10 @@ export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promis
 
   const isFamily = scope === "family" && !!userRow.householdEnabled && !!userRow.householdId;
 
-  const baseFilter = isFamily
-    ? inArray(transactions.userId, familyMemberIds(userRow.householdId!))
-    : eq(transactions.userId, req.userId!);
+  const ids = await scopeUserIds(req.userId!, userRow.householdId, isFamily);
+  const starts = await loadStartMonths(ids);
 
-  const startDate = isFamily
-    ? await getFamilyStartDate(userRow.householdId!)
-    : userRow.trackingStartDate ?? localDateISO(userRow.createdAt);
-
-  res.json({ balance: await cumulativeBalance(baseFilter, startDate, year, month) });
+  res.json({ balance: await cumulativeBalance(ids, starts, year, month) });
 }
 
 export async function getSummaryCards(req: AuthRequest, res: Response): Promise<void> {
@@ -759,8 +765,6 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
     .select({
       householdId: users.householdId,
       householdEnabled: users.householdEnabled,
-      trackingStartDate: users.trackingStartDate,
-      createdAt: users.createdAt,
     })
     .from(users)
     .where(eq(users.id, req.userId!))
@@ -770,17 +774,21 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
 
   const isFamily = scope === "family" && !!userRow.householdEnabled && !!userRow.householdId;
 
-  const baseFilter = isFamily
-    ? inArray(transactions.userId, familyMemberIds(userRow.householdId!))
-    : eq(transactions.userId, req.userId!);
-
-  const startDate = isFamily
-    ? await getFamilyStartDate(userRow.householdId!)
-    : userRow.trackingStartDate ?? localDateISO(userRow.createdAt);
+  const ids = await scopeUserIds(req.userId!, userRow.householdId, isFamily);
+  const starts = await loadStartMonths(ids);
 
   // Balance: cumulative from tracking start to end of requested month, built
   // month by month with the same recurring-item rules as the figures below.
-  const balance = await cumulativeBalance(baseFilter, startDate, year, month);
+  const balance = await cumulativeBalance(ids, starts, year, month);
+
+  // The month's figures only cover members who were already tracking in it: a
+  // month before someone's tracking start is empty for them (recurring rows too).
+  const tracked = ids.filter((id) => isTrackedMonth(starts, id, monthStr));
+  if (tracked.length === 0) {
+    res.json({ balance, income: 0, expenses: 0, savingsRate: 0 });
+    return;
+  }
+  const baseFilter = inArray(transactions.userId, tracked);
 
   // Month income (non-recurring) & variable expenses: exact date match within the month.
   // Recurring (isFixed) rows are excluded here and handled separately below, since a

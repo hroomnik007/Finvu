@@ -179,3 +179,22 @@ describe("activeSeriesTotal", () => {
     expect(activeSeriesTotal(rows, 2026, 11)).toBe(0);
   });
 });
+
+describe("cumulativeBalanceFromRows with tracking starts", () => {
+  it("counts a recurring row dated before the user's start only from the start month on", () => {
+    const babka = row({ type: "income", description: "Babka", amount: "200", date: "2026-01-05" });
+    const starts = new Map([["u1", "2026-04"]]);
+    expect(cumulativeBalanceFromRows(new Map(), [babka], idx(2026, 1), idx(2026, 3), TODAY, starts)).toBe(0);
+    expect(cumulativeBalanceFromRows(new Map(), [babka], idx(2026, 1), idx(2026, 6), TODAY, starts)).toBe(600);
+  });
+
+  it("applies each member's own start", () => {
+    const rows = [
+      row({ userId: "a", type: "income", description: "Plat", amount: "1000", date: "2026-01-01" }),
+      row({ userId: "b", description: "Nájom", amount: "100", date: "2026-01-01" }),
+    ];
+    const starts = new Map([["a", "2026-03"], ["b", "2026-02"]]);
+    // a: Mar+Apr = 2000; b: Feb..Apr = −300
+    expect(cumulativeBalanceFromRows(new Map(), rows, idx(2026, 1), idx(2026, 4), TODAY, starts)).toBe(1700);
+  });
+});
