@@ -63,7 +63,9 @@ export function useTranslation() {
   const tr = loaded[lang]
   // A language picked later loads from the precache in a moment; Slovak until then.
   if (!tr) void loadLanguage(lang)
-  return { t: tr ?? sk, lang, locale: LOCALE_MAP[lang] }
+  // shownLang is the language of the strings actually rendered (Slovak while a
+  // chunk is still loading), so <html lang> never disagrees with the text.
+  return { t: tr ?? sk, lang, shownLang: tr ? lang : ('sk' as SupportedLang), locale: LOCALE_MAP[lang] }
 }
 
 // ── Localized date names (replaces hardcoded Slovak day/month arrays) ──────
