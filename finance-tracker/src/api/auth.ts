@@ -1,7 +1,6 @@
 import { apiClient, refreshAccessToken } from './client'
 import { announceAchievementUnlocks } from '../utils/achievementEvents'
 import type { AuthUser, UserSession } from '../types'
-import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 
 export async function login(email: string, password: string): Promise<{ user: AuthUser; accessToken: string }> {
   const { data } = await apiClient.post('/api/auth/login', { email, password })
@@ -55,8 +54,19 @@ export async function resetPassword(token: string, newPassword: string): Promise
   return data
 }
 
-export async function deleteAccount(currentPassword?: string): Promise<void> {
-  await apiClient.delete('/api/auth/account', { data: { currentPassword } })
+/**
+ * What proves it's really the owner deleting the account: the password for
+ * password accounts; for passwordless ones a fresh passkey assertion, the PIN
+ * (on a device bound to it) or a token just obtained from the linked Google account.
+ */
+export type DeleteAccountProof =
+  | { currentPassword: string }
+  | { passkey: object }
+  | { pin: string }
+  | { googleAccessToken: string }
+
+export async function deleteAccount(proof: DeleteAccountProof): Promise<void> {
+  await apiClient.delete('/api/auth/account', { data: proof })
 }
 
 export async function updateAvatar(avatarUrl: string): Promise<{ avatarUrl: string }> {
@@ -163,20 +173,8 @@ export async function deletePinDevice(id: string): Promise<void> {
   await apiClient.delete(`/api/auth/pin-devices/${id}`)
 }
 
-export async function webauthnRegisterOptions(
-  creds: { currentPassword?: string; currentPin?: string } = {},
-): Promise<PublicKeyCredentialCreationOptionsJSON> {
-  const { data } = await apiClient.post('/api/auth/webauthn/register-options', creds)
-  return data
-}
-
 export async function webauthnRegisterVerify(body: object): Promise<{ success: boolean }> {
   const { data } = await apiClient.post('/api/auth/webauthn/register-verify', body)
-  return data
-}
-
-export async function webauthnAuthenticateOptions(email?: string): Promise<object> {
-  const { data } = await apiClient.get('/api/auth/webauthn/authenticate-options', { params: email ? { email } : {} })
   return data
 }
 
@@ -191,6 +189,11 @@ export interface PasskeyInfo {
 export async function getPasskeys(): Promise<PasskeyInfo[]> {
   const { data } = await apiClient.get('/api/auth/webauthn/credentials')
   return (data as { data: PasskeyInfo[] }).data
+}
+
+export async function renamePasskey(id: string, name: string): Promise<{ id: string; name: string }> {
+  const { data } = await apiClient.patch(`/api/auth/webauthn/credentials/${id}`, { name })
+  return data
 }
 
 export async function deletePasskey(id: string): Promise<void> {

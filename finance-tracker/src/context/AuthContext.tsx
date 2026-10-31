@@ -23,6 +23,7 @@ import {
 } from '../api/auth'
 import { applyLanguageSetting } from './SettingsContext'
 import type { AuthUser } from '../types'
+import type { DeleteAccountProof } from '../api/auth'
 import { clearUserData, noteSignedInUser } from '../lib/userDataReset'
 
 interface AuthContextValue {
@@ -38,7 +39,7 @@ interface AuthContextValue {
   register: (email: string, password: string, name: string, gdprConsent: boolean) => Promise<void>
   loginAsGuest: () => void
   logout: () => Promise<void>
-  deleteAccount: (currentPassword?: string) => Promise<void>
+  deleteAccount: (proof: DeleteAccountProof) => Promise<void>
   refreshUser: () => Promise<void>
   completeOnboarding: () => Promise<void>
   updateMonthlyEmail: (enabled: boolean) => Promise<void>
@@ -245,8 +246,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => doLogout(true), [doLogout])
 
-  const deleteAccount = useCallback(async (currentPassword?: string) => {
-    await apiDeleteAccount(currentPassword)
+  const deleteAccount = useCallback(async (proof: DeleteAccountProof) => {
+    await apiDeleteAccount(proof)
     await doLogout(false)
   }, [doLogout])
 

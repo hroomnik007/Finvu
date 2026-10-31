@@ -37,6 +37,8 @@ import { resetDemoAccount, DEMO_EMAIL } from "../lib/resetDemo";
 import { parseImageDataUrl, saveAvatarFile, deleteAvatarFiles } from "../lib/avatarStorage";
 import { releaseOwnedHouseholds } from "../lib/household";
 import { isLocked, recordFailure, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
+import { verifyGoogleAccessToken, FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN } from "../lib/googleToken";
+import { verifyPasskeyReauth } from "../lib/passkeyReauth";
 
 // Emails are stored and matched lower-case. Legacy rows may still be mixed-case,
 // so lookups go through byEmail() (case-insensitive) instead of plain equality.
@@ -97,6 +99,7 @@ export function userPublic(u: {
   onboardingBannerDismissed?: boolean | null;
   pinHash?: string | null;
   passwordHash?: string | null;
+  googleId?: string | null;
   autoLockMinutes?: number | null;
 }) {
   return {
@@ -121,6 +124,8 @@ export function userPublic(u: {
     // Lets the frontend decide whether changing/removing a PIN should ask for
     // the current password or the current PIN as the re-auth factor.
     has_password: !!u.passwordHash,
+    // Whether "confirm with Google" can be offered (e.g. before deleting the account).
+    has_google: !!u.googleId,
     auto_lock_minutes: u.autoLockMinutes ?? null,
   };
 }
@@ -483,6 +488,7 @@ export async function me(req: AuthRequest, res: Response): Promise<void> {
       onboardingBannerDismissed: users.onboardingBannerDismissed,
       pinHash: users.pinHash,
       passwordHash: users.passwordHash,
+      googleId: users.googleId,
     })
     .from(users)
     .where(eq(users.id, req.userId!))
@@ -810,56 +816,12 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
 }
 
 export async function googleAuth(req: Request, res: Response): Promise<void> {
-  const { accessToken } = req.body as { accessToken?: string };
-  if (!accessToken || typeof accessToken !== "string") {
-    res.status(400).json({ error: "accessToken is required" });
+  const verified = await verifyGoogleAccessToken((req.body ?? {}).accessToken);
+  if (!verified.ok) {
+    res.status(verified.status).json({ error: verified.error });
     return;
   }
-
-  // Without our client id there is no way to tell a token issued for this app
-  // from one issued to any other Google app — fail closed instead of accepting both.
-  if (!env.GOOGLE_CLIENT_ID) {
-    console.error("[googleAuth] GOOGLE_CLIENT_ID is not set — Google sign-in is disabled.");
-    res.status(503).json({ error: "Google prihlásenie nie je nakonfigurované." });
-    return;
-  }
-
-  let googleId: string;
-  let email: string;
-  let name: string;
-
-  try {
-    const userinfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!userinfoRes.ok) {
-      res.status(401).json({ error: "Neplatný Google token." });
-      return;
-    }
-    const info = await userinfoRes.json() as { sub: string; email: string; name: string; email_verified: boolean };
-    if (!info.email || !info.sub || info.email_verified !== true) {
-      res.status(401).json({ error: "Neplatný Google token." });
-      return;
-    }
-
-    const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
-    if (!tokenInfoRes.ok) {
-      res.status(401).json({ error: "Neplatný Google token." });
-      return;
-    }
-    const tokenInfo = await tokenInfoRes.json() as { aud?: string; azp?: string };
-    if (tokenInfo.aud !== env.GOOGLE_CLIENT_ID && tokenInfo.azp !== env.GOOGLE_CLIENT_ID) {
-      res.status(401).json({ error: "Google token nebol vydaný pre túto aplikáciu." });
-      return;
-    }
-
-    googleId = info.sub;
-    email = info.email.trim().toLowerCase();
-    name = info.name || email.split("@")[0];
-  } catch {
-    res.status(401).json({ error: "Nepodarilo sa overiť Google token." });
-    return;
-  }
+  const { sub: googleId, email, name } = verified;
 
   let [user] = await db.select().from(users).where(byEmail(email)).limit(1);
 
@@ -894,28 +856,88 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
   res.json({ user: userPublic(user), accessToken: accessJwt, sessionId });
 }
 
+// DELETE /api/auth/account
+//   password account:     { currentPassword }
+//   passwordless account: one fresh proof of being the owner —
+//     { passkey }            assertion for POST /webauthn/reauth-options (UV required)
+//     { pin }                current PIN, only from a device bound to the PIN, with the PIN lockout
+//     { googleAccessToken }  a token just obtained from Google for the linked Google account
+// A valid access token alone is not enough to wipe an account (a stolen
+// token or an unlocked, unattended phone would otherwise be).
 export async function deleteAccount(req: AuthRequest, res: Response): Promise<void> {
   if (rejectDemo(req, res)) return;
   const userId = req.userId!;
-  const { currentPassword } = req.body as { currentPassword?: string };
+  const body = (req.body ?? {}) as { currentPassword?: unknown; passkey?: unknown; pin?: unknown; googleAccessToken?: unknown };
 
-  const [user] = await db.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, userId)).limit(1);
+  const [user] = await db
+    .select({ passwordHash: users.passwordHash, pinHash: users.pinHash, googleId: users.googleId })
+    .from(users).where(eq(users.id, userId)).limit(1);
   if (!user) {
     res.status(404).json({ error: "Používateľ neexistuje." });
     return;
   }
 
-  // Google-only accounts have no password to verify — nothing to check for them.
   if (user.passwordHash) {
-    if (!currentPassword) {
+    if (typeof body.currentPassword !== "string" || !body.currentPassword) {
       res.status(400).json({ error: "Pre zmazanie účtu zadajte aktuálne heslo." });
       return;
     }
-    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    const valid = await bcrypt.compare(body.currentPassword, user.passwordHash);
     if (!valid) {
       res.status(401).json({ error: "Nesprávne aktuálne heslo." });
       return;
     }
+  } else if (body.passkey !== undefined) {
+    if (!(await verifyPasskeyReauth(userId, body.passkey))) {
+      res.status(401).json({ error: "Overenie passkey zlyhalo. Skúste to znova." });
+      return;
+    }
+  } else if (body.pin !== undefined) {
+    const PIN_FAIL = { error: "Nesprávny PIN." };
+    if (!user.pinHash || typeof body.pin !== "string" || !/^\d{4}$/.test(body.pin)) {
+      res.status(401).json(PIN_FAIL);
+      return;
+    }
+    // Same rules as PIN sign-in: only from a device bound to the PIN, and the
+    // per-account lockout is checked before (and fed by) the comparison.
+    if (!(await verifyAndSlidePinDeviceToken(res, userId, req))) {
+      res.status(401).json({ error: "PIN sa dá použiť len na zariadení, kde bol nastavený.", code: "PIN_DEVICE_NOT_BOUND" });
+      return;
+    }
+    const lockKey = pinKey(userId);
+    if (await isLocked(lockKey)) {
+      res.status(429).json(LOCKED_RESPONSE);
+      return;
+    }
+    if (!(await bcrypt.compare(body.pin, user.pinHash))) {
+      await recordFailure(lockKey);
+      res.status(401).json(PIN_FAIL);
+      return;
+    }
+    await clearFailures(lockKey);
+  } else if (body.googleAccessToken !== undefined) {
+    const google = await verifyGoogleAccessToken(body.googleAccessToken);
+    if (!google.ok) {
+      res.status(google.status).json({ error: google.error });
+      return;
+    }
+    if (!user.googleId || google.sub !== user.googleId) {
+      res.status(401).json({ error: "Prihláste sa Google účtom, ktorý patrí k tomuto účtu." });
+      return;
+    }
+    if (google.expiresIn < FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN) {
+      res.status(401).json({ error: "Prihlásenie cez Google je príliš staré. Skúste to znova." });
+      return;
+    }
+  } else {
+    // Tell the client which proofs this account can give.
+    const [{ n }] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(webauthnCredentials)
+      .where(eq(webauthnCredentials.userId, userId));
+    const methods = [n > 0 && "passkey", user.pinHash && "pin", user.googleId && "google"].filter(Boolean);
+    res.status(400).json({ error: "Pre zmazanie účtu potvrďte svoju totožnosť.", code: "REAUTH_REQUIRED", methods });
+    return;
   }
 
   await deleteAvatarFiles(userId);

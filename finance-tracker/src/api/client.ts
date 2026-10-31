@@ -3,6 +3,11 @@ import axios from 'axios'
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 /** Resolve a server-relative asset path (e.g. /uploads/avatars/…) to a full API URL. */
+/** Full API URL for a server path, for the few calls that must use native fetch(). */
+export function apiUrl(path: string): string {
+  return `${BASE_URL}${path}`
+}
+
 export function resolveAssetUrl(pathOrUrl: string): string {
   return pathOrUrl.startsWith('/') ? `${BASE_URL}${pathOrUrl}` : pathOrUrl
 }

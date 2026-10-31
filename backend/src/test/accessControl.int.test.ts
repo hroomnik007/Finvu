@@ -13,6 +13,8 @@ import {
   savingsGoals, savingsDeposits, userSessions, pinDeviceTokens, webauthnCredentials,
 } from "../db/schema";
 import { signAccessToken } from "../lib/tokens";
+import { ORIGIN, RP_ID } from "../lib/webauthnChallenges";
+import { softPasskey } from "./softAuthenticator";
 import { authenticateToken } from "../middleware/authenticate";
 import { errorHandler } from "../middleware/errorHandler";
 import authRouter from "../routes/auth";
@@ -323,6 +325,17 @@ describe("account items of another user", () => {
     expect(await row(db.select().from(webauthnCredentials).where(eq(webauthnCredentials.id, alice.passkey)))).toBeTruthy();
   });
 
+  it("passkeys can only be renamed by their owner", async () => {
+    const theirs = await call(carol, "PATCH", `/api/auth/webauthn/credentials/${alice.passkey}`, { name: "pwned" });
+    expect(theirs.status).toBe(404);
+    expect((await row(db.select().from(webauthnCredentials).where(eq(webauthnCredentials.id, alice.passkey))))?.name).not.toBe("pwned");
+
+    expect((await call(alice, "PATCH", `/api/auth/webauthn/credentials/${alice.passkey}`, { name: "  " })).status).toBe(400);
+    const own = await call(alice, "PATCH", `/api/auth/webauthn/credentials/${alice.passkey}`, { name: " Alice's  iPhone " });
+    expect(own.status).toBe(200);
+    expect(own.json).toEqual({ id: alice.passkey, name: "Alice's iPhone" });
+  });
+
   it("a malformed id is a 4xx, not a server error", async () => {
     for (const path of ["sessions", "pin-devices", "webauthn/credentials"]) {
       const { status } = await call(carol, "DELETE", `/api/auth/${path}/not-a-uuid`);
@@ -331,3 +344,41 @@ describe("account items of another user", () => {
     }
   });
 });
+
+describe("deleting a passwordless account", () => {
+  const key = softPasskey();
+  let dave: Ids;
+
+  beforeAll(async () => {
+    const email = `dave-${run}@access.test`;
+    const [u] = await db.insert(users).values({ email, name: "dave", emailVerified: true, passwordHash: null, googleId: `g-dave-${run}` }).returning({ id: users.id });
+    await db.insert(webauthnCredentials).values({ userId: u.id, credentialId: key.credentialId, publicKey: key.publicKeyBase64 });
+    dave = { user: u.id, token: signAccessToken({ userId: u.id, email }) } as Ids;
+  });
+  afterAll(async () => { if (dave) await db.delete(users).where(eq(users.id, dave.user)); });
+
+  const sign = (challenge: string) => key.assert({ challenge, origin: ORIGIN, rpId: RP_ID });
+  const daveExists = async () => !!(await row(db.select({ id: users.id }).from(users).where(eq(users.id, dave.user))));
+
+  it("needs a proof, and only dave's own passkey on dave's own challenge counts", async () => {
+    const none = await call(dave, "DELETE", "/api/auth/account", {});
+    expect(none.status).toBe(400);
+    expect(none.json).toMatchObject({ code: "REAUTH_REQUIRED", methods: ["passkey", "google"] });
+
+    // carol (a password account) can't swap her password for some passkey assertion
+    const carolOpts = await call(carol, "POST", "/api/auth/webauthn/reauth-options");
+    expect(carolOpts.status).toBe(200);
+    expect((await call(carol, "DELETE", "/api/auth/account", { passkey: sign(carolOpts.json.challenge) })).status).toBe(400); // carol has a password
+    // and carol's challenge can't be used to delete dave
+    expect((await call(dave, "DELETE", "/api/auth/account", { passkey: sign(carolOpts.json.challenge) })).status).toBe(401);
+    expect(await daveExists()).toBe(true);
+
+    const opts = await call(dave, "POST", "/api/auth/webauthn/reauth-options");
+    expect(opts.json.allowCredentials).toEqual([expect.objectContaining({ id: key.credentialId })]);
+    expect(opts.json.userVerification).toBe("required");
+    const ok = await call(dave, "DELETE", "/api/auth/account", { passkey: sign(opts.json.challenge) });
+    expect(ok.status).toBe(200);
+    expect(await daveExists()).toBe(false);
+  });
+});
+

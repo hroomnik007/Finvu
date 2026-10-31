@@ -12,6 +12,7 @@ import { updateWeeklyEmail, updateUserSettings, changePassword, getSessions, del
 import type { PinDevice } from '../api/auth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { PasskeySection } from '../components/PasskeySection'
+import { DeleteAccountModal } from '../components/DeleteAccountModal'
 import { parseUserAgent } from '../utils/parseUserAgent'
 import { getAllTransactions } from '../api/allTransactions'
 import { getTransactions, deleteTransaction } from '../api/transactions'
@@ -236,7 +237,7 @@ export function SettingsPage() {
     const rule = new Intl.PluralRules(locale).select(n)
     return rule === 'one' ? one : rule === 'few' ? few : many
   }
-  const { deleteAccount, user, updateMonthlyEmail, refreshUser, logout } = useAuth()
+  const { user, updateMonthlyEmail, refreshUser, logout } = useAuth()
   const { setupPin, hasPin, removePin } = usePinLockContext()
 
   const compactStorageKey = window.innerWidth < 768 ? 'finvu_compact_mobile' : 'finvu_compact_desktop'
@@ -704,11 +705,6 @@ export function SettingsPage() {
   }
 
   // ── Delete account ────────────────────────────────────────────────────────
-  const [deleteConfirm, setDeleteConfirm] = useState('')
-  const [deletePassword, setDeletePassword] = useState('')
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-
   // ── Savings toggle ────────────────────────────────────────────────────────
   const savingsEnabled = user?.savings_enabled ?? false
   const [savingsToggling, setSavingsToggling] = useState(false)
@@ -1532,70 +1528,7 @@ export function SettingsPage() {
       )}
 
       {/* ── DELETE ACCOUNT MODAL ── */}
-      {deleteOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
-            <div className="flex items-center justify-between mb-4">
-              <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deleteAccount}</h2>
-              <button onClick={() => setDeleteOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}><X size={16} /></button>
-            </div>
-            <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deleteAccountDesc}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
-                {t.settings.currentPassword}
-              </label>
-              <input
-                type="password"
-                placeholder={t.settings.currentPassword}
-                value={deletePassword}
-                onChange={e => { setDeletePassword(e.target.value); setDeleteError(null) }}
-                style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
-                {t.settings.deleteAccountConfirmLabel}
-              </label>
-              <input
-                type="text"
-                placeholder={t.settings.deleteConfirmWord}
-                value={deleteConfirm}
-                onChange={e => { setDeleteConfirm(e.target.value); setDeleteError(null) }}
-                style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }}
-              />
-            </div>
-            {deleteError && <p style={{ fontSize: 12, color: 'var(--aurora-rose)', marginBottom: 8 }}>{deleteError}</p>}
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-white/5 border border-white/10 text-[color:var(--aurora-faint)] hover:bg-white/10 transition-colors cursor-pointer">
-                {t.common.cancel}
-              </button>
-              <button
-                disabled={deleteConfirm.trim().toUpperCase() !== t.settings.deleteConfirmWord || isDeleting}
-                onClick={async () => {
-                  setIsDeleting(true)
-                  try {
-                    await deleteAccount(deletePassword)
-                  } catch (err: unknown) {
-                    const status = (err as { response?: { status?: number } })?.response?.status
-                    if (status === 502 || status === 501 || status === 404) {
-                      setDeleteError(t.settings.deleteAccountUnavailable)
-                    } else if (status === 401 || status === 400) {
-                      setDeleteError(t.settings.wrongCurrentPassword)
-                    } else {
-                      setDeleteError(t.settings.deleteFailed)
-                    }
-                    setIsDeleting(false)
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: deleteConfirm.trim().toUpperCase() === t.settings.deleteConfirmWord ? '#DC2626' : undefined }}
-              >
-                {isDeleting ? t.settings.dangerDeleting : t.settings.deleteAccountConfirmBtn}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {deleteOpen && <DeleteAccountModal onClose={() => setDeleteOpen(false)} />}
 
       {/* ── CHANGE PASSWORD MODAL ── */}
       {changePwOpen && (
@@ -1767,26 +1700,28 @@ export function SettingsPage() {
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deactivationSection.charAt(0) + t.settings.deactivationSection.slice(1).toLowerCase()}</h2>
               <button onClick={() => setDeactivationModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
             </div>
+            {/* Each action closes this sheet first: its dialog is rendered earlier in the
+                tree with the same z-index, so it would otherwise open hidden behind it. */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <ChevronRow
                 icon={Trash2} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.deleteAllTransactions} sublabel={t.settings.deleteAllTransactionsSub}
-                onClick={() => { setDangerAction('transactions'); setDangerConfirmText('') }}
+                onClick={() => { setDeactivationModalOpen(false); setDangerAction('transactions'); setDangerConfirmText('') }}
               />
               <ChevronRow
                 icon={RotateCcw} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.resetAppLabel} sublabel={t.settings.resetAppSub}
-                onClick={() => { setDangerAction('reset'); setDangerConfirmText('') }}
+                onClick={() => { setDeactivationModalOpen(false); setDangerAction('reset'); setDangerConfirmText('') }}
               />
               <ChevronRow
                 icon={Ban} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.deactivateAccount} sublabel={t.settings.deactivateSub}
-                onClick={() => { setDeactivateOpen(true); setDeactivateConfirm(''); setDeactivateError(null) }}
+                onClick={() => { setDeactivationModalOpen(false); setDeactivateOpen(true); setDeactivateConfirm(''); setDeactivateError(null) }}
               />
               <ChevronRow
                 icon={UserX} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.deleteAccount} sublabel={t.settings.deleteAccountSub}
-                onClick={() => { setDeleteOpen(true); setDeleteConfirm(''); setDeletePassword(''); setDeleteError(null) }}
+                onClick={() => { setDeactivationModalOpen(false); setDeleteOpen(true) }}
               />
             </div>
           </div>

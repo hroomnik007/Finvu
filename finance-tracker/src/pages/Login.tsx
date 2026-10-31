@@ -3,8 +3,10 @@ import { Eye, EyeOff, ArrowRight, X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
-import { getPinDeviceStatus, resendVerification, webauthnAuthenticateOptions, webauthnAuthenticateVerify } from '../api/auth'
-import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
+import { getPinDeviceStatus, resendVerification, webauthnAuthenticateVerify } from '../api/auth'
+import { browserSupportsWebAuthnAutofill, startAuthentication, WebAuthnAbortService } from '@simplewebauthn/browser'
+import { ceremonyErrorKind, fetchLoginOptions, PREFETCH_MAX_AGE_MS } from '../lib/webauthnCeremony'
+import type { LoginOptions } from '../lib/webauthnCeremony'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
 import { PinKeypad } from '../components/PinKeypad'
@@ -43,6 +45,12 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   // have an account or which sign-in methods they use.
   const [pinOnThisDevice, setPinOnThisDevice] = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
+  // Usernameless login options fetched ahead of the tap (see lib/webauthnCeremony):
+  // with them ready the tap goes straight into navigator.credentials.get().
+  const loginOptionsRef = useRef<{ options: LoginOptions; at: number } | null>(null)
+  // True while the explicit "Passkey" button's ceremony runs; the autofill
+  // (conditional UI) request must not be re-armed over it.
+  const explicitPasskeyRef = useRef(false)
   const lastPinTapRef = useRef(0)
 
   useEffect(() => {
@@ -95,24 +103,96 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
     }
   }
 
-  // Passkey sign-in: with an e-mail the server restricts the prompt to that
-  // user's credentials, without one the browser offers its discoverable passkeys.
+  const completePasskeyLogin = useCallback(async (options: LoginOptions, useBrowserAutofill: boolean) => {
+    const assertion = await startAuthentication({ optionsJSON: options, useBrowserAutofill })
+    const { user: me, accessToken, sessionId } = await webauthnAuthenticateVerify({ ...assertion, _challengeKey: options._challengeKey })
+    loginWithToken(me, accessToken, sessionId)
+  }, [loginWithToken])
+
+  // Prefetch on mount and keep it fresh: the server keeps a challenge for 5
+  // minutes, a prefetched one is only used for 4. Options are usernameless
+  // (no e-mail sent), so prefetching reveals nothing and works for any account.
+  // Where the browser supports it, the same options also arm conditional UI:
+  // the passkeys show up in the e-mail field's autofill (autocomplete
+  // "username webauthn"). The pending autofill request is aborted when the
+  // explicit button starts its own ceremony (startAuthentication aborts the
+  // previous one), re-armed with a fresh challenge every 4 minutes, and
+  // cancelled when the page unmounts.
+  const armRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    if (!('PublicKeyCredential' in window)) return
+    let unmounted = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let autofill: boolean | null = null
+    let failures = 0 // consecutive failed autofill sign-ins
+
+    const arm = async () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => void arm(), PREFETCH_MAX_AGE_MS)
+      let options: LoginOptions
+      try {
+        options = await fetchLoginOptions()
+      } catch {
+        loginOptionsRef.current = null
+        return
+      }
+      if (unmounted) return
+      loginOptionsRef.current = { options, at: Date.now() }
+      if (autofill === null) autofill = await browserSupportsWebAuthnAutofill().catch(() => false)
+      if (!autofill || unmounted || explicitPasskeyRef.current) return
+      try {
+        await completePasskeyLogin(options, true)
+      } catch (err: unknown) {
+        if (unmounted || ceremonyErrorKind(err) === 'cancelled') return // aborted / re-armed / dismissed
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        setError(msg ?? t.auth.passkeyFailed)
+        // That challenge is used up. Re-arm, but back off: a passkey whose
+        // account is gone (or a misbehaving authenticator answering on its own)
+        // must not spin a request loop. After 3 failures in a row only the
+        // regular 4-minute refresh or an explicit attempt re-arms.
+        failures += 1
+        if (failures < 3) {
+          clearTimeout(timer)
+          timer = setTimeout(() => void arm(), 1000 * failures)
+        }
+      }
+    }
+
+    armRef.current = () => { if (!unmounted) { failures = 0; void arm() } }
+    void arm()
+    return () => {
+      unmounted = true
+      clearTimeout(timer)
+      WebAuthnAbortService.cancelCeremony()
+    }
+  }, [completePasskeyLogin, t.auth.passkeyFailed])
+
+  // Passkey sign-in is usernameless: every passkey is a discoverable credential
+  // (residentKey 'required'), so the browser offers the passkeys it holds for
+  // finvu.pedani.eu and the typed e-mail, if any, is not needed.
   const handlePasskeyLogin = async () => {
     setError(null)
     setNeedsVerification(false)
     setPasskeyLoading(true)
+    explicitPasskeyRef.current = true
+    const cached = loginOptionsRef.current
+    loginOptionsRef.current = null // a challenge is single-use
     try {
-      const { startAuthentication } = await import('@simplewebauthn/browser')
-      const options = await webauthnAuthenticateOptions(email.includes('@') ? email : undefined) as { _challengeKey: string }
-      const assertion = await startAuthentication({ optionsJSON: options as unknown as PublicKeyCredentialRequestOptionsJSON })
-      const { user: me, accessToken, sessionId } = await webauthnAuthenticateVerify({ ...assertion, _challengeKey: options._challengeKey })
-      loginWithToken(me, accessToken, sessionId)
+      const options = cached && Date.now() - cached.at < PREFETCH_MAX_AGE_MS
+        ? cached.options
+        : await fetchLoginOptions() // one native fetch is still fine for old Safari
+      // Starting this ceremony aborts the pending autofill request.
+      await completePasskeyLogin(options, false)
     } catch (err: unknown) {
       // The user dismissing the browser prompt is not an error worth showing
-      if ((err as { name?: string })?.name === 'NotAllowedError') return
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setError(msg ?? t.auth.passkeyFailed)
+      if (ceremonyErrorKind(err) !== 'cancelled') {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        setError(msg ?? t.auth.passkeyFailed)
+      }
+      explicitPasskeyRef.current = false
+      armRef.current() // fresh challenge + autofill again
     } finally {
+      explicitPasskeyRef.current = false
       setPasskeyLoading(false)
     }
   }
@@ -257,6 +337,8 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           <label style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
           <input
             type="email"
+            name="email"
+            autoComplete="username webauthn"
             placeholder={t.auth.emailPlaceholder}
             value={email}
             onChange={e => setEmail(e.target.value)}
