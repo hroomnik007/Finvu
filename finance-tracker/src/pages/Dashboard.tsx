@@ -748,7 +748,7 @@ const upcomingFixed = useMemo(() => {
       {/* ════════════════════════════════════════
           MOBILE LAYOUT
       ════════════════════════════════════════ */}
-      <div className="flex flex-col gap-4 lg:hidden" style={{ paddingBottom: 'calc(156px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex flex-col gap-4 lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }}>
         <div>{greetingRow}</div>
         {heroSection}
         {dailyBudgetCard}

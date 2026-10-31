@@ -227,7 +227,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 'calc(116px + env(safe-area-inset-bottom, 0px))' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 'var(--page-pad-bottom-nofab)' }}>
 
       {/* ── Hero card ── */}
       <HeroCard variant="neutral">

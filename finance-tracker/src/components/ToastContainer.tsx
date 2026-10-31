@@ -32,7 +32,7 @@ export function ToastContainer({ toasts }: ToastContainerProps) {
       {/* Achievement unlock toasts — positioned below the top bar: full-width
           (small side margins) on mobile, top-right on desktop. */}
       {achievementToasts.length > 0 && (
-        <div className="fixed z-[70] flex flex-col gap-2 left-3 right-3 top-[calc(52px+env(safe-area-inset-top)+10px)] lg:left-auto lg:right-5 lg:top-[76px] lg:w-[340px]">
+        <div className="fixed z-[70] flex flex-col gap-2 left-3 right-3 top-[calc(52px+var(--safe-top)+10px)] lg:left-auto lg:right-5 lg:top-[76px] lg:w-[340px]">
           {achievementToasts.map(toast => (
             <div
               key={toast.id}

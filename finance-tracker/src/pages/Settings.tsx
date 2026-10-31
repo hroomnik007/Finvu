@@ -829,7 +829,7 @@ export function SettingsPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full" style={{ paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 20px))' }}>
+    <div className="w-full" style={{ paddingBottom: 'var(--page-pad-bottom-nofab)' }}>
 
       {/* Settings page header — desktop: always the plain title.
           Mobile: plain title on the level-1 list, back-arrow + category

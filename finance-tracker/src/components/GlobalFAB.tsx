@@ -300,9 +300,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
         <button
           onClick={handleFABClick}
           aria-label={t.fab.title}
-          className="fixed right-4 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl cursor-pointer"
+          className="fab-pos w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl cursor-pointer"
           style={{
-            bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))',
             zIndex: 40,
             background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
             boxShadow: '0 10px 30px rgba(139,92,246,.5)',

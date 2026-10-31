@@ -81,7 +81,7 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
   }
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px var(--page-pad-bottom-nofab)' }}>
       <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.search.title}</h1>
 

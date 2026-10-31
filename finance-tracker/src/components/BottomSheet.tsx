@@ -181,7 +181,7 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
           <div style={{
             padding: '16px 24px',
             paddingBottom: isMobile
-              ? 'calc(24px + env(safe-area-inset-bottom, 0px))'
+              ? 'calc(24px + var(--safe-bottom))'
               : '24px',
             borderTop: '1px solid var(--border)',
             flexShrink: 0,

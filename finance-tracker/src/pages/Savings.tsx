@@ -339,7 +339,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(116px + env(safe-area-inset-bottom, 0px))' }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'var(--page-pad-bottom)' }}>
       <div style={{ padding: 20, minHeight: '100%' }}>
 
         {/* Hero wallet card */}
@@ -435,9 +435,8 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         <button
           onClick={openAdd}
           aria-label={t.savings.addTitle}
-          className="lg:hidden fixed right-4 w-14 h-14 rounded-full flex items-center justify-center text-white cursor-pointer"
+          className="lg:hidden fab-pos w-14 h-14 rounded-full flex items-center justify-center text-white cursor-pointer"
           style={{
-            bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))',
             zIndex: 40,
             background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
             border: 'none',

@@ -686,7 +686,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                     items={sortedCategories.map(c => c.id!)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 196 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 'var(--page-pad-bottom)' }}>
                       {sortedCategories.map(cat => {
                         const status = budgetStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
@@ -709,7 +709,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
-          style={{ position: 'fixed', right: 16, bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
+          style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
         </button>

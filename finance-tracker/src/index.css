@@ -773,12 +773,40 @@ html.compact {
 html.compact body { font-size: 13px; }
 html.compact .card { padding: var(--card-padding); }
 
-/* === MOBILE CONTENT AREA === */
-.content-main {
-  padding-bottom: calc(88px + env(safe-area-inset-bottom, 20px));
+/* === MOBILE CHROME: tab bar, FAB, safe areas ===
+   One set of numbers for everything pinned to the bottom of the screen, so
+   the FAB, the tab bar, its sub-menus and the page padding stay in step.
+   The env() insets are only non-zero with viewport-fit=cover (index.html):
+   iPhone home indicator, notch/status bar in the installed PWA, landscape. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --nav-h: 84px;      /* tab bar pill, expanded */
+  --nav-gap: 12px;    /* pill to the bottom edge / home indicator */
+  --fab-size: 56px;
+  /* distance from the bottom of the viewport to the top of the tab bar */
+  --nav-clearance: calc(var(--nav-gap) + var(--nav-h) + var(--safe-bottom));
+  --fab-bottom: calc(var(--nav-clearance) + 12px);
+  --fab-right: calc(16px + var(--safe-right));
+  /* bottom padding of a scrolling page: its last row ends above the FAB */
+  --page-pad-bottom: calc(var(--fab-bottom) + var(--fab-size) + 16px);
+  /* pages without a FAB only need to clear the tab bar */
+  --page-pad-bottom-nofab: calc(var(--nav-clearance) + 24px);
 }
 @media (min-width: 1024px) {
-  .content-main { padding-bottom: 0; }
+  /* desktop: no tab bar and no FAB */
+  :root {
+    --nav-clearance: 0px;
+    --page-pad-bottom: 32px;
+    --page-pad-bottom-nofab: 32px;
+  }
+}
+.fab-pos {
+  position: fixed;
+  right: var(--fab-right);
+  bottom: var(--fab-bottom);
 }
 
 /* === SETTINGS === */
