@@ -18,6 +18,7 @@ import { env } from "../config/env";
 import { verifyReauth } from "../lib/reauth";
 import { DEMO_EMAIL } from "../lib/resetDemo";
 import { issueTokens, userPublic } from "./auth.controller";
+import { cleanPasskeyName, newPasskeyName } from "../lib/passkeyNames";
 
 const RP_NAME = "Finvu";
 const RP_ID = env.WEBAUTHN_RP_ID ?? new URL(env.APP_URL).hostname;
@@ -107,10 +108,11 @@ export async function webauthnRegisterOptions(req: AuthRequest, res: Response): 
   res.json(options);
 }
 
-// POST /api/auth/webauthn/register-verify
+// POST /api/auth/webauthn/register-verify  { ...RegistrationResponseJSON, name? }
+// `name` is the browser's suggestion from its user agent ("iPhone · Safari").
 export async function webauthnRegisterVerify(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId!;
-  const body = req.body as RegistrationResponseJSON;
+  const { name: suggestedName, ...body } = (req.body ?? {}) as RegistrationResponseJSON & { name?: unknown };
 
   const expectedChallenge = consumeChallenge(userId);
   if (!expectedChallenge) { res.status(400).json({ error: "Challenge vypršal." }); return; }
@@ -132,7 +134,8 @@ export async function webauthnRegisterVerify(req: AuthRequest, res: Response): P
     res.status(400).json({ error: "Registrácia zlyhala." }); return;
   }
 
-  const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
+  const { credential, credentialDeviceType, credentialBackedUp, aaguid } = verification.registrationInfo;
+  const name = newPasskeyName(suggestedName, aaguid, body.authenticatorAttachment);
 
   await db.insert(webauthnCredentials).values({
     userId,
@@ -141,6 +144,7 @@ export async function webauthnRegisterVerify(req: AuthRequest, res: Response): P
     counter: credential.counter,
     deviceType: credentialDeviceType,
     backedUp: credentialBackedUp,
+    ...(name ? { name } : {}),
   });
 
   res.json({ success: true });
@@ -273,4 +277,20 @@ export async function deletePasskey(req: AuthRequest, res: Response): Promise<vo
     .returning({ id: webauthnCredentials.id });
   if (removed.length === 0) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
   res.json({ success: true });
+}
+
+// PATCH /api/auth/webauthn/credentials/:id  { name } — rename one of the
+// caller's passkeys. Scoped by user id like DELETE: someone else's id is a 404.
+export async function renamePasskey(req: AuthRequest, res: Response): Promise<void> {
+  const id = req.params["id"] as string;
+  if (!UUID_RE.test(id)) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  const name = cleanPasskeyName((req.body ?? {}).name);
+  if (!name) { res.status(400).json({ error: "Zadajte názov passkey." }); return; }
+  const updated = await db
+    .update(webauthnCredentials)
+    .set({ name })
+    .where(and(eq(webauthnCredentials.id, id), eq(webauthnCredentials.userId, req.userId!)))
+    .returning({ id: webauthnCredentials.id, name: webauthnCredentials.name });
+  if (updated.length === 0) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  res.json(updated[0]);
 }

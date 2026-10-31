@@ -180,6 +180,11 @@ export async function getPasskeys(): Promise<PasskeyInfo[]> {
   return (data as { data: PasskeyInfo[] }).data
 }
 
+export async function renamePasskey(id: string, name: string): Promise<{ id: string; name: string }> {
+  const { data } = await apiClient.patch(`/api/auth/webauthn/credentials/${id}`, { name })
+  return data
+}
+
 export async function deletePasskey(id: string): Promise<void> {
   await apiClient.delete(`/api/auth/webauthn/credentials/${id}`)
 }

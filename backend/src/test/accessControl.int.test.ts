@@ -323,6 +323,17 @@ describe("account items of another user", () => {
     expect(await row(db.select().from(webauthnCredentials).where(eq(webauthnCredentials.id, alice.passkey)))).toBeTruthy();
   });
 
+  it("passkeys can only be renamed by their owner", async () => {
+    const theirs = await call(carol, "PATCH", `/api/auth/webauthn/credentials/${alice.passkey}`, { name: "pwned" });
+    expect(theirs.status).toBe(404);
+    expect((await row(db.select().from(webauthnCredentials).where(eq(webauthnCredentials.id, alice.passkey))))?.name).not.toBe("pwned");
+
+    expect((await call(alice, "PATCH", `/api/auth/webauthn/credentials/${alice.passkey}`, { name: "  " })).status).toBe(400);
+    const own = await call(alice, "PATCH", `/api/auth/webauthn/credentials/${alice.passkey}`, { name: " Alice's  iPhone " });
+    expect(own.status).toBe(200);
+    expect(own.json).toEqual({ id: alice.passkey, name: "Alice's iPhone" });
+  });
+
   it("a malformed id is a 4xx, not a server error", async () => {
     for (const path of ["sessions", "pin-devices", "webauthn/credentials"]) {
       const { status } = await call(carol, "DELETE", `/api/auth/${path}/not-a-uuid`);

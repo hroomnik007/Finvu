@@ -6,6 +6,7 @@ import { PinSetupModal } from './PinSetupModal'
 import { startRegistration } from '@simplewebauthn/browser'
 import { webauthnRegisterVerify } from '../api/auth'
 import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
+import { currentUa, suggestPasskeyName } from '../lib/passkeyName'
 import { useTranslation } from '../i18n'
 
 const STEP_EMOJIS = ['🎉', '💰', '📊', '🐷', '🏠', '⚙️', '🔐']
@@ -74,7 +75,7 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
           : {},
       )
       const response = await startRegistration({ optionsJSON: options })
-      await webauthnRegisterVerify(response)
+      await webauthnRegisterVerify({ ...response, name: suggestPasskeyName(currentUa(), response.authenticatorAttachment, t.settings) })
       setWebauthnDone(true)
       setWebauthnSecret('')
     } catch (e: unknown) {

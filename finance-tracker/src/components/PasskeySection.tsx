@@ -5,11 +5,14 @@ import { useAuth } from '../context/AuthContext'
 import { ConfirmDialog } from './ConfirmDialog'
 import { GlassCard } from './GlassCard'
 import { startRegistration } from '@simplewebauthn/browser'
-import { deletePasskey, getPasskeys, webauthnRegisterVerify } from '../api/auth'
+import { deletePasskey, getPasskeys, renamePasskey, webauthnRegisterVerify } from '../api/auth'
 import type { PasskeyInfo } from '../api/auth'
 import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
+import { currentUa, suggestPasskeyName } from '../lib/passkeyName'
 
 const labelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', margin: '0 0 6px' } as const
+const smallButton = (color: string, background: string, border: string) =>
+  ({ flexShrink: 0, background, border: `1px solid ${border}`, color, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }) as const
 const textStyle = { fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 } as const
 
 export function PasskeySection() {
@@ -22,6 +25,7 @@ export function PasskeySection() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null)
 
   const reauthFactor: 'password' | 'pin' | null = user?.has_password ? 'password' : user?.has_pin ? 'pin' : null
 
@@ -54,7 +58,7 @@ export function PasskeySection() {
           : {},
       )
       const response = await startRegistration({ optionsJSON: options })
-      await webauthnRegisterVerify(response)
+      await webauthnRegisterVerify({ ...response, name: suggestPasskeyName(currentUa(), response.authenticatorAttachment, t.settings) })
       setSecret('')
       setSecretOpen(false)
       await load()
@@ -66,6 +70,19 @@ export function PasskeySection() {
         : serverMsg ?? t.auth.registerFailed)
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function handleRename() {
+    if (!renaming || !renaming.name.trim()) return
+    setError(null)
+    try {
+      const { id, name } = await renamePasskey(renaming.id, renaming.name)
+      setPasskeys(list => list.map(p => (p.id === id ? { ...p, name } : p)))
+      setRenaming(null)
+    } catch (e: unknown) {
+      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      setError(serverMsg ?? t.auth.registerFailed)
     }
   }
 
@@ -92,21 +109,45 @@ export function PasskeySection() {
         <div className="flex flex-col gap-3">
           {passkeys.map(p => (
             <GlassCard key={p.id} radius={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ ...textStyle, fontWeight: 500, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p.name}{p.backedUp ? ` · ${t.settings.passkeySynced}` : ''}
-                </p>
-                <p style={textStyle}>
-                  {t.settings.passkeyCreated}: {formatDateLocale(p.createdAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setConfirmId(p.id)}
-                style={{ flexShrink: 0, background: 'rgba(251,113,133,0.1)', border: '1px solid rgba(251,113,133,0.25)', color: 'var(--aurora-rose)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
-              >
-                {t.settings.passkeyDelete}
-              </button>
+              {renaming?.id === p.id ? (
+                <form
+                  onSubmit={e => { e.preventDefault(); void handleRename() }}
+                  style={{ flex: 1, minWidth: 0, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
+                >
+                  <input
+                    autoFocus
+                    aria-label={t.settings.passkeyNameLabel}
+                    value={renaming.name}
+                    maxLength={64}
+                    onChange={e => setRenaming({ id: p.id, name: e.target.value })}
+                    onKeyDown={e => { if (e.key === 'Escape') setRenaming(null) }}
+                    style={{ flex: '1 1 140px', minWidth: 0, height: 34, borderRadius: 8, padding: '0 10px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13 }}
+                  />
+                  <button type="submit" disabled={!renaming.name.trim()} style={smallButton('var(--aurora-violet-text)', 'rgba(139,92,246,0.12)', 'rgba(139,92,246,0.3)')}>
+                    {t.settings.passkeyRenameSave}
+                  </button>
+                  <button type="button" onClick={() => setRenaming(null)} style={smallButton('var(--aurora-faint)', 'transparent', 'var(--aurora-gline)')}>
+                    {t.settings.passkeyRenameCancel}
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ ...textStyle, fontWeight: 500, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.name}{p.backedUp ? ` · ${t.settings.passkeySynced}` : ''}
+                    </p>
+                    <p style={textStyle}>
+                      {t.settings.passkeyCreated}: {formatDateLocale(p.createdAt, locale, { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setRenaming({ id: p.id, name: p.name })} style={smallButton('var(--aurora-violet-text)', 'rgba(139,92,246,0.1)', 'rgba(139,92,246,0.25)')}>
+                    {t.settings.passkeyRename}
+                  </button>
+                  <button type="button" onClick={() => setConfirmId(p.id)} style={smallButton('var(--aurora-rose)', 'rgba(251,113,133,0.1)', 'rgba(251,113,133,0.25)')}>
+                    {t.settings.passkeyDelete}
+                  </button>
+                </>
+              )}
             </GlassCard>
           ))}
         </div>
