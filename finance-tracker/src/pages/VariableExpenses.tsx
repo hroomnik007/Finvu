@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import { EmptyStateAction } from '../components/EmptyStateAction'
 import { Edit2, Trash2, Plus, Receipt, X, ArrowDown, Tag } from 'lucide-react'
 
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
@@ -345,6 +346,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                   <Receipt size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                   <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.variable.noExpenses}</p>
                   <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.variable.noExpensesSubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyExpense} onClick={openAdd} />
                 </div>
               </GlassCard>
             ) : (
@@ -395,6 +397,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                   <Receipt size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                   <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.variable.noExpenses}</p>
                   <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.variable.noExpensesSubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyExpense} onClick={openAdd} />
                 </div>
               </GlassCard>
             ) : (

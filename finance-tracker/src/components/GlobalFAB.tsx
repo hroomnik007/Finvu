@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { subscribeAddForm } from '../utils/addFormEvents'
 import type { LucideIcon } from 'lucide-react'
 import { Plus, X, ArrowUp, ArrowDown, Lock, Tag, Repeat, PiggyBank } from 'lucide-react'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
@@ -130,6 +131,9 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
       }
     }
   }
+
+  // Checklist / empty-state buttons ask for a specific form.
+  useEffect(() => subscribeAddForm(type => { setShowTypeSelector(false); setActiveModal(type) }), [])
 
   // ── Data hooks ────────────────────────────────────────────────────────────
   const { addIncome, deleteIncome } = useIncomes(month, year)

@@ -13,7 +13,8 @@ const USER_KEYS = [
   'profile_avatar',
 ]
 // Old builds wrote these with the user's email in the key name.
-const USER_KEY_PREFIXES = ['pin_enabled_', 'webauthn_enabled_']
+// finvu_first_run_dismissed_<userId>: the first-run checklist was closed.
+const USER_KEY_PREFIXES = ['pin_enabled_', 'webauthn_enabled_', 'finvu_first_run_dismissed_']
 
 export const USER_DATA_CLEARED_EVENT = 'auth:user-data-cleared'
 

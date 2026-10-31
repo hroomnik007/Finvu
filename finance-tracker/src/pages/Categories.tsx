@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Tag, GripVertical } from 'lucide-react'
+import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
   DndContext,
   closestCenter,
@@ -623,6 +624,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                 <Tag size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.categories.noCategories}</p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.categories.noCategoriesSubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyCategory} onClick={openAdd} />
               </div>
             </GlassCard>
           ) : (

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
   Pencil, Trash2, Plus, Lock, Calendar, List as ListIcon, CheckCircle2, Tag, Repeat,
 } from 'lucide-react'
@@ -539,6 +540,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                 <Lock size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.fixed.emptyTitle}</p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.fixed.emptySubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyFixed} onClick={openAdd} />
               </div>
             </GlassCard>
           ) : filtered.length === 0 ? (

@@ -32,6 +32,7 @@ import { useCountUp } from '../hooks/useCountUp'
 import type { Page } from '../App'
 import type { Translations } from '../i18n/sk'
 import { todayISO } from '../utils/format'
+import { FirstRunChecklist } from '../components/FirstRunChecklist'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -617,6 +618,8 @@ const upcomingFixed = useMemo(() => {
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
     <div style={{ padding: '20px' }} className="flex flex-col gap-4 lg:gap-0 pb-4 w-full">
+
+      <FirstRunChecklist onNavigate={onNavigate} />
 
       {/* Budget template offer: non-blocking replacement for the old modal */}
       {budgetTemplateOffer && (

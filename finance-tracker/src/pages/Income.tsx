@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Repeat, Edit2, Trash2, Calendar, Plus, CalendarDays, PiggyBank, ArrowUp } from 'lucide-react'
+import { EmptyStateAction } from '../components/EmptyStateAction'
 
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
@@ -261,6 +262,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                 <PiggyBank size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.income.noIncome}</p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.income.noIncomeSubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyIncome} onClick={openAdd} />
               </div>
             </GlassCard>
           ) : (
