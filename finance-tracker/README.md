@@ -59,7 +59,7 @@ Demo účet je predvyplnený realistickými dátami: príjmy, výdavky, sporenie
 - **WebAuthn** (passkeys), Google OAuth, PIN login
 
 ### Infraštruktúra
-- **Docker** + **Docker Compose** (backend + PostgreSQL)
+- **Docker** + **Docker Compose** (backend; PostgreSQL beží vo vlastnom kontajneri)
 - **GitHub Actions** — automatický CI/CD deploy na každý push na `main`
 - **Hetzner VPS** (Debian, CX23) — `api.pedani.eu`
 - **nginx** — frontend `finvu.pedani.eu` (statický build na Hetzner VPS)
@@ -71,39 +71,59 @@ Demo účet je predvyplnený realistickými dátami: príjmy, výdavky, sporenie
 ### Požiadavky
 
 - Node.js 22+
-- Docker + Docker Compose
+- PostgreSQL 17 (najľahšie cez Docker)
 
-### Frontend
+`docker-compose.yml` je produkčný: spúšťa iba backend a pripája sa na existujúci Postgres kontajner, na lokálny vývoj nie je.
+
+### Databáza
+
+```bash
+docker run -d --name finvu-db -p 5432:5432 \
+  -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=finance_tracker \
+  postgres:17-alpine
+```
+
+### Backend (port 3001)
+
+```bash
+cd backend
+cp .env.example .env
+# V .env: v DATABASE_URL zmeniť host "postgres" na "localhost",
+# nastaviť tri JWT_*_SECRET (napr. `openssl rand -hex 32`) a ADMIN_PASSWORD.
+npm install
+npm run db:setup              # prázdna databáza: pôvodná schéma + všetky migrácie
+npm run db:seed-demo          # voliteľné: demo@finvu.sk / demo123 s ukážkovými dátami
+npm run dev                   # → http://localhost:3001/api/health
+```
+
+Bez `SMTP_HOST` sa e-maily neposielajú, iba logujú, takže nový účet si nevie overiť e-mail. Lokálne použi demo účet.
+
+### Frontend (port 5173)
 
 ```bash
 cd finance-tracker
-cp .env.example .env          # nastaviť VITE_API_URL=http://localhost:3001
+cp .env.example .env          # VITE_API_URL=http://localhost:3001
 npm install
 npm run dev                   # → http://localhost:5173
 ```
 
-### Backend
+### Kontroly
 
 ```bash
-cd backend
-cp .env.example .env          # nastaviť DATABASE_URL, JWT_SECRET, atď.
-docker compose up -d postgres # spustiť iba databázu
-npm install
-npm run db:setup              # prázdna databáza: pôvodná schéma + všetky migrácie
-npm run dev                   # → http://localhost:3001
+cd backend && npm run typecheck && npm test
+npm run test:integration      # testy prístupových práv, potrebujú DATABASE_URL na testovaciu databázu
+cd ../finance-tracker && npm run lint && npx tsc -b --noEmit && npm test
 ```
 
 ### Databázové migrácie
 
 ```bash
-# Lokálne (existujúca databáza)
-npm run db:migrate
-
-# Produkcia (v Docker kontajneri)
-docker exec finance-tracker-repo-backend-1 node dist/scripts/migrate.js
+cd backend
+npm run db:migrate            # nové súbory z migrations/ na existujúcu databázu
+npm run db:check-schema       # overí, že databáza sedí so src/db/schema.ts
 ```
 
-Migrácie sú číslované SQL súbory v `backend/migrations/` a spúšťajú sa automaticky pri deployi. `backend/drizzle/` je zmrazená pôvodná schéma, nové zmeny patria len do `backend/migrations/`. Podrobnosti: [DEPLOYMENT.md](../DEPLOYMENT.md).
+Migrácie sú číslované SQL súbory v `backend/migrations/` a na serveri sa spúšťajú automaticky pri deployi (z hosta, nie z kontajnera). `backend/drizzle/` je zmrazená pôvodná schéma, nové zmeny patria len do `backend/migrations/`. Podrobnosti: [DEPLOYMENT.md](../DEPLOYMENT.md), self-hosting a premenné prostredia: [README.md](../README.md).
 
 ---
 
