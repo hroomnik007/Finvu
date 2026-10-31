@@ -9,7 +9,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import {
   users, households, householdMembers, categories, categoryRules, transactions,
-  savingsGoals, savingsDeposits, userSessions, pinDeviceTokens, webauthnCredentials,
+  savingsGoals, savingsDeposits, userSessions, pinDeviceTokens, webauthnCredentials, subscriptionDismissals,
 } from "../db/schema";
 import { signAccessToken } from "../lib/tokens";
 import { errorHandler } from "../middleware/errorHandler";
@@ -31,7 +31,7 @@ const run = Date.now().toString(36);
 let base = "";
 let server: ReturnType<typeof app.listen>;
 type U = { id: string; token: string; email: string };
-let alice: U, bob: U, dave: U, erin: U, frank: U;
+let alice: U, bob: U, dave: U, erin: U, frank: U, gina: U;
 
 async function makeUser(name: string): Promise<U> {
   const email = `${name}-${run}@backup.test`;
@@ -66,6 +66,11 @@ async function seedRich(u: U, tag: string) {
     { goalId: goal.id, userId: u.id, amount: "100", createdAt: new Date("2026-02-01T10:00:00Z") },
     { goalId: goal.id, userId: u.id, amount: "50", createdAt: new Date("2026-03-01T10:00:00Z") },
   ]);
+  // hidden subscription suggestions
+  await db.insert(subscriptionDismissals).values([
+    { userId: u.id, patternKey: `netflix ${tag.toLowerCase()}` },
+    { userId: u.id, patternKey: `spotify ${tag.toLowerCase()}` },
+  ]);
   // secrets that must never end up in a backup
   await db.insert(userSessions).values({ userId: u.id, deviceName: `phone-${tag}` });
   await db.insert(pinDeviceTokens).values({ userId: u.id, tokenHash: `pinhash-${tag}`, expiresAt: new Date(Date.now() + 86400000) });
@@ -81,6 +86,7 @@ async function aggregates(userId: string) {
   const goals = await db.select().from(savingsGoals).where(eq(savingsGoals.userId, userId)).orderBy(asc(savingsGoals.name));
   const deps = await db.select().from(savingsDeposits).where(eq(savingsDeposits.userId, userId));
   const goalName = new Map(goals.map(g => [g.id, g.name]));
+  const hidden = await db.select({ k: subscriptionDismissals.patternKey }).from(subscriptionDismissals).where(eq(subscriptionDismissals.userId, userId));
   const [s] = await db.select({ theme: users.theme, language: users.language, trackingStartDate: users.trackingStartDate, currencyFormat: users.currencyFormat, defaultPage: users.defaultPage, savingsEnabled: users.savingsEnabled }).from(users).where(eq(users.id, userId));
   const sum = (rows: { amount: string }[]) => rows.reduce((a, r) => a + Math.round(Number(r.amount) * 100), 0);
   return {
@@ -93,6 +99,7 @@ async function aggregates(userId: string) {
     rows: txs.map(t => [t.date, t.type, t.amount, t.description, t.isFixed, t.endedOn, t.categoryId ? catName.get(t.categoryId) : null].join("|")).sort(),
     goals: goals.map(g => [g.name, g.targetAmount, g.savedAmount, g.deadline, g.note, g.paused].join("|")),
     deposits: deps.map(d => `${goalName.get(d.goalId)}|${d.amount}|${d.createdAt.toISOString()}`).sort(),
+    dismissals: hidden.map(h => h.k).sort(),
   };
 }
 
@@ -109,6 +116,7 @@ beforeAll(async () => {
   dave = await makeUser("dave");
   erin = await makeUser("erin");
   frank = await makeUser("frank");
+  gina = await makeUser("gina");
   await seedRich(alice, "A");
   await seedRich(bob, "B");
   // alice and bob share a household: bob's rows are visible to alice in the app, but are not hers to back up
@@ -124,7 +132,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   server?.close();
-  const ids = [alice, bob, dave, erin, frank].filter(Boolean).map(u => u.id);
+  const ids = [alice, bob, dave, erin, frank, gina].filter(Boolean).map(u => u.id);
   await db.update(users).set({ householdId: null }).where(inArray(users.id, ids));
   await db.delete(households).where(inArray(households.createdBy, ids));
   await db.delete(users).where(inArray(users.id, ids));
@@ -197,12 +205,13 @@ describe("backup round trip", () => {
     const res = await restore(dave.token, { mode: "replace", backup: decrypted });
     expect(res.status).toBe(200);
     const { data } = await res.json();
-    expect(data).toEqual({ categories: 3, categoryRules: 2, transactions: 7, savingsGoals: 2, savingsDeposits: 2, skippedTransactions: 0 });
+    expect(data).toEqual({ categories: 3, categoryRules: 2, transactions: 7, savingsGoals: 2, savingsDeposits: 2, subscriptionDismissals: 2, skippedTransactions: 0 });
 
     const a = await aggregates(alice.id);
     const d = await aggregates(dave.id);
     expect(d).toEqual(a);
     expect(d.expenseCents).toBe(1250 + 730 + 300 + 50000 + 55000);
+    expect(d.dismissals).toEqual(["netflix a", "spotify a"]);
     expect(d.settings).toEqual({ theme: "light", language: "cs", trackingStartDate: "2026-01-01", currencyFormat: "en", defaultPage: "variable", savingsEnabled: true });
   }, 30_000);
 
@@ -210,7 +219,7 @@ describe("backup round trip", () => {
     const before = await aggregates(dave.id);
     const backup = await (await get(alice.token)).json();
     const res = await restore(dave.token, { mode: "merge", backup });
-    expect((await res.json()).data).toEqual({ categories: 0, categoryRules: 0, transactions: 0, savingsGoals: 0, savingsDeposits: 0, skippedTransactions: 7 });
+    expect((await res.json()).data).toEqual({ categories: 0, categoryRules: 0, transactions: 0, savingsGoals: 0, savingsDeposits: 0, subscriptionDismissals: 0, skippedTransactions: 7 });
     expect(await aggregates(dave.id)).toEqual(before);
   });
 
@@ -231,6 +240,22 @@ describe("backup round trip", () => {
     const res = await restore(dave.token, { mode: "replace", backup });
     expect(res.status).toBe(200);
     expect(await aggregates(dave.id)).toEqual(await aggregates(alice.id));
+  });
+
+  it("carries hidden subscription suggestions, and older files without them still restore", async () => {
+    await db.insert(subscriptionDismissals).values({ userId: gina.id, patternKey: "stara appka" });
+    const backup = await (await get(alice.token)).json();
+    expect(backup.data.subscriptionDismissals).toEqual(["netflix a", "spotify a"]);
+    // merge keeps what gina already hid and adds alice's
+    let res = await restore(gina.token, { mode: "merge", backup });
+    expect((await res.json()).data).toMatchObject({ subscriptionDismissals: 2 });
+    expect((await aggregates(gina.id)).dismissals).toEqual(["netflix a", "spotify a", "stara appka"]);
+    // a file made before dismissals were backed up: replace clears them, nothing else breaks
+    const { subscriptionDismissals: _omit, ...oldData } = backup.data;
+    res = await restore(gina.token, { mode: "replace", backup: { ...backup, data: oldData } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data).toMatchObject({ transactions: 7, subscriptionDismissals: 0 });
+    expect((await aggregates(gina.id)).dismissals).toEqual([]);
   });
 
   it("is rate limited", async () => {

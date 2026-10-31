@@ -6,6 +6,7 @@ export interface RestoreCounts {
   transactions: number
   savingsGoals: number
   savingsDeposits: number
+  subscriptionDismissals: number
   skippedTransactions: number
 }
 
