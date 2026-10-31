@@ -121,6 +121,7 @@ export interface AuthUser {
   onboarding_banner_dismissed?: boolean
   has_pin?: boolean
   has_password?: boolean
+  has_google?: boolean
   language?: string | null
   isDemo?: boolean
   phone?: string | null

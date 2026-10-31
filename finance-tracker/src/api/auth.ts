@@ -54,8 +54,19 @@ export async function resetPassword(token: string, newPassword: string): Promise
   return data
 }
 
-export async function deleteAccount(currentPassword?: string): Promise<void> {
-  await apiClient.delete('/api/auth/account', { data: { currentPassword } })
+/**
+ * What proves it's really the owner deleting the account: the password for
+ * password accounts; for passwordless ones a fresh passkey assertion, the PIN
+ * (on a device bound to it) or a token just obtained from the linked Google account.
+ */
+export type DeleteAccountProof =
+  | { currentPassword: string }
+  | { passkey: object }
+  | { pin: string }
+  | { googleAccessToken: string }
+
+export async function deleteAccount(proof: DeleteAccountProof): Promise<void> {
+  await apiClient.delete('/api/auth/account', { data: proof })
 }
 
 export async function updateAvatar(avatarUrl: string): Promise<{ avatarUrl: string }> {

@@ -61,6 +61,11 @@ export function fetchRegisterOptions(creds: { currentPassword?: string; currentP
   return nativeJson('/api/auth/webauthn/register-options', { method: 'POST', body: JSON.stringify(creds) }, true)
 }
 
+/** Challenge for confirming a sensitive action with one of the user's passkeys (2 minutes). */
+export function fetchReauthOptions(): Promise<PublicKeyCredentialRequestOptionsJSON> {
+  return nativeJson('/api/auth/webauthn/reauth-options', { method: 'POST' }, true)
+}
+
 // Server-side challenges live 5 minutes; a prefetched one is used for at most
 // 4 so there is always time left to finish the ceremony.
 export const PREFETCH_MAX_AGE_MS = 4 * 60 * 1000
