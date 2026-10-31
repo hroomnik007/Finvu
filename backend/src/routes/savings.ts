@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/authenticate";
+import { idempotent } from "../middleware/idempotency";
 import { uuidParam } from "../middleware/validateParams";
 import {
   listSavingsGoals,
@@ -20,13 +21,13 @@ router.param("id", uuidParam);
 router.param("depositId", uuidParam);
 
 router.get("/",     listSavingsGoals);
-router.post("/",    createSavingsGoal);
+router.post("/",    idempotent, createSavingsGoal);
 router.patch("/:id", updateSavingsGoal);
 router.patch("/:id/pause", pauseSavingsGoal);
 router.patch("/:id/resume", resumeSavingsGoal);
 router.delete("/:id", deleteSavingsGoal);
 router.get("/:id/deposits", listDeposits);
-router.post("/:id/deposits", addDeposit);
+router.post("/:id/deposits", idempotent, addDeposit);
 router.delete("/:id/deposits/:depositId", deleteDeposit);
 
 export default router;

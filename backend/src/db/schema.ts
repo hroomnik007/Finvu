@@ -12,6 +12,7 @@ import {
   check,
   unique,
   index,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -305,3 +306,19 @@ export const loginLockouts = pgTable("login_lockouts", {
   windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull(),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
 }, (t) => [index("login_lockouts_window_started_at_idx").on(t.windowStartedAt)]);
+
+// Idempotency-Key records for create endpoints (middleware/idempotency.ts).
+// responseStatus is null while the first request is still running.
+export const idempotencyKeys = pgTable("idempotency_keys", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  key: varchar("key", { length: 100 }).notNull(),
+  requestMethod: varchar("request_method", { length: 10 }).notNull(),
+  requestPath: varchar("request_path", { length: 200 }).notNull(),
+  requestHash: varchar("request_hash", { length: 64 }).notNull(),
+  responseStatus: integer("response_status"),
+  responseBody: jsonb("response_body"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  unique("idempotency_keys_user_key_unique").on(t.userId, t.key),
+  index("idempotency_keys_created_at_idx").on(t.createdAt),
+]);

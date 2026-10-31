@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 import type { ApiSavingsGoal, Deposit } from '../types'
 import { announceAchievementUnlocks } from '../utils/achievementEvents'
+import { postIdempotent, type IdempotentOptions } from './idempotency'
 
 export interface SavingsGoalPayload {
   name: string
@@ -17,8 +18,8 @@ export async function getSavingsGoals(): Promise<{ data: ApiSavingsGoal[] }> {
   return data as { data: ApiSavingsGoal[] }
 }
 
-export async function createSavingsGoal(payload: SavingsGoalPayload): Promise<{ data: ApiSavingsGoal }> {
-  const { data } = await apiClient.post('/api/savings', payload)
+export async function createSavingsGoal(payload: SavingsGoalPayload, opts: IdempotentOptions = {}): Promise<{ data: ApiSavingsGoal }> {
+  const { data } = await postIdempotent<{ data: ApiSavingsGoal; newlyUnlockedAchievements?: unknown }>(apiClient.post, '/api/savings', payload, opts)
   announceAchievementUnlocks(data.newlyUnlockedAchievements)
   return data as { data: ApiSavingsGoal }
 }
@@ -50,8 +51,8 @@ export async function listDeposits(goalId: string): Promise<Deposit[]> {
   return (data as { data: Deposit[] }).data
 }
 
-export async function addDeposit(goalId: string, amount: number): Promise<{ goal: ApiSavingsGoal; deposit: Deposit }> {
-  const { data } = await apiClient.post(`/api/savings/${goalId}/deposits`, { amount })
+export async function addDeposit(goalId: string, amount: number, opts: IdempotentOptions = {}): Promise<{ goal: ApiSavingsGoal; deposit: Deposit }> {
+  const { data } = await postIdempotent<unknown>(apiClient.post, `/api/savings/${goalId}/deposits`, { amount }, opts)
   return (data as { data: { goal: ApiSavingsGoal; deposit: Deposit } }).data
 }
 
