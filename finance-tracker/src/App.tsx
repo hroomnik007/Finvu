@@ -577,7 +577,7 @@ function App() {
           {page === 'annual' && <AnnualPage scope={dashView} />}
           {(page === 'settings' || page === 'household') && (
             <div style={{ flex: 1, overflowY: 'auto' }}>
-              <div style={{ padding: '20px', minHeight: '100%' }}>
+              <div style={{ padding: `20px calc(20px + var(--page-inset, 0px))`, minHeight: '100%' }}>
                 {page === 'settings' && <SettingsPage />}
                 {page === 'household' && <HouseholdPage month={month} year={year} showToast={showToast} />}
               </div>

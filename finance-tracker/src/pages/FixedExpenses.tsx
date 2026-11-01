@@ -367,10 +367,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
       )}
 
       {/* Content row */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', minHeight: 0, overflowY: 'auto', paddingLeft: 'var(--page-inset, 0px)', paddingRight: 'var(--page-inset, 0px)' }}>
 
-        {/* Main scroll area */}
-        <div style={{ flex: 1, overflowY: 'auto', paddingTop: 20, paddingLeft: 20, paddingRight: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Main area — the row above is the single scroller, so the scrollbar sits at the screen edge */}
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 20, paddingLeft: 20, paddingRight: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Hero wallet card */}
           <HeroCard variant="fixed">
@@ -702,7 +702,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         </div>
 
         {/* Right panel — desktop only */}
-        <div className="hidden lg:flex" style={{ width: 280, flexShrink: 0, overflowY: 'auto', padding: '20px 20px 20px 0', flexDirection: 'column', gap: 16 }}>
+        <div className="hidden lg:flex" style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, maxHeight: 'calc(100vh - 64px)', overflowY: 'auto', padding: '20px 20px 20px 0', flexDirection: 'column', gap: 16 }}>
           <GlassCard radius={16}>
             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.yearly}</p>
             {yearlyContent}

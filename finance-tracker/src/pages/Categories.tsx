@@ -574,7 +574,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
 
-        <div style={{ flex: 1, overflowY: 'auto', touchAction: 'pan-y', padding: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ flex: 1, overflowY: 'auto', touchAction: 'pan-y', padding: `20px calc(20px + var(--page-inset, 0px))`, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
           {/* Hero wallet card */}
           <HeroCard variant="neutral">

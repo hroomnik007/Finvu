@@ -1,10 +1,12 @@
-import { useRef, useState, useCallback, type ReactNode } from 'react'
+import { useRef, useState, useCallback, useLayoutEffect, type ReactNode } from 'react'
 
 const PULL_THRESHOLD = 70
 const MAX_PULL = 110
 const DAMPING = 0.5
 /** Page content column cap, centered on wide screens. 1232 = Annual's 1200px
- * content width + its 16px side padding, so Annual renders exactly as before. */
+ * content width + its 16px side padding. Pages keep their scroll container at
+ * full width (so the scrollbar stays at the screen edge) and add
+ * `--page-inset` to their horizontal padding to center the content. */
 const PAGE_MAX_WIDTH = 1232
 
 /** Walks up from the touched element to find the nearest actually-scrollable
@@ -41,6 +43,18 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
   const [pulling, setPulling] = useState(false)
   const startY = useRef(0)
   const scrollParentRef = useRef<HTMLElement | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // Publishes the side inset that centers page content in a PAGE_MAX_WIDTH column.
+  useLayoutEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    const update = () => el.style.setProperty('--page-inset', `${Math.max(0, (el.clientWidth - PAGE_MAX_WIDTH) / 2)}px`)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (refreshing) return
@@ -122,7 +136,7 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
           </svg>
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: PAGE_MAX_WIDTH, marginLeft: 'auto', marginRight: 'auto' }}>
+      <div ref={contentRef} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {children}
       </div>
     </div>

@@ -356,7 +356,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'var(--page-pad-bottom)' }}>
-      <div style={{ padding: 20, minHeight: '100%' }}>
+      <div style={{ padding: `20px calc(20px + var(--page-inset, 0px))`, minHeight: '100%' }}>
 
         {/* Hero wallet card */}
         <HeroCard variant="income" style={{ marginBottom: 20 }}>

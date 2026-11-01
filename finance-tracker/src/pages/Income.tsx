@@ -220,7 +220,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
       <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
 
         {/* Main content */}
-        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: `20px calc(20px + var(--page-inset, 0px))`, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Hero wallet card */}
           <HeroCard variant="income">

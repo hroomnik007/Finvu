@@ -625,7 +625,7 @@ const upcomingFixed = useMemo(() => {
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-    <div style={{ padding: '20px' }} className="flex flex-col gap-4 lg:gap-0 pb-4 w-full">
+    <div style={{ padding: `20px calc(20px + var(--page-inset, 0px))` }} className="flex flex-col gap-4 lg:gap-0 pb-4 w-full">
 
       <FirstRunChecklist onNavigate={onNavigate} />
 
