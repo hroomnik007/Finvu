@@ -69,7 +69,7 @@ describe("error codes", () => {
 
 describe("routes/auth.ts wiring", () => {
   const src = readFileSync(join(__dirname, "../routes/auth.ts"), "utf8");
-  const limiterOf = (path: string) => src.match(new RegExp(`router\\.post\\("${path}",\\s*(\\w+)`))?.[1];
+  const limiterOf = (path: string) => src.match(new RegExp(`router\\.post\\("${path}",\\s*(?:passkeysEnabled,\\s*)?(\\w+)`))?.[1];
   const defOf = (name: string) => src.match(new RegExp(`const ${name} = (\\w+)\\(`))?.[1];
 
   it("password, PIN and passkey sign-in use failure-only limiters", () => {
@@ -81,6 +81,12 @@ describe("routes/auth.ts wiring", () => {
     for (const path of ["/register", "/admin-login", "/google", "/forgot-password"]) {
       expect(defOf(limiterOf(path)!), path).toBe("authLimiter");
     }
+  });
+  it("passkey register / sign-in / re-auth routes sit behind the PASSKEYS_ENABLED gate, management stays open", () => {
+    for (const r of ["post(\"/webauthn/register-options\"", "post(\"/webauthn/register-verify\"", "get(\"/webauthn/authenticate-options\"", "post(\"/webauthn/authenticate-verify\"", "post(\"/webauthn/reauth-options\""]) {
+      expect(src, r).toMatch(new RegExp(`router\\.${r.replace(/[()]/g, "\\$&")},\\s*passkeysEnabled,`));
+    }
+    expect(src).not.toMatch(/router\.(get|patch|delete)\("\/webauthn\/credentials[^)]*\),\s*passkeysEnabled/);
   });
   it("no limiter is defined without the coded message", () => {
     expect(src).not.toMatch(/rateLimit\(/);

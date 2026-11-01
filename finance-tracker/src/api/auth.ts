@@ -58,12 +58,11 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
 /**
  * What proves it's really the owner deleting the account: the password for
- * password accounts; for passwordless ones a fresh passkey assertion, the PIN
+ * password accounts; for passwordless ones the PIN
  * (on a device bound to it) or a token just obtained from the linked Google account.
  */
 export type DeleteAccountProof =
   | { currentPassword: string }
-  | { passkey: object }
   | { pin: string }
   | { googleAccessToken: string }
 
@@ -174,29 +173,6 @@ export async function getPinDevices(): Promise<PinDevice[]> {
 
 export async function deletePinDevice(id: string): Promise<void> {
   await apiClient.delete(`/api/auth/pin-devices/${id}`)
-}
-
-export async function webauthnRegisterVerify(body: object): Promise<{ success: boolean }> {
-  const { data } = await apiClient.post('/api/auth/webauthn/register-verify', body)
-  return data
-}
-
-export interface PasskeyInfo {
-  id: string
-  name: string
-  deviceType: string | null
-  backedUp: boolean
-  createdAt: string
-}
-
-export async function getPasskeys(): Promise<PasskeyInfo[]> {
-  const { data } = await apiClient.get('/api/auth/webauthn/credentials')
-  return (data as { data: PasskeyInfo[] }).data
-}
-
-export async function webauthnAuthenticateVerify(body: object): Promise<{ user: import('../types').AuthUser; accessToken: string; sessionId?: string }> {
-  const { data } = await apiClient.post('/api/auth/webauthn/authenticate-verify', body)
-  return data
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {

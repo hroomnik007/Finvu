@@ -1,4 +1,5 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
+import { env } from "../config/env";
 import {
   register, login, refresh, logout, me,
   verifyEmail, forgotPassword, resetPassword, deleteAccount,
@@ -95,12 +96,18 @@ router.get("/sessions",                       authenticateToken, getSessions);
 router.delete("/sessions/:id",                authenticateToken, deleteSession);
 router.post("/deactivate",                    sensitiveLimiter, authenticateToken, deactivateAccount);
 
-// WebAuthn
-router.post("/webauthn/register-options",     sensitiveLimiter, authenticateToken, webauthnRegisterOptions);
-router.post("/webauthn/register-verify",      authenticateToken, webauthnRegisterVerify);
-router.get("/webauthn/authenticate-options",  webauthnOptionsLimiter, webauthnAuthenticateOptions);
-router.post("/webauthn/authenticate-verify",  webauthnVerifyLimiter, webauthnAuthenticateVerify);
-router.post("/webauthn/reauth-options",       sensitiveLimiter, authenticateToken, webauthnReauthOptions);
+// WebAuthn. Registering, signing in and re-authenticating with a passkey are switched
+// off (PASSKEYS_ENABLED, default false); stored passkeys can still be listed, renamed
+// and deleted below so nobody is left unable to revoke one.
+function passkeysEnabled(_req: Request, res: Response, next: NextFunction): void {
+  if (env.PASSKEYS_ENABLED) { next(); return; }
+  res.status(410).json({ error: "Passkeys are no longer supported.", code: "PASSKEYS_DISABLED" });
+}
+router.post("/webauthn/register-options",     passkeysEnabled, sensitiveLimiter, authenticateToken, webauthnRegisterOptions);
+router.post("/webauthn/register-verify",      passkeysEnabled, authenticateToken, webauthnRegisterVerify);
+router.get("/webauthn/authenticate-options",  passkeysEnabled, webauthnOptionsLimiter, webauthnAuthenticateOptions);
+router.post("/webauthn/authenticate-verify",  passkeysEnabled, webauthnVerifyLimiter, webauthnAuthenticateVerify);
+router.post("/webauthn/reauth-options",       passkeysEnabled, sensitiveLimiter, authenticateToken, webauthnReauthOptions);
 router.get("/webauthn/credentials",           authenticateToken, listPasskeys);
 router.patch("/webauthn/credentials/:id",     authenticateToken, renamePasskey);
 router.delete("/webauthn/credentials/:id",    authenticateToken, deletePasskey);

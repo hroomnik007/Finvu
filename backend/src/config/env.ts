@@ -23,6 +23,10 @@ const envSchema = z.object({
   // Default to the host/origin of APP_URL; override only for unusual setups.
   WEBAUTHN_RP_ID: z.string().optional(),
   WEBAUTHN_ORIGIN: z.string().optional(),
+  // Passkey sign-in / registration / re-auth are switched off: a passkey can only be
+  // used through a password manager in this PWA, so the UI promise was misleading.
+  // Listing, renaming and deleting stored passkeys stays available. "true" re-enables.
+  PASSKEYS_ENABLED: z.enum(["true", "false"]).default("false").transform(v => v === "true"),
   UPLOAD_DIR: z.string().default("uploads"),
 });
 

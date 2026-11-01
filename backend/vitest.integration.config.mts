@@ -13,6 +13,7 @@ export default defineConfig({
       JWT_ADMIN_SECRET: "test-admin-secret-test-admin-secret-00000",
       ADMIN_PASSWORD: "test-admin-password",
       NODE_ENV: "test",
+      PASSKEYS_ENABLED: "true", // the passkey integration tests exercise the real ceremony
     },
   },
 });

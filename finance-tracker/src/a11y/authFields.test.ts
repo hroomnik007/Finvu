@@ -7,9 +7,9 @@ import { describe, expect, it } from 'vitest'
 const src = (p: string) => readFileSync(resolve(__dirname, '..', p), 'utf8')
 
 describe('auth form autofill attributes', () => {
-  it('login keeps the passkey-aware username field and a current-password field', () => {
+  it('login keeps the username field and a current-password field', () => {
     const s = src('pages/Login.tsx')
-    expect(s).toContain('autoComplete="username webauthn"')
+    expect(s).toContain('autoComplete="username"')
     expect(s).toContain('autoComplete="current-password"')
     expect(s).toContain('htmlFor="login-email"')
     expect(s).toContain('id="login-email"')
@@ -34,7 +34,7 @@ describe('auth form autofill attributes', () => {
   })
 
   it('PIN re-auth fields never offer saved passwords', () => {
-    for (const f of ['components/OnboardingTutorial.tsx', 'components/DeleteAccountModal.tsx']) {
+    for (const f of ['components/DeleteAccountModal.tsx']) {
       expect(src(f)).toMatch(/autoComplete=\{[a-zA-Z]+ === 'pin' \? 'off' : 'current-password'\}/)
     }
   })

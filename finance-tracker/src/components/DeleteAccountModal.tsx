@@ -1,22 +1,20 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { useGoogleLogin } from '@react-oauth/google'
-import { startAuthentication } from '@simplewebauthn/browser'
 import { useTranslation } from '../i18n'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { useAuth } from '../context/AuthContext'
-import { getPasskeys, getPinDeviceStatus } from '../api/auth'
+import { getPinDeviceStatus } from '../api/auth'
 import type { DeleteAccountProof } from '../api/auth'
-import { ceremonyErrorKind, fetchReauthOptions } from '../lib/webauthnCeremony'
 
-type Method = 'password' | 'passkey' | 'pin' | 'google'
+type Method = 'password' | 'pin' | 'google'
 
 const inputStyle = { height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' } as const
 const labelStyle = { fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' } as const
 
 /**
  * Account deletion needs a fresh proof of identity, not just the session:
- * the password for password accounts; for passwordless ones a passkey, the PIN
+ * the password for password accounts; for passwordless ones the PIN
  * (only on a device bound to it) or signing in to the linked Google account again.
  */
 export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
@@ -34,13 +32,8 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
     if (user?.has_password) return
     let cancelled = false
     void (async () => {
-      const webauthn = typeof window !== 'undefined' && 'PublicKeyCredential' in window
-      const [passkeys, pinDevice] = await Promise.all([
-        webauthn ? getPasskeys().catch(() => []) : Promise.resolve([]),
-        user?.has_pin ? getPinDeviceStatus().catch(() => ({ deviceRegistered: false })) : Promise.resolve({ deviceRegistered: false }),
-      ])
+      const pinDevice = user?.has_pin ? await getPinDeviceStatus().catch(() => ({ deviceRegistered: false })) : { deviceRegistered: false }
       const available: Method[] = [
-        ...(passkeys.length > 0 ? ['passkey' as const] : []),
         ...(pinDevice.deviceRegistered ? ['pin' as const] : []),
         ...(user?.has_google ? ['google' as const] : []),
       ]
@@ -62,8 +55,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
     else if (status === 401 || status === 400) {
       setError(m === 'password' ? t.settings.wrongCurrentPassword
         : m === 'pin' ? t.auth.wrongPin
-        : m === 'google' ? t.settings.deleteGoogleMismatch
-        : t.settings.deletePasskeyFailed)
+        : t.settings.deleteGoogleMismatch)
     } else setError(t.settings.deleteFailed)
   }
 
@@ -90,16 +82,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
     setError(null)
     if (method === 'password') return submit({ currentPassword: secret }, method)
     if (method === 'pin') return submit({ pin: secret }, method)
-    if (method === 'google') { googleReauth(); return }
-    try {
-      // Tap -> one native fetch -> get(): keeps old Safari's user activation
-      const options = await fetchReauthOptions()
-      const passkey = await startAuthentication({ optionsJSON: options })
-      await submit({ passkey }, method)
-    } catch (err) {
-      if (ceremonyErrorKind(err) !== 'cancelled') showError(err, method)
-      setBusy(false)
-    }
+    googleReauth()
   }
 
   const needsSecret = method === 'password' || method === 'pin'
@@ -107,7 +90,6 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   const canDelete = !!method && confirmed && !busy && (!needsSecret || !!secret)
   const methodLabel: Record<Method, string> = {
     password: t.settings.currentPassword,
-    passkey: t.settings.deleteMethodPasskey,
     pin: t.settings.deleteMethodPin,
     google: t.settings.deleteMethodGoogle,
   }

@@ -3,12 +3,7 @@ import { X, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { usePinLock } from '../hooks/usePinLock'
 import { PinSetupModal } from './PinSetupModal'
-import { startRegistration } from '@simplewebauthn/browser'
-import { webauthnRegisterVerify } from '../api/auth'
-import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
-import { currentUa, suggestPasskeyName } from '../lib/passkeyName'
 import { useTranslation } from '../i18n'
-import { rateLimitedMessage } from '../utils/authError'
 
 const STEP_EMOJIS = ['🎉', '💰', '📊', '🐷', '🏠', '⚙️', '🔐']
 
@@ -33,13 +28,6 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
     { title: t.onboarding.step6Title, description: t.onboarding.step6Desc, emoji: STEP_EMOJIS[6] },
   ]
   const [pinSetupOpen, setPinSetupOpen] = useState(false)
-  const [webauthnDone, setWebauthnDone] = useState(false)
-  const [webauthnLoading, setWebauthnLoading] = useState(false)
-  const [webauthnError, setWebauthnError] = useState<string | null>(null)
-  // Registering a passkey re-checks the current password (or PIN for accounts
-  // without one); the field appears on the first press, the second performs it.
-  const [webauthnSecretOpen, setWebauthnSecretOpen] = useState(false)
-  const [webauthnSecret, setWebauthnSecret] = useState('')
   const [pinDone, setPinDone] = useState(false)
 
   const isLastStep = step === STEPS.length - 1
@@ -58,37 +46,6 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
     setTimeout(onComplete, 300)
   }
 
-  const reauthFactor: 'password' | 'pin' | null = user?.has_password ? 'password' : user?.has_pin ? 'pin' : null
-
-  const handleWebAuthnSetup = async () => {
-    if (reauthFactor && !webauthnSecretOpen) {
-      setWebauthnSecretOpen(true)
-      return
-    }
-    if (reauthFactor && !webauthnSecret) return
-    setWebauthnLoading(true)
-    setWebauthnError(null)
-    try {
-      // Tap -> one native fetch -> create() (see lib/webauthnCeremony).
-      const options = await fetchRegisterOptions(
-        reauthFactor === 'password' ? { currentPassword: webauthnSecret }
-          : reauthFactor === 'pin' ? { currentPin: webauthnSecret }
-          : {},
-      )
-      const response = await startRegistration({ optionsJSON: options })
-      await webauthnRegisterVerify({ ...response, name: suggestPasskeyName(currentUa(), response.authenticatorAttachment, t.settings) })
-      setWebauthnDone(true)
-      setWebauthnSecret('')
-    } catch (e: unknown) {
-      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
-      const kind = serverMsg ? 'other' : ceremonyErrorKind(e)
-      setWebauthnError(kind === 'cancelled' ? t.settings.passkeyCancelled
-        : kind === 'exists' ? t.settings.passkeyExists
-        : serverMsg ?? t.auth.registerFailed)
-    } finally {
-      setWebauthnLoading(false)
-    }
-  }
 
   const current = STEPS[step]
 
@@ -249,54 +206,6 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
                 {!pinDone && <span style={{ fontSize: 12, color: '#A78BFA', fontWeight: 600 }}>{t.onboarding.setupBtn}</span>}
               </button>
 
-              {/* WebAuthn */}
-              {typeof window !== 'undefined' && !!window.PublicKeyCredential && (
-                <button
-                  onClick={handleWebAuthnSetup}
-                  disabled={webauthnDone || webauthnLoading}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '14px 16px',
-                    borderRadius: '16px',
-                    background: webauthnDone ? 'rgba(52,211,153,0.08)' : 'var(--bg-elevated)',
-                    border: webauthnDone ? '1px solid rgba(52,211,153,0.3)' : '1px solid var(--border-subtle)',
-                    cursor: webauthnDone || webauthnLoading ? 'default' : 'pointer',
-                    textAlign: 'left',
-                    width: '100%',
-                    opacity: webauthnLoading ? 0.7 : 1,
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>🔐</span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.onboarding.biometryLabel}</p>
-                    <p style={{ fontSize: 12, color: webauthnDone ? '#34d399' : 'var(--text-muted)' }}>
-                      {webauthnDone ? t.onboarding.biometrySetLabel : webauthnLoading ? t.onboarding.biometryLoading : t.onboarding.biometryDesc}
-                    </p>
-                  </div>
-                  {!webauthnDone && !webauthnLoading && <span style={{ fontSize: 12, color: '#A78BFA', fontWeight: 600 }}>{t.onboarding.setupBtn}</span>}
-                </button>
-              )}
-              {webauthnSecretOpen && !webauthnDone && reauthFactor && (
-                <input
-                  type="password"
-                  autoFocus
-                  autoComplete={reauthFactor === 'pin' ? 'off' : 'current-password'}
-                  inputMode={reauthFactor === 'pin' ? 'numeric' : undefined}
-                  pattern={reauthFactor === 'pin' ? '[0-9]*' : undefined}
-                  maxLength={reauthFactor === 'pin' ? 4 : undefined}
-                  value={webauthnSecret}
-                  onChange={e => setWebauthnSecret(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleWebAuthnSetup() }}
-                  placeholder={reauthFactor === 'pin' ? t.onboarding.passkeyPinLabel : t.profile.currentPassword}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12, fontSize: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
-                />
-              )}
-              {webauthnError && (
-                <p style={{ fontSize: 12, color: '#f87171', textAlign: 'center' }}>{webauthnError}</p>
-              )}
             </div>
             )
           )}

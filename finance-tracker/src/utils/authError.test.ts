@@ -80,6 +80,6 @@ describe('sign-in screens', () => {
   const login = readFileSync(join(__dirname, '../pages/Login.tsx'), 'utf8')
   it('never show the server error text on Login', () => {
     expect(login).not.toMatch(/data\?\.error/)
-    expect(login.match(/authErrorMessage\(err, t\.auth\.\w+, t\.auth\)/g)?.length).toBe(4)
+    expect(login.match(/authErrorMessage\(err, t\.auth\.\w+, t\.auth\)/g)?.length).toBe(2)
   })
 })
