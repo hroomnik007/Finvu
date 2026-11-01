@@ -22,7 +22,6 @@ import transactionsRouter from "../routes/transactions";
 import categoriesRouter from "../routes/categories";
 import categoryRulesRouter from "../routes/categoryRules";
 import adminRouter from "../routes/admin";
-import sharedReportsRouter from "../routes/sharedReports";
 import householdsRouter from "../routes/households";
 import savingsRouter from "../routes/savings";
 import notificationsRouter from "../routes/notifications";
@@ -37,7 +36,6 @@ app.use("/api/transactions", transactionsRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/category-rules", categoryRulesRouter);
 app.use("/api/admin", adminRouter);
-app.use("/api/reports", sharedReportsRouter);
 app.use("/api/households", authenticateToken, householdsRouter);
 app.use("/api/savings", savingsRouter);
 app.use("/api/notifications", notificationsRouter);
@@ -128,7 +126,7 @@ describe("unauthenticated requests", () => {
     ["DELETE", "/api/transactions/00000000-0000-0000-0000-000000000000"], ["GET", `/api/transactions/summary?month=${MONTH}`],
     ["GET", "/api/categories"], ["DELETE", "/api/categories"], ["GET", "/api/category-rules"],
     ["GET", "/api/savings"], ["GET", "/api/households/me"], ["GET", "/api/households/1/members"],
-    ["GET", "/api/reports/total-balance"], ["GET", "/api/notifications/feed"], ["GET", "/api/achievements"],
+    ["GET", "/api/notifications/feed"], ["GET", "/api/achievements"],
     ["GET", "/api/auth/me"], ["GET", "/api/auth/sessions"], ["DELETE", "/api/auth/account"],
   ];
 
@@ -168,8 +166,6 @@ describe("transactions of another user", () => {
     }
     const search = await call(carol, "GET", `/api/transactions?q=secret&limit=200`);
     expect(search.text).not.toContain("secret alice");
-    const total = await call(carol, "GET", "/api/reports/total-balance");
-    expect(total.json.totalExpenses).toBe(511);
   });
 
   it("can't be changed, deleted, repriced or ended", async () => {

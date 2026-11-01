@@ -118,11 +118,6 @@ export async function getSummary(month: string, scope: BalanceScope = 'personal'
   return data
 }
 
-export async function getTotalBalance(): Promise<{ totalIncome: number; totalExpenses: number; balance: number }> {
-  const { data } = await apiClient.get('/api/reports/total-balance')
-  return data
-}
-
 export async function getBalanceAtMonth(year: number, month: number, scope: BalanceScope = 'personal'): Promise<{ balance: number }> {
   const { data } = await apiClient.get('/api/transactions/balance-at-month', { params: { year, month, scope } })
   return data

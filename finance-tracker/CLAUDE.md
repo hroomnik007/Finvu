@@ -56,7 +56,6 @@ finance-tracker/src/
 - adminLogin
 - WebAuthn register + authenticate (options + verify)
 - updateAvatar / updateWeeklyEmail / updateUserSettings
-- createSharedReport / getSharedReport
 - deleteAccount
 
 ## Internacionalizácia (i18n)

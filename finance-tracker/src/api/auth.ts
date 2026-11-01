@@ -1,5 +1,4 @@
 import { apiClient, refreshAccessToken } from './client'
-import { announceAchievementUnlocks } from '../utils/achievementEvents'
 import type { AuthUser, UserSession } from '../types'
 import type { ThemePreference } from '../utils/theme'
 
@@ -115,12 +114,6 @@ export async function deleteSessionById(sessionId: string): Promise<void> {
 // Same fresh proof of identity as deleteAccount (see DeleteAccountProof).
 export async function deactivateAccount(proof: DeleteAccountProof): Promise<void> {
   await apiClient.post('/api/auth/deactivate', proof)
-}
-
-export async function createSharedReport(data: string, expiresInHours?: number): Promise<{ token: string }> {
-  const { data: res } = await apiClient.post('/api/reports', { data, expiresInHours })
-  announceAchievementUnlocks(res.newlyUnlockedAchievements)
-  return res
 }
 
 export async function getSharedReport(token: string): Promise<{ data: string }> {
