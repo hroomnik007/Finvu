@@ -30,18 +30,6 @@
 
 ---
 
-## Demo
-
-| | |
-|---|---|
-| URL | https://finvu.pedani.eu |
-| Email | `demo@finvu.sk` |
-| Heslo | `demo123` |
-
-Demo účet je predvyplnený realistickými dátami: príjmy, výdavky, sporenie, domácnosť s členmi.
-
----
-
 ## Tech stack
 
 ### Frontend
@@ -92,11 +80,11 @@ cp .env.example .env
 # nastaviť tri JWT_*_SECRET (napr. `openssl rand -hex 32`) a ADMIN_PASSWORD.
 npm install
 npm run db:setup              # prázdna databáza: pôvodná schéma + všetky migrácie
-npm run db:seed-demo          # voliteľné: demo@finvu.sk / demo123 s ukážkovými dátami
+npm run db:seed-dev-user      # voliteľné: overený lokálny používateľ s ukážkovými dátami
 npm run dev                   # → http://localhost:3001/api/health
 ```
 
-Bez `SMTP_HOST` sa e-maily neposielajú, iba logujú, takže nový účet si nevie overiť e-mail. Lokálne použi demo účet.
+Bez `SMTP_HOST` sa e-maily neposielajú, iba logujú, takže nový účet si nevie overiť e-mail. Lokálne si overeného používateľa vytvor cez `npm run db:seed-dev-user`.
 
 ### Frontend (port 5173)
 
@@ -155,7 +143,6 @@ Podporované metódy:
 | Google OAuth | Prihlásenie cez Google účet |
 | WebAuthn (Passkeys) | Biometria / hardvérový kľúč |
 | PIN | Rýchle prihlásenie PIN kódom |
-| Demo | Testovací účet bez registrácie |
 
 ---
 

@@ -12,6 +12,7 @@
     "db:check-schema": "tsx src/scripts/check-schema.ts",
     "db:studio": "drizzle-kit studio",
     "db:seed-demo": "tsx src/scripts/seed-demo.ts",
+    "db:seed-dev-user": "tsx src/scripts/seed-dev-user.ts",
     "seed-categories": "tsx src/scripts/seed-categories.ts",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.mts",

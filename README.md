@@ -32,18 +32,6 @@
 
 ---
 
-## Demo
-
-| | |
-|---|---|
-| URL | https://finvu.pedani.eu |
-| Email | `demo@finvu.sk` |
-| Password | `demo123` |
-
-The demo account is pre-filled with realistic data: income, expenses, savings, and household members.
-
----
-
 ## Tech stack
 
 ### Frontend
@@ -94,11 +82,11 @@ cp .env.example .env
 # and set the three JWT_*_SECRET values (e.g. `openssl rand -hex 32`) and ADMIN_PASSWORD.
 npm install
 npm run db:setup              # empty database: legacy schema + all migrations
-npm run db:seed-demo          # optional: demo@finvu.sk / demo123 with sample data
+npm run db:seed-dev-user      # optional: verified local user with sample data
 npm run dev                   # → http://localhost:3001/api/health
 ```
 
-Without `SMTP_HOST` e-mails are not sent, only logged, so a newly registered account can't verify its e-mail. Use the demo account locally.
+Without `SMTP_HOST` e-mails are not sent, only logged, so a newly registered account can't verify its e-mail. Locally, create a verified user with `npm run db:seed-dev-user`.
 
 ### Frontend (port 5173)
 
@@ -262,7 +250,6 @@ Supported methods:
 | Email + password | Standard registration |
 | Google OAuth | Sign in with Google account |
 | PIN | Quick PIN login |
-| Demo | Test account without registration |
 
 ---
 

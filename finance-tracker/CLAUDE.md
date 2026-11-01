@@ -25,7 +25,6 @@ Aktuálna verzia: **Finvu 2026 v3** — design system z `colors_and_type.css` to
 - WebAuthn (passkeys)
 - Google OAuth
 - PIN login
-- Demo login
 - JWT — Bearer token v pamäti (nie localStorage)
 - Refresh token — httpOnly cookie
 - Token refresh queue pre súbežné 401 requesty
@@ -41,7 +40,7 @@ Aktuálna verzia: **Finvu 2026 v3** — design system z `colors_and_type.css` to
 finance-tracker/src/
 ├── api/          # axios klient + endpointy:
 │   ├── client.ts        # axios inštancia, interceptory, token refresh
-│   ├── auth.ts          # login, register, logout, refresh, WebAuthn, Google, PIN, demo, admin
+│   ├── auth.ts          # login, register, logout, refresh, WebAuthn, Google, PIN, admin
 │   ├── transactions.ts  # CRUD pre transakcie
 │   ├── categories.ts    # CRUD pre kategórie
 │   └── admin.ts         # admin endpointy
@@ -60,7 +59,7 @@ finance-tracker/src/
 - login / register / logout / refreshToken / getMe
 - verifyEmail / forgotPassword / resetPassword
 - googleLogin / pinLogin / savePin / deletePin
-- adminLogin / demoLogin
+- adminLogin
 - WebAuthn register + authenticate (options + verify)
 - updateAvatar / updateWeeklyEmail / updateUserSettings
 - createSharedReport / getSharedReport
@@ -139,16 +138,15 @@ docker exec finance-tracker-repo-backend-1 node dist/scripts/migrate.js
 - **"Preskočiť" na template kroku**: zachová default kategórie nezmenené
 - Onboarding sa zobrazí len raz — stav sleduje `user.onboarding_complete` (DB) a `user.onboarding_banner_dismissed`
 
-## Demo účet
+## Demo účet (zrušený) a lokálny vývojový používateľ
 
-- **Email**: `demo@finvu.sk` (heslo: demopassword alebo cez "Demo" tlačidlo)
-- **Predvyplnené dáta**: príjmy, fixné aj variabilné výdavky, savings goals, členovia domácnosti
-- **Seed skript**: `backend/src/scripts/seed-demo.ts` — spúšťa sa ručne:
-  ```bash
-  docker exec finance-tracker-repo-backend-1 node dist/scripts/seed-demo.js
-  ```
-- Domácnosť: `"Demových"`, household_id priradené všetkým transakciám
-- Demo účet má `isDemo: true` — niektoré akcie sú zakázané (napr. zmena hesla)
+Demo účet `demo@finvu.sk` je zrušený (rozhodnutie 2026-11-01, rušenie ide po krokoch). Neoveruje sa cez neho. Lokálne sa overuje cez seed vývojového používateľa.
+
+- **Seed**: `cd backend && npm run db:seed-dev-user` (`backend/src/scripts/seed-dev-user.ts`), idempotentný
+- **Email**: `dev@finvu.local`, **heslo**: `DevPass123!` (len lokálna DB; údaje sa nedávajú do README)
+- Bežný účet s overeným e-mailom (bez SMTP), bez demo príznaku a bez domácnosti. Dáta: kategórie, 3 mesiace transakcií, fixný výdavok (Nájom) a opakujúci sa príjem (Výplata)
+- Skript odmietne beh pri `NODE_ENV=production` aj pri `DATABASE_URL` mimo `localhost`/`127.0.0.1`
+- `seed-demo.ts` a ochrana `demo@finvu.sk` v kóde (`rejectDemo`, `resetDemoAccount`, `DEMO_INVITE_CODE`) zatiaľ zostávajú, odstránia sa až v kroku 3 spolu s účtom v produkčnej DB
 
 ### Kód
 - Vždy TypeScript — žiadny `any`, žiadne implicitné typy
