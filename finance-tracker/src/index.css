@@ -966,6 +966,16 @@ html.compact .card { padding: var(--card-padding); }
 
 /* Annual overview: stats row, then chart + table side by side on desktop. */
 .annual-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.annual-table { min-width: 400px; }
+.annual-m-short { display: none; }
+/* Phones: the table fits the card (short month names, tighter cells) instead of scrolling sideways */
+@media (max-width: 480px) {
+  .annual-table { min-width: 0; }
+  .annual-table th, .annual-table td { padding-left: 2px !important; padding-right: 2px !important; font-size: 12px !important; letter-spacing: 0 !important; }
+  .annual-table-card { padding-left: 2px !important; padding-right: 2px !important; }
+  .annual-m-full { display: none; }
+  .annual-m-short { display: inline; }
+}
 .annual-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 @media (min-width: 1024px) {
   .annual-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
