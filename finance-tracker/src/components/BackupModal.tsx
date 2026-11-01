@@ -10,6 +10,7 @@ import {
   type BackupCounts, type BackupErrorCode,
 } from '../utils/backupCrypto'
 import { ConfirmDialog } from './ConfirmDialog'
+import { todayISO } from '../utils/format'
 
 const GRADIENT = 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))'
 const MIN_PASSWORD = 8
@@ -110,7 +111,7 @@ export function BackupModal({ open, mode, onClose }: BackupModalProps) {
     setBusy(true); setError(null)
     try {
       const data = await fetchBackup()
-      const stamp = new Date().toISOString().slice(0, 10)
+      const stamp = todayISO()
       if (plain) {
         downloadText(plainBackupFile(data), `finvu-backup-${stamp}.json`, 'application/json')
       } else {

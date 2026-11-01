@@ -62,7 +62,7 @@ finance-tracker/src/
 ## Internacionalizácia (i18n)
 
 - **5 jazykov**: SK (primárny), CS, PL, HU, EN
-- **Súbory**: `finance-tracker/src/i18n/{sk,en,cs,pl,hu}.ts` (5 súborov) — každý ~413 kľúčov, 16 skupín
+- **Súbory**: `finance-tracker/src/i18n/{sk,en,cs,pl,hu}.ts` (5 súborov)
 - **Štruktúra**: všetkých 5 súborov musí mať **identickú štruktúru** zodpovedajúcu `typeof sk` — TypeScript to vynucuje cez `satisfies`
 - **Hook**: `useTranslation()` vracia `{ t: Translations }` — `t` je priamy objekt SK/CS/PL/HU/EN podľa aktívneho jazyka
 - **Auto-detekcia**: pri prvej návšteve sa jazyk deteguje z prehliadača (i18next-browser-languagedetector alebo `navigator.language`)
@@ -84,7 +84,9 @@ npm run preview   # preview buildu
 ## Deployment
 - Frontend: statický build na serveri (nginx), nasadzuje GitHub Actions
 - Backend: Hetzner CX23, `https://api.pedani.eu`
-- Deploy robí GitHub Actions (`.github/workflows/deploy.yml`, popis v `DEPLOYMENT.md`); `deploy.sh` v root adresári je len ručná záloha
+- **Produkčné nasadenie robí výlučne GitHub Actions** (`.github/workflows/deploy.yml`, popis v `DEPLOYMENT.md`) po pushi na `main`: job `lint` (ESLint, typecheck, testy, npm audit, kontrola schémy) a potom `deploy-frontend` (ak sa zmenilo `finance-tracker/**`) a `deploy-backend` (ak sa zmenilo `backend/**`). Workflow sa dá spustiť aj ručne (`workflow_dispatch`)
+- `deploy.sh` v root adresári je len ručná záloha pre prípad, že GitHub Actions nie sú dostupné. **`deploy.sh` ani iné nasadzovacie skripty sa nespúšťajú proti produkcii bez výslovného pokynu majiteľa**
+- Konfigurácia nginx (`nginx/*.conf`) sa cez CI nenasadzuje (pozri `DEPLOYMENT.md`)
 
 ## Databázové migrácie
 
@@ -164,7 +166,7 @@ Demo účet bol zrušený (2026-11-01) a z kódu aj databázy odstránený. Lok�
 - Theme preference: ukladá sa do DB aj localStorage cache
 
 ### Deploy
-- Server: pedani.eu (Hetzner CX23), deploy cez SSH → `./deploy.sh frontend`
+- Server: pedani.eu (Hetzner CX23); nasadenie robí GitHub Actions (pozri sekciu Deployment vyššie), nie ručný `deploy.sh`
 - `.npmrc` má `legacy-peer-deps=true` kvôli vite-plugin-pwa@1.2/vite@8 konfliktu
 - Do gitu pridávaj **len konkrétne upravené súbory explicitne** (`git add cesta/k/súboru …`), nikdy `git add -A` ani `git commit -a` — priečinok `rev/` v koreni repozitára je cudzí a untracked. Potom `git commit` a push na `origin` aj `gitea`
 - git remotes: `origin` = GitHub (triggers Actions), `gitea` = self-hosted Gitea
@@ -238,52 +240,18 @@ docker compose up --build -d
 ## Layout & UI pravidlá
 
 ### Grid a šírky
-- Main content wrapper v App.tsx: `className="flex-1 overflow-y-auto w-full min-w-0"`
-- Content div inside main: `className="w-full h-full p-6"`
+- Kostra aplikácie (navigácia, `Topbar`, obsah stránky v `PullToRefresh`) je v `src/App.tsx`; presné štýly wrapperov pozri tam
 - Šírku a centrovanie obsahu riadi `PullToRefresh` (`PAGE_MAX_WIDTH` = 1232): nastaví CSS premennú `--page-inset` na scroll kontajneri a stránky ju pridávajú do horizontálneho paddingu (`padding: 20px calc(20px + var(--page-inset, 0px))`), takže scrollbar ostáva na okraji obrazovky. Na page-level komponentoch (Dashboard, Income, …) sa nepoužíva `max-w-*`; k 2026-11-01 sa `max-w-*` v `src/` vyskytuje len v `ConfirmDialog` a `ToastContainer` (dialóg/toast, nie stránky). Sidebar a Topbar zostávajú na celú šírku
-- Dashboard 2-stĺpcový layout: `grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-6 w-full`
-  - Ľavý stĺpec: hlavný obsah (rastie)
-  - Pravý stĺpec: kontextový panel (fixed 340–380px)
+- Dashboard má na desktope (lg+) dva stĺpce (hlavný obsah vľavo, kontextový panel vpravo), na mobile jeden stĺpec; presné rozmery pozri `src/pages/Dashboard.tsx`
 
 ### Sidebar
-- Expanded: šírka `240px`, main má `lg:ml-[240px]`
-- Collapsed: šírka `64px`, main má `lg:ml-[64px]`
-- Sidebar: `position: fixed`, `z-index` nad contentom
-- Prechod: `transition-all duration-200` na sidebar aj main
+- Komponent `src/components/AppNav.tsx`; má rozbalený a zbalený stav, šírky idú cez CSS premenné `--sidebar-w` a `--sidebar-collapsed-w`
 
 ### Farby a pozadie
 - Pozadie stránky a farby všeobecne: tokeny `--aurora-bg` / `--aurora-bg-image` a ostatné `--aurora-*` z `src/index.css` (dark aj light), nie hardcoded hex
-- Greeting margin kompenzácia: `margin: -24px -24px 0 -24px`, `padding: 16px 24px 12px`
 
-### Dashboard — sekcie (v3)
-**Hero karta** (gradient wallet card):
-- Poradie: ZOSTATOK label → veľké číslo + úspora badge (top-right) → tx pill → divider → PRÍJMY/VÝDAVKY 2-col grid
-- Úspora badge: `↑ X % úspora`, padding 8px 16px, fontWeight 700, fontSize 13, `#34d399`, `rgba(52,211,153,0.2)` bg
-- PRÍJMY/VÝDAVKY: % zmena vs predchádzajúci mesiac (↑/↓ badge), animované sumy cez `useCountUp`
-
-**Ľavý stĺpec** (desktop grid): hero karta → heatmap + donut (`grid grid-cols-2 items-stretch` — obe karty rovnaká výška)
-**Mobilný layout**: hero → donut → heatmap → pravý panel
-
-**Donut graf** (`pieChartCard`):
-- Hover segment alebo legend → segment sa vysunie + legenda stučnie (priority: click > legendHover > pieHover)
-- Klik → uzamkne výber; klik znovu → odznačí
-- Center: pri výbere → ikona + názov + suma + %; bez výberu → celková suma + "celkom"
-- State: `activeIndex` (pie hover), `legendHoverIndex` (legend hover), `clickedIndex` (locked)
-
-**Pravý panel** — karty:
-1. **Nadchádzajúce platby** — fixné výdavky zoradené podľa dní do splatnosti
-2. **Rozpočet** — category progress bars (green <70%, yellow 70–90%, red >90%)
-3. Motivačná správa (ak relevantná)
-4. Porovnanie mesiacov — aktuálny vs predchádzajúci
-5. Mesačná výzva — progress bar voči minulému mesiacu
-6. Sporenie — ciele (ak `savings_enabled`)
-
-**Odstránené sekcie** (v3):
-- Vývoj príjmov a výdavkov (AreaChart + BarChart)
-- Predikcia výdavkov (ForecastCard + expensePrediction block)
-- Posledné transakcie v pravom paneli
-- Standalone Úspora karta (donut ring "51% Výborne!")
-- Bento stat cards pod hero kartou
+### Dashboard — sekcie
+Pevné detaily jednotlivých sekcií sa tu nevedú (zastarávali) — zdroj pravdy je `src/pages/Dashboard.tsx`. Stručne: hero karta (`HeroCard`), karta denného rozpočtu, heatmapa výdavkov (`ExpenseHeatmap`) a donut graf (`CategoryDonutCard`), pravý panel s kartami (nadchádzajúce platby, predikcia cez `ForecastCard`, sporenie ak `savings_enabled`, …). Mobil: jeden stĺpec; desktop (lg+): dva stĺpce.
 
 ### Responsive pravidlo
 - Desktop (lg+): sidebar + 2-stĺpcový grid
