@@ -826,7 +826,7 @@ const upcomingFixed = useMemo(() => {
             padding: '16px 12px',
             overflowX: 'hidden',
             overflowY: 'auto',
-            height: 'calc(100vh - 64px)',
+            maxHeight: 'calc(100vh - 120px)',
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
