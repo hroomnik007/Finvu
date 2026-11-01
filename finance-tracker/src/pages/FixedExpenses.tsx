@@ -21,6 +21,7 @@ import { useCategories } from '../hooks/useCategories'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 import type { FixedExpense, Category } from '../types'
 import { DenseCard, DenseRow } from '../components/DenseList'
 import { useOffline } from '../hooks/useOfflineQueue'
@@ -36,6 +37,7 @@ import { ValidFromHint } from '../components/ValidFromHint'
 import { todayISO } from '../utils/format'
 import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
 import { SuggestedCategoryHint } from '../components/SuggestedCategoryHint'
+import { pickerCategories } from '../utils/entryDefaults'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -103,8 +105,9 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     [categories]
   )
 
+  // Lists show the stored category whatever its type; only the picker is limited.
   const getCat = (id?: string | null): Category | null =>
-    expenseCategories.find(c => c.id === id) ?? null
+    categories.find(c => c.id === id) ?? null
 
   // A subscription card on the dashboard can send us here with the form to prefill
   const [initialPrefill] = useState(peekFixedPrefill)
@@ -112,6 +115,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const [sheetOpen, setSheetOpen] = useState(initialPrefill !== null)
   const [editing, setEditing] = useState<FixedExpense | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const pickerCats = useMemo(() => pickerCategories(categories, 'expense', editing?.categoryId), [categories, editing?.categoryId])
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
   const [activeCat, setActiveCat] = useState<string | null>(null)
   const [csvOpen, setCsvOpen] = useState(false)
@@ -189,7 +193,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
   function countdownBadge(daysUntil: number) {
     if (daysUntil === 0) return { text: t.expenses.fixed.countdown.today, color: 'var(--aurora-violet-text)', bg: 'rgba(139,92,246,0.15)' }
-    const text = t.expenses.fixed.countdown.days.replace('{n}', String(daysUntil))
+    const text = pluralText(daysUntil, t.expenses.fixed.countdown.days, locale)
     if (daysUntil <= 3) return { text, color: 'var(--aurora-rose)', bg: 'rgba(251,113,133,0.15)' }
     if (daysUntil <= 7) return { text, color: 'var(--aurora-amber)', bg: 'rgba(251,191,36,0.15)' }
     return { text, color: 'var(--aurora-emerald)', bg: 'rgba(52,211,153,0.15)' }
@@ -738,9 +742,9 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
         />
 
-        {expenseCategories.length > 0 && (
+        {pickerCats.length > 0 && (
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {expenseCategories.map(c => (
+            {pickerCats.map(c => (
               <CategoryCircle
                 key={c.id}
                 icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}

@@ -3,6 +3,7 @@ import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 
 export interface SharedCategoryTile {
   id: string
@@ -32,7 +33,7 @@ const small = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(-
  * grid grows in rows, so a long list of categories doesn't turn into a tall column.
  */
 export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { formatAmount } = useFormatters()
   const ht = t.household
 
@@ -47,7 +48,7 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
         <p style={heading}>👥 {ht.sharedCategoriesTitle}</p>
         {shared.length > 0 && (
           <span style={small}>
-            {ht.sharedCount.replace('{n}', String(shared.length))}
+            {pluralText(shared.length, ht.sharedCount, locale)}
             {over > 0 && <span style={{ color: 'var(--aurora-rose)', fontWeight: 700 }}> · {ht.sharedOver.replace('{n}', String(over))}</span>}
             {totalLimit > 0 && ` · ${formatAmount(totalSpent)} / ${formatAmount(totalLimit)}`}
           </span>

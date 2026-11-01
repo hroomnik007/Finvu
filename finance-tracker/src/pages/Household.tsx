@@ -13,6 +13,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useCategories } from '../hooks/useCategories'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { pluralText, type PluralForms } from '../utils/plural'
 import { getMyHousehold, getMonthlyStats, getActivity, leaveHousehold, regenerateInviteCode, removeHouseholdMember } from '../api/households'
 import { getSummaryCards } from '../api/transactions'
 import { shareCategories } from '../api/categories'
@@ -21,7 +22,7 @@ import { parseDescription } from '../hooks/useFixedExpenses'
 
 const CAT_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#A78BFA', '#F97316']
 
-function timeAgo(iso: string, ht: { timeJustNow: string; timeMinutes: string; timeHours: string; timeYesterday: string; timeDays: string }): string {
+function timeAgo(iso: string, ht: { timeJustNow: string; timeMinutes: string; timeHours: string; timeYesterday: string; timeDays: PluralForms }, locale: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60000)
   const hours = Math.floor(mins / 60)
@@ -30,17 +31,17 @@ function timeAgo(iso: string, ht: { timeJustNow: string; timeMinutes: string; ti
   if (mins < 60) return ht.timeMinutes.replace('{n}', String(mins))
   if (hours < 24) return ht.timeHours.replace('{n}', String(hours))
   if (days === 1) return ht.timeYesterday
-  return ht.timeDays.replace('{n}', String(days))
+  return pluralText(days, ht.timeDays, locale)
 }
 
 const ACTIVITY_INITIAL_LIMIT = 8
 
-function dayLabel(iso: string, ht: { today: string; timeYesterday: string; timeDays: string }): string {
+function dayLabel(iso: string, ht: { today: string; timeYesterday: string; timeDays: PluralForms }, locale: string): string {
   const startOfDay = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime() }
   const diffDays = Math.round((startOfDay(Date.now()) - startOfDay(new Date(iso).getTime())) / 86400000)
   if (diffDays <= 0) return ht.today
   if (diffDays === 1) return ht.timeYesterday
-  return ht.timeDays.replace('{n}', String(diffDays))
+  return pluralText(diffDays, ht.timeDays, locale)
 }
 
 interface HouseholdPageProps {
@@ -53,7 +54,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   const { user, refreshUser } = useAuth()
   const { formatAmount, formatAmountParts } = useFormatters()
   const { categories, reload: reloadCategories } = useCategories()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { household: ht } = t
 
   const [householdData, setHouseholdData] = useState<HouseholdData | null>(null)
@@ -157,13 +158,13 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   const activityGroups = useMemo(() => {
     const groups: { label: string; items: ActivityItem[] }[] = []
     for (const a of visibleActivity) {
-      const label = dayLabel(a.created_at, ht)
+      const label = dayLabel(a.created_at, ht, locale)
       const last = groups[groups.length - 1]
       if (last && last.label === label) last.items.push(a)
       else groups.push({ label, items: [a] })
     }
     return groups
-  }, [visibleActivity, ht])
+  }, [visibleActivity, ht, locale])
 
   // Hero totals come from the same summary-cards call as the Dashboard family
   // view, so both pages always show identical numbers; the per-member stats
@@ -469,7 +470,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                             <span style={{ color: 'var(--aurora-faint)' }}> {actionText} </span>
                             <span style={{ fontWeight: 500 }}>{description}</span>
                           </p>
-                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{timeAgo(a.created_at, ht)}</p>
+                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{timeAgo(a.created_at, ht, locale)}</p>
                         </div>
                         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', flexShrink: 0 }}>
                           {isIncome ? '+' : '−'}{formatAmount(a.amount)}

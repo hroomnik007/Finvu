@@ -12,6 +12,7 @@ import { useSavings } from '../hooks/useSavings'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { listDeposits, addDeposit, deleteDeposit } from '../api/savings'
 import { getSummaryCards } from '../api/transactions'
@@ -360,7 +361,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         {/* Hero wallet card */}
         <HeroCard variant="income" style={{ marginBottom: 20 }}>
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
-            {t.savings.totalSavingsLabel} · {t.savings.activeGoals.replace('{n}', String(goalCount))}
+            {t.savings.totalSavingsLabel} · {pluralText(goalCount, t.savings.activeGoals, locale)}
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'baseline' }}>

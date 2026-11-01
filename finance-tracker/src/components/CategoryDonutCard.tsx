@@ -5,6 +5,7 @@ import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 
 export interface DonutDatum {
   name: string
@@ -27,7 +28,7 @@ interface CategoryDonutCardProps {
  */
 export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps) {
   const { formatAmount } = useFormatters()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [legendHoverIndex, setLegendHoverIndex] = useState<number | null>(null)
@@ -191,7 +192,7 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
                   onClick={() => setShowAllPie(p => !p)}
                   style={{ fontSize: 12, color: 'var(--aurora-violet-text)', cursor: 'pointer', background: 'transparent', border: 'none', padding: 0, textAlign: 'left', fontFamily: "'Manrope', sans-serif" }}
                 >
-                  {showAllPie ? t.dashboard.showLess : t.dashboard.moreItems.replace('{n}', String(remainingPieCount))}
+                  {showAllPie ? t.dashboard.showLess : pluralText(remainingPieCount, t.dashboard.moreItems, locale)}
                 </button>
               )}
             </div>

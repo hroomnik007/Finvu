@@ -27,7 +27,7 @@ export function verificationEmailHtml(token: string): string {
       <a href="${link}" style="display:inline-block;background:#7C3AED;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">
         Overiť email
       </a>
-      <p style="color:#666;font-size:13px">Odkaz je platný na jedno použitie. Ak si sa neregistroval/a, tento email ignoruj.</p>
+      <p style="color:#666;font-size:13px">Odkaz je platný na jedno použitie. Ak registrácia nepochádza od teba, tento email ignoruj.</p>
     </div>
   `;
 }
@@ -43,7 +43,7 @@ ${link}
 
 Odkaz je platný 1 hodinu.
 
-Ak si o obnovu nežiadal/a, tento email ignoruj.
+Ak žiadosť o obnovu nepochádza od teba, tento email ignoruj.
 
 Tím FinVu`;
 }
@@ -60,7 +60,7 @@ export function resetPasswordEmailHtml(token: string): string {
         Obnoviť heslo
       </a>
       <p style="color:#666;font-size:13px">Odkaz je platný 1 hodinu.</p>
-      <p style="color:#666;font-size:13px">Ak si o obnovu nežiadal/a, tento email ignoruj.</p>
+      <p style="color:#666;font-size:13px">Ak žiadosť o obnovu nepochádza od teba, tento email ignoruj.</p>
       <p>Tím FinVu</p>
     </div>
   `;
@@ -75,11 +75,11 @@ export function accountExistsEmailHtml(): string {
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
       <h2 style="color:#7C3AED">Finvu — účet už existuje</h2>
       <p>Niekto sa práve pokúsil zaregistrovať s touto emailovou adresou, ale účet s ňou už máš.</p>
-      <p>Ak si to bol/a ty, stačí sa prihlásiť. Ak si nepamätáš heslo, na prihlasovacej stránke si ho môžeš obnoviť.</p>
+      <p>Ak si to ty, stačí sa prihlásiť. Ak si nepamätáš heslo, na prihlasovacej stránke si ho môžeš obnoviť.</p>
       <a href="${loginLink}" style="display:inline-block;background:#7C3AED;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">
         Prihlásiť sa
       </a>
-      <p style="color:#666;font-size:13px">Ak si to nebol/a ty, tento email môžeš ignorovať. Tvoj účet sa nezmenil.</p>
+      <p style="color:#666;font-size:13px">Ak to nie si ty, tento email môžeš ignorovať. Tvoj účet sa nezmenil.</p>
     </div>
   `;
 }

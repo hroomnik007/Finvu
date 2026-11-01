@@ -20,3 +20,8 @@ export function pluralForm(n: number, forms: PluralForms, locale: string): strin
 export function pluralCount(n: number, forms: PluralForms, locale: string): string {
   return `${new Intl.NumberFormat(locale).format(n)} ${pluralForm(n, forms, locale)}`
 }
+
+/** Picks the plural form of a template like "o {n} dni" and fills in the count. */
+export function pluralText(n: number, forms: PluralForms, locale: string): string {
+  return pluralForm(n, forms, locale).replace('{n}', new Intl.NumberFormat(locale).format(n))
+}

@@ -5,6 +5,7 @@ import {
   Target, Flame, PiggyBank, BarChart3, Trophy, Zap, Users, Gem,
 } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { pluralCount } from '../utils/plural'
 import { formatDateLocale } from '../utils/format'
 import { useFormatters } from '../hooks/useFormatters'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -361,7 +362,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
               { label: t.profile.transactionsStat, value: txnCount !== null ? String(txnCount) : '—', color: 'var(--aurora-hi)', icon: null },
               { label: t.profile.savingsStat, value: savingsTotal !== null ? formatMoneyRounded(savingsTotal) : '—', color: 'var(--aurora-emerald)', icon: null },
               { label: t.profile.streakStat, value: String(user?.currentStreak ?? 0), color: '#FB923C', icon: Flame },
-              { label: t.profile.trackingStat, value: trackingDays !== null ? `${trackingDays} ${t.profile.days}` : '—', color: 'var(--aurora-violet-text)', icon: null },
+              { label: t.profile.trackingStat, value: trackingDays !== null ? pluralCount(trackingDays, t.profile.days, locale) : '—', color: 'var(--aurora-violet-text)', icon: null },
             ].map((stat, i) => (
               <div key={i} style={{ padding: '12px 8px', textAlign: 'center', borderLeft: i > 0 ? '1px solid var(--aurora-gline)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: stat.color, marginBottom: 2 }}>

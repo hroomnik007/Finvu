@@ -22,6 +22,7 @@ import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 import { useSettingsContext } from '../context/SettingsContext'
 import { useAuth } from '../context/AuthContext'
 import { getMonthlySeries, getSummaryCards, type SeriesMonth } from '../api/transactions'
@@ -120,7 +121,7 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   )
   const { goals: savingsGoals } = useSavings()
   const { formatAmount, formatAmountParts, formatLongDate } = useFormatters()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { profileName } = useSettingsContext()
   const { user, refreshUser } = useAuth()
   const displayName = user?.name || profileName
@@ -227,7 +228,7 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
 
   function countdownBadge(daysUntil: number) {
     if (daysUntil === 0) return { text: t.expenses.fixed.countdown.today, color: 'var(--aurora-violet-text)', bg: 'rgba(139,92,246,0.15)' }
-    const text = t.expenses.fixed.countdown.days.replace('{n}', String(daysUntil))
+    const text = pluralText(daysUntil, t.expenses.fixed.countdown.days, locale)
     if (daysUntil <= 3) return { text, color: 'var(--aurora-rose)', bg: 'rgba(251,113,133,0.1)' }
     if (daysUntil <= 7) return { text, color: 'var(--aurora-amber)', bg: 'rgba(251,191,36,0.15)' }
     return { text, color: 'var(--aurora-emerald)', bg: 'rgba(52,211,153,0.15)' }
