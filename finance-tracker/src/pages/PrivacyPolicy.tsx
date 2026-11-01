@@ -11,24 +11,24 @@ const SECTIONS = [
     body: (
       <ul style={{ listStyle: 'disc', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <li>Meno a emailová adresa (pri registrácii)</li>
-        <li>Finančné záznamy, ktoré sami zadáte (príjmy, výdavky, kategórie)</li>
+        <li>Finančné záznamy, ktoré zadáš (príjmy, výdavky, kategórie)</li>
         <li>Technické údaje potrebné pre fungovanie aplikácie (IP adresa, čas prihlásenia)</li>
       </ul>
     ),
   },
   {
     title: '3. Účel spracovania',
-    body: <p>Vaše údaje spracúvame výlučne za účelom poskytovania funkcionality aplikácie Finvu — evidencie osobných financií. Údaje nepredávame tretím stranám ani ich nepoužívame na marketingové účely.</p>,
+    body: <p>Tvoje údaje spracúvame výlučne za účelom poskytovania funkcionality aplikácie Finvu — evidencie osobných financií. Údaje nepredávame tretím stranám ani ich nepoužívame na marketingové účely.</p>,
   },
   {
     title: '4. Ukladanie údajov',
-    body: <p>Vaše dáta sú bezpečne uložené na serveri v EU. Prenos dát je šifrovaný pomocou HTTPS. Heslá sú ukladané iba v zahashovanej forme (bcrypt).</p>,
+    body: <p>Tvoje dáta sú bezpečne uložené na serveri v EU. Prenos dát je šifrovaný pomocou HTTPS. Heslá sú ukladané iba v zahashovanej forme (bcrypt).</p>,
   },
   {
-    title: '5. Vaše práva',
+    title: '5. Tvoje práva',
     body: (
       <ul style={{ listStyle: 'disc', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <li>Právo na prístup k vašim údajom</li>
+        <li>Právo na prístup k tvojim údajom</li>
         <li>Právo na opravu nesprávnych údajov</li>
         <li>Právo na vymazanie účtu a všetkých údajov (dostupné v Nastaveniach aplikácie)</li>
         <li>Právo na prenosnosť údajov (export do JSON dostupný v Nastaveniach)</li>
@@ -41,7 +41,7 @@ const SECTIONS = [
   },
   {
     title: '7. Kontakt',
-    body: <p>V prípade otázok týkajúcich sa ochrany súkromia nás kontaktujte na emailovej adrese dostupnej cez aplikáciu.</p>,
+    body: <p>V prípade otázok týkajúcich sa ochrany súkromia nás kontaktuj na emailovej adrese dostupnej cez aplikáciu.</p>,
   },
 ]
 

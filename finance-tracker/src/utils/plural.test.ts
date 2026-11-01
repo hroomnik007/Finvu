@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { pluralCount, pluralForm } from './plural'
+import { pluralCount, pluralForm, pluralText } from './plural'
+import { sk as skT } from '../i18n/sk'
+import { cs as csT } from '../i18n/cs'
+import { pl as plT } from '../i18n/pl'
 
 const sk = { one: 'transakcia', few: 'transakcie', many: 'transakcií' }
 const pl = { one: 'transakcja', few: 'transakcje', many: 'transakcji' }
@@ -25,5 +28,16 @@ describe('pluralCount', () => {
   it('formats the number for the locale', () => {
     expect(pluralCount(3, sk, 'sk-SK')).toBe('3 transakcie')
     expect(pluralCount(1200, en, 'en-GB')).toBe('1,200 transactions')
+  })
+})
+
+describe('pluralText', () => {
+  it('fills the count into the right template', () => {
+    expect(pluralText(4, skT.csv.records, 'sk')).toBe('4 záznamy')
+    expect(pluralText(1, skT.csv.records, 'sk')).toBe('1 záznam')
+    expect(pluralText(12, skT.csv.records, 'sk')).toBe('12 záznamov')
+    expect(pluralText(3, csT.notifications.daysAgo, 'cs')).toBe('před 3 dny')
+    expect(pluralText(22, plT.csv.importSuccess, 'pl')).toBe('Zaimportowano 22 transakcje')
+    expect(pluralText(1, skT.expenses.fixed.countdown.days, 'sk')).toBe('o 1 deň')
   })
 })

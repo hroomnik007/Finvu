@@ -30,6 +30,19 @@ export function dateForRecurringToggle(current: string, recurring: boolean, mont
   return current
 }
 
+/**
+ * Categories offered when picking one for an entry of `type`. A category of the
+ * other type already on the edited entry (`keepId`) stays in the list so the
+ * existing value still shows.
+ */
+export function pickerCategories<C extends { id?: string; type: 'income' | 'expense' }>(
+  categories: readonly C[],
+  type: 'income' | 'expense',
+  keepId?: string | null,
+): C[] {
+  return categories.filter(c => c.type === type || (!!keepId && c.id === keepId))
+}
+
 /** Categories ordered by how often they were used (most first), ties and unused A–Z. */
 export function sortCategoriesByUsage<C extends { id?: string; name: string }>(
   categories: readonly C[],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultEntryDate, recentMonths, sortCategoriesByUsage, dateForRecurringToggle } from './entryDefaults'
+import { defaultEntryDate, recentMonths, sortCategoriesByUsage, dateForRecurringToggle, pickerCategories } from './entryDefaults'
 
 const today = new Date(2026, 9, 31) // 31 Oct 2026
 
@@ -47,5 +47,21 @@ describe('dateForRecurringToggle', () => {
   it('keeps a date the user picked', () => {
     expect(dateForRecurringToggle('2026-03-12', true, 3, 2026, today)).toBe('2026-03-12')
     expect(dateForRecurringToggle('2026-03-12', false, 3, 2026, today)).toBe('2026-03-12')
+  })
+})
+
+describe('pickerCategories', () => {
+  const cats = [
+    { id: 'food', type: 'expense' as const },
+    { id: 'salary', type: 'income' as const },
+    { id: 'rent', type: 'expense' as const },
+  ]
+  it('offers only categories of the entry type', () => {
+    expect(pickerCategories(cats, 'expense').map(c => c.id)).toEqual(['food', 'rent'])
+    expect(pickerCategories(cats, 'income').map(c => c.id)).toEqual(['salary'])
+  })
+  it('keeps a mismatched category already on the edited entry', () => {
+    expect(pickerCategories(cats, 'expense', 'salary').map(c => c.id)).toEqual(['food', 'salary', 'rent'])
+    expect(pickerCategories(cats, 'expense', null).map(c => c.id)).toEqual(['food', 'rent'])
   })
 })

@@ -7,6 +7,7 @@ import { useCategories } from '../hooks/useCategories'
 import { matchRule, suggestKeyword } from '../utils/importRules'
 import { CamtError, looksLikeXml, parseCamt053 } from '../utils/camt053'
 import { useTranslation } from '../i18n'
+import { pluralForm, pluralText } from '../utils/plural'
 import { useFormatters } from '../hooks/useFormatters'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { SettingsDropdown } from './SettingsDropdown'
@@ -418,7 +419,7 @@ function parseMBank(rows: CsvRow[]): ImportRow[] {
 }
 
 export function CsvImportModal({ open, onClose, filterType, initialFile }: CsvImportModalProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { formatAmount, formatDate, formatNumber } = useFormatters()
   const [format, setFormat] = useState<BankFormat>('revolut')
   const [rows, setRows] = useState<ImportRow[]>([])
@@ -666,7 +667,7 @@ export function CsvImportModal({ open, onClose, filterType, initialFile }: CsvIm
           {importedCount !== null ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-              <p style={{ fontSize: 18, fontWeight: 600, color: '#34D399', marginBottom: 8 }}>{t.csv.importSuccess.replace('{n}', String(importedCount))}</p>
+              <p style={{ fontSize: 18, fontWeight: 600, color: '#34D399', marginBottom: 8 }}>{pluralText(importedCount, t.csv.importSuccess, locale)}</p>
               <button onClick={onClose} style={{ height: 48, padding: '0 32px', background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', border: 'none', borderRadius: 14, color: 'white', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 12 }}>{t.csv.close}</button>
             </div>
           ) : rows.length === 0 && csvHeaders.length === 0 ? (
@@ -737,9 +738,9 @@ export function CsvImportModal({ open, onClose, filterType, initialFile }: CsvIm
                 </ul>
               )}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>{rows.length} {t.csv.records} · <span style={{ color: 'var(--violet)' }}>{selectedCount}</span> {t.csv.selectedCount}
-                  {rows.some(r => r.auto) && ` · ${t.csv.autoCount.replace('{n}', String(rows.filter(r => r.auto).length))}`}
-                  {rows.some(r => r.duplicate) && <span style={{ color: '#FBBF24' }}> · {t.csv.duplicateCount.replace('{n}', String(rows.filter(r => r.duplicate).length))}</span>}
+                <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>{pluralText(rows.length, t.csv.records, locale)} · <span style={{ color: 'var(--violet)' }}>{selectedCount}</span> {pluralForm(selectedCount, t.csv.selectedCount, locale)}
+                  {rows.some(r => r.auto) && ` · ${pluralText(rows.filter(r => r.auto).length, t.csv.autoCount, locale)}`}
+                  {rows.some(r => r.duplicate) && <span style={{ color: '#FBBF24' }}> · {pluralText(rows.filter(r => r.duplicate).length, t.csv.duplicateCount, locale)}</span>}
                 </p>
                 <button onClick={() => setRows(r => r.map(x => ({ ...x, selected: !allSelected })))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--violet)', fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 12 }}>
                   {allSelected ? t.csv.deselectAll : t.csv.selectAll}

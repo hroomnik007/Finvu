@@ -22,7 +22,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedMonthNames } from '../i18n'
 import { dayHeaderParts } from '../utils/format'
-import { pluralCount } from '../utils/plural'
+import { pluralCount, pluralText } from '../utils/plural'
 import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import { defaultEntryDate } from '../utils/entryDefaults'
 import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
@@ -101,7 +101,6 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const listFailed = listError && variableExpenses.length === 0
   const { fixedExpenses } = useFixedExpenses(month, year)
   const { categories, addCategory } = useCategories()
-  const quickCategories = useCategoriesByUsage(categories)
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
@@ -110,6 +109,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<VariableExpense | null>(null)
+  const quickCategories = useCategoriesByUsage(categories, editing?.categoryId)
   const [form, setForm] = useState<VarForm>(() => emptyForm(month, year))
   const [newCatMode, setNewCatMode] = useState(false)
   const [newCatName, setNewCatName] = useState('')
@@ -625,7 +625,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
       <ConfirmDialog
         open={bulkDeleteOpen}
-        message={t.expenses.variable.bulkDeleteConfirm.replace('{n}', String(selectedIds.size))}
+        message={pluralText(selectedIds.size, t.expenses.variable.bulkDeleteConfirm, locale)}
         onConfirm={() => void deleteSelected()}
         onCancel={() => setBulkDeleteOpen(false)}
       />

@@ -1,6 +1,7 @@
 import type { NotificationFeedItem } from '../api/notifications'
 import type { Translations } from '../i18n/sk'
 import type { Page } from '../App'
+import { pluralText } from './plural'
 
 /** Display model for one feed item: the amount appears exactly once. */
 export interface NotificationView {
@@ -16,7 +17,7 @@ export interface NotificationView {
   target?: Page
 }
 
-export function notificationView(item: NotificationFeedItem, t: Translations, formatAmount: (n: number) => string): NotificationView {
+export function notificationView(item: NotificationFeedItem, t: Translations, formatAmount: (n: number) => string, locale = 'sk'): NotificationView {
   const n = t.notifications
   switch (item.kind) {
     case 'budget': {
@@ -33,7 +34,7 @@ export function notificationView(item: NotificationFeedItem, t: Translations, fo
       }
     }
     case 'fixedDue': {
-      const time = item.daysUntil === 0 ? n.today : item.daysUntil === 1 ? n.tomorrow : n.inDays.replace('{n}', String(item.daysUntil))
+      const time = item.daysUntil === 0 ? n.today : item.daysUntil === 1 ? n.tomorrow : pluralText(item.daysUntil, n.inDays, locale)
       return {
         kind: 'fixedDue',
         title: item.label,
@@ -46,7 +47,7 @@ export function notificationView(item: NotificationFeedItem, t: Translations, fo
       }
     }
     case 'income': {
-      const time = item.daysAgo === 0 ? n.today : item.daysAgo === 1 ? n.yesterday : n.daysAgo.replace('{n}', String(item.daysAgo))
+      const time = item.daysAgo === 0 ? n.today : item.daysAgo === 1 ? n.yesterday : pluralText(item.daysAgo, n.daysAgo, locale)
       return {
         kind: 'income',
         title: n.incomeReceived,

@@ -36,6 +36,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 import { reorderCategories as reorderCategoriesApi, shareCategories } from '../api/categories'
 import { useAuth } from '../context/AuthContext'
 import type { Category } from '../types'
@@ -466,7 +467,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     await reload()
     setBulkBusy(false)
     setBulkDeleteOpen(false)
-    if (blocked > 0) alert(t.expenses.categories.bulkDeleteBlocked.replace('{n}', String(blocked)))
+    if (blocked > 0) alert(pluralText(blocked, t.expenses.categories.bulkDeleteBlocked, locale))
     if (selectedIds.size - blocked > 0) showToast(t.expenses.categories.bulkDeleted.replace('{n}', String(selectedIds.size - blocked)))
     exitSelectMode()
   }
@@ -818,7 +819,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
 
       <ConfirmDialog
         open={bulkDeleteOpen}
-        message={t.expenses.categories.bulkDeleteConfirm.replace('{n}', String(selectedIds.size))}
+        message={pluralText(selectedIds.size, t.expenses.categories.bulkDeleteConfirm, locale)}
         onConfirm={deleteSelected}
         onCancel={() => setBulkDeleteOpen(false)}
       />

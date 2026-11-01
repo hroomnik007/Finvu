@@ -1,6 +1,7 @@
 import { useModalA11y } from '../hooks/useModalA11y'
 import { X } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { pluralForm } from '../utils/plural'
 
 interface StreakModalProps {
   currentStreak: number
@@ -18,7 +19,7 @@ function StatBox({ label, value }: { label: string; value: number }) {
 }
 
 export function StreakModal({ currentStreak, longestStreak, onClose }: StreakModalProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const { panelRef, titleId, dialogProps } = useModalA11y({ open: true, onClose })
 
   return (
@@ -45,7 +46,7 @@ export function StreakModal({ currentStreak, longestStreak, onClose }: StreakMod
           <div style={{ fontSize: 52, lineHeight: 1, display: 'inline-block', animation: 'flame 1.4s ease-in-out infinite', transformOrigin: 'bottom center' }}>🔥</div>
           <h2 id={titleId} tabIndex={-1} style={{ margin: 0, outline: 'none', fontWeight: 'inherit' }}>
             <div style={{ fontSize: 40, fontWeight: 800, color: 'white', fontFamily: "'DM Mono', monospace", marginTop: 8, letterSpacing: '-1px' }}>{currentStreak}</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{t.profile.days} {t.streak.inARow}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{pluralForm(currentStreak, t.profile.days, locale)} {t.streak.inARow}</div>
           </h2>
         </div>
 

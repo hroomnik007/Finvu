@@ -3,15 +3,16 @@ import { useQueries } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n'
 import { fetchVariableExpenses, variableExpenseQueryKey } from './useVariableExpenses'
-import { recentMonths, sortCategoriesByUsage } from '../utils/entryDefaults'
+import { pickerCategories, recentMonths, sortCategoriesByUsage } from '../utils/entryDefaults'
 import type { Category } from '../types'
 
 /**
  * Categories sorted for quick entry: most used in the last 3 months first
  * (from the user's own variable expenses — the same cached queries the
- * expense pages use), unused ones A–Z.
+ * expense pages use), unused ones A–Z. Only expense categories, plus `keepId`
+ * (the edited expense's category) when it is of the other type.
  */
-export function useCategoriesByUsage(categories: Category[]): Category[] {
+export function useCategoriesByUsage(categories: Category[], keepId?: string | null): Category[] {
   const { user } = useAuth()
   const { locale } = useTranslation()
   const now = new Date()
@@ -26,5 +27,5 @@ export function useCategoriesByUsage(categories: Category[]): Category[] {
   const usedIds = results.flatMap(r => (r.data ?? []).map(e => e.categoryId))
   const key = usedIds.join(',')
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => sortCategoriesByUsage(categories, usedIds, locale), [categories, key, locale])
+  return useMemo(() => sortCategoriesByUsage(pickerCategories(categories, 'expense', keepId), usedIds, locale), [categories, key, locale, keepId])
 }

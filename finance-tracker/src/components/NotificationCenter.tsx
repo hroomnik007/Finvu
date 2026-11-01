@@ -6,6 +6,7 @@ import { getNotificationFeed, dismissNotification as dismissNotifApi, type Notif
 import { useFormatters } from '../hooks/useFormatters'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 import type { Translations } from '../i18n/sk'
 import { subscribeAchievementUnlocks } from '../utils/achievementEvents'
 import { subscribeNotificationsRefresh } from '../utils/notificationEvents'
@@ -51,7 +52,7 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
@@ -108,7 +109,7 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
 
   const KIND_ICON: Record<NotificationView['kind'], LucideIcon> = { budget: AlertTriangle, fixedDue: Calendar, income: TrendingUp, savings: Target }
   function feedItemToNotification(item: NotificationFeedItem): Notification {
-    const v = notificationView(item, t, formatAmount)
+    const v = notificationView(item, t, formatAmount, locale)
     return { id: item.id, icon: KIND_ICON[v.kind], title: v.title, desc: v.desc, time: v.time, read: v.read, color: v.color, amount: v.amount, target: v.target }
   }
 
@@ -257,7 +258,7 @@ export function NotificationCenter({ onNavigate }: NotificationCenterProps) {
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{t.notifications.title}</span>
               {unreadCount > 0 && (
                 <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.16)', color: 'var(--aurora-violet-text)' }}>
-                  {unreadCount} {t.notifications.newBadge}
+                  {pluralText(unreadCount, t.notifications.newBadge, locale)}
                 </span>
               )}
             </div>

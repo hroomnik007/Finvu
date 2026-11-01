@@ -4,6 +4,7 @@ import { Tag } from 'lucide-react'
 import type { VariableExpense, Category } from '../types'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { todayISO } from '../utils/format'
@@ -35,7 +36,7 @@ type TooltipState = {
 
 export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavigate }: ExpenseHeatmapProps) {
   const { formatAmount, formatLongDate } = useFormatters()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [tooltip, setTooltip] = useState<TooltipState>(null)
   const [lastClickedDay, setLastClickedDay] = useState<string | null>(null)
 
@@ -213,7 +214,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
           })}
           {tooltip.dayExpenses.length > 3 && (
             <div style={{ color: 'var(--aurora-faint)', fontSize: 12, marginTop: 4 }}>
-              {t.dashboard.heatmapMoreItems.replace('{n}', String(tooltip.dayExpenses.length - 3))}
+              {pluralText(tooltip.dayExpenses.length - 3, t.dashboard.heatmapMoreItems, locale)}
             </div>
           )}
         </div>,

@@ -1,5 +1,6 @@
 import { Flame } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { pluralText } from '../utils/plural'
 
 interface StreakBadgeProps {
   count: number
@@ -9,7 +10,7 @@ interface StreakBadgeProps {
 }
 
 export function StreakBadge({ count, size = 'lg', onClick, variant = 'default' }: StreakBadgeProps) {
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   if (count <= 0) return null
   const isLg = size === 'lg'
   const interactive = !!onClick
@@ -18,7 +19,7 @@ export function StreakBadge({ count, size = 'lg', onClick, variant = 'default' }
     <button
       type="button"
       onClick={onClick}
-      title={(interactive ? t.streak.badgeTitleInteractive : t.streak.badgeTitle).replace('{n}', String(count))}
+      title={pluralText(count, interactive ? t.streak.badgeTitleInteractive : t.streak.badgeTitle, locale)}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         padding: isLg ? '4px 9px' : '2px 6px',
