@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { annualCsv, annualRows, savingsRatePct, yearCategories, yearTotals } from './annual'
+import { annualCsv, annualRows, monthsUpTo, savingsRatePct, yearCategories, yearTotals } from './annual'
 import type { SeriesMonth } from '../api/transactions'
 
 const months: SeriesMonth[] = [
@@ -43,5 +43,13 @@ describe('annualRows', () => {
   it('ignores months from another year and handles an all-empty year', () => {
     const rows = annualRows(2026, [{ month: '2025-12', income: 10, expense: 5 }])
     expect(rows.every(r => r.empty && r.incomePct === 0)).toBe(true)
+  })
+
+  it('drops months after the current one', () => {
+    const series: SeriesMonth[] = ['2026-10', '2026-11', '2026-12'].map(month => ({ month, income: 220, expense: 0 }))
+    expect(monthsUpTo(series, '2026-11').map(m => m.month)).toEqual(['2026-10', '2026-11'])
+    const rows = annualRows(2026, monthsUpTo(series, '2026-11'))
+    expect(rows[11].empty).toBe(true)
+    expect(yearTotals(monthsUpTo(series, '2026-11')).income).toBe(440)
   })
 })

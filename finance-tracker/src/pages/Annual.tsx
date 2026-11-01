@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import { GlassCard } from '../components/GlassCard'
 import { QueryError, Skeleton } from '../components/QueryState'
 import { getMonthlySeries } from '../api/transactions'
-import { annualCsv, annualRows, savingsRatePct, yearCategories, yearTotals } from '../utils/annual'
+import { annualCsv, annualRows, monthsUpTo, savingsRatePct, yearCategories, yearTotals } from '../utils/annual'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 
@@ -27,14 +27,16 @@ function downloadCsv(content: string, filename: string) {
 export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
   const { t, locale } = useTranslation()
   const { formatAmount } = useFormatters()
-  const currentYear = new Date().getFullYear()
+  const nowDate = new Date()
+  const currentYear = nowDate.getFullYear()
+  const currentMonthKey = `${currentYear}-${String(nowDate.getMonth() + 1).padStart(2, '0')}`
   const [year, setYear] = useState(currentYear)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['monthlySeries', `${year}-01`, `${year}-12`, scope, 'categories'],
     queryFn: () => getMonthlySeries(`${year}-01`, `${year}-12`, scope, 'categories'),
   })
-  const months = data?.months ?? []
+  const months = monthsUpTo(data?.months ?? [], currentMonthKey)
   const totals = yearTotals(months)
   const categories = yearCategories(months)
   const maxCat = Math.max(1, ...categories.map(c => c.total))
@@ -58,17 +60,25 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
     )
   }
 
-  const arrow: React.CSSProperties = { background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--aurora-hi)' }
+  const yearBtn = (color: string, enabled: boolean): React.CSSProperties => ({ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: enabled ? 'pointer' : 'default', color, borderRadius: 7 })
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px var(--page-pad-bottom-nofab)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.annual.title}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button type="button" className="hit-44" aria-label={t.common.prevYear} title={t.common.prevYear} onClick={() => setYear(y => y - 1)} style={arrow}><ChevronLeft size={16} /></button>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 16, color: 'var(--aurora-hi)', minWidth: 44, textAlign: 'center' }}>{year}</span>
-            <button type="button" className="hit-44" aria-label={t.common.nextYear} title={t.common.nextYear} onClick={() => setYear(y => y + 1)} disabled={year >= currentYear} style={{ ...arrow, opacity: year >= currentYear ? 0.4 : 1 }}><ChevronRight size={16} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 3, flexShrink: 0 }}>
+            <button type="button" className="hit-44" aria-label={t.common.prevYear} title={t.common.prevYear} onClick={() => setYear(y => y - 1)}
+              style={yearBtn('var(--aurora-lo)', true)}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--aurora-hover)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+            ><ChevronLeft size={14} /></button>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", whiteSpace: 'nowrap', padding: '0 8px', minWidth: 96, textAlign: 'center' }}>{year}</span>
+            <button type="button" className="hit-44" aria-label={t.common.nextYear} title={t.common.nextYear} onClick={() => setYear(y => y + 1)} disabled={year >= currentYear}
+              style={yearBtn(year >= currentYear ? 'var(--aurora-faint)' : 'var(--aurora-lo)', year < currentYear)}
+              onMouseEnter={e => { if (year < currentYear) e.currentTarget.style.background = 'var(--aurora-hover)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+            ><ChevronRight size={14} /></button>
           </div>
         </div>
 

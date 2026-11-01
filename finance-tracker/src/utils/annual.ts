@@ -5,6 +5,12 @@ export function savingsRatePct(income: number, expense: number): number | null {
   return income > 0 ? Math.round(((income - expense) / income) * 100) : null
 }
 
+// The series projects recurring rows into every following month; a month that has not
+// started yet must not count, so drop everything after `currentMonth` (YYYY-MM).
+export function monthsUpTo(months: SeriesMonth[], currentMonth: string): SeriesMonth[] {
+  return months.filter(m => m.month <= currentMonth)
+}
+
 // Whole-year totals over the months of a series.
 export function yearTotals(months: SeriesMonth[]): { income: number; expense: number } {
   return months.reduce((t, m) => ({ income: t.income + m.income, expense: t.expense + m.expense }), { income: 0, expense: 0 })
