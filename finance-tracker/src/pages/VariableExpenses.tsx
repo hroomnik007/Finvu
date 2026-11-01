@@ -445,7 +445,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         </div>
 
         {/* Right panel — desktop only */}
-        <div className="hidden lg:flex" style={{ width: 280, borderLeft: '1px solid var(--aurora-gline)', overflowY: 'auto', padding: 16, flexDirection: 'column', gap: 20, background: 'var(--aurora-glass)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        <div className="hidden lg:flex" style={{ width: 280, flexShrink: 0, alignSelf: 'flex-start', maxHeight: 'calc(100% - 40px)', margin: '20px 20px 20px 0', border: '1px solid var(--aurora-gline)', borderRadius: 16, overflowY: 'auto', padding: 16, flexDirection: 'column', gap: 20, background: 'var(--aurora-glass)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           {rpSection(t.expenses.variable.categoriesAndBudget,
             budgetStatuses.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--aurora-faint)', fontSize: 13, fontFamily: "'Manrope', sans-serif" }}>

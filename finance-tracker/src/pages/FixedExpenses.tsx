@@ -702,7 +702,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         </div>
 
         {/* Right panel — desktop only */}
-        <div className="hidden lg:flex" style={{ width: 280, borderLeft: '1px solid var(--aurora-gline)', overflowY: 'auto', padding: 16, flexDirection: 'column', gap: 16, background: 'var(--aurora-glass)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        <div className="hidden lg:flex" style={{ width: 280, flexShrink: 0, overflowY: 'auto', padding: '20px 20px 20px 0', flexDirection: 'column', gap: 16 }}>
           <GlassCard radius={16}>
             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.yearly}</p>
             {yearlyContent}
