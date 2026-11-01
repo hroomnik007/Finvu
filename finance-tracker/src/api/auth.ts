@@ -75,11 +75,6 @@ export async function updateAvatar(avatarUrl: string): Promise<{ avatarUrl: stri
   return data
 }
 
-export async function demoLogin(): Promise<{ user: import('../types').AuthUser; accessToken: string }> {
-  const { data } = await apiClient.post('/api/auth/demo-login')
-  return data
-}
-
 export async function updateWeeklyEmail(enabled: boolean): Promise<{ weeklyEmailEnabled: boolean }> {
   const { data } = await apiClient.patch('/api/auth/weekly-email', { enabled })
   return data

@@ -17,7 +17,7 @@ interface LoginPageProps {
 
 export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: LoginPageProps) {
   const { t } = useTranslation()
-  const { login, loginDemo, loginWithGoogle, loginWithPin } = useAuth()
+  const { login, loginWithGoogle, loginWithPin } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -44,12 +44,6 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   // have an account or which sign-in methods they use.
   const [pinOnThisDevice, setPinOnThisDevice] = useState(false)
   const lastPinTapRef = useRef(0)
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('demo') !== 'true') return
-    setEmail('demo@finvu.sk')
-    setPassword('demo123')
-  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -81,11 +75,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
     setResendSent(false)
     setIsLoading(true)
     try {
-      if (email === 'demo@finvu.sk') {
-        await loginDemo()
-      } else {
-        await login(email, password)
-      }
+      await login(email, password)
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { error?: string; code?: string } } })?.response?.data
       setError(authErrorMessage(err, t.auth.loginFailed, t.auth))

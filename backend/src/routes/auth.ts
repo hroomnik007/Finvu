@@ -3,7 +3,7 @@ import { env } from "../config/env";
 import {
   register, login, refresh, logout, me,
   verifyEmail, forgotPassword, resetPassword, deleteAccount,
-  updateAvatar, demoLogin, adminLogin, updateWeeklyEmail, googleAuth, updateUserSettings,
+  updateAvatar, adminLogin, updateWeeklyEmail, googleAuth, updateUserSettings,
   pinLogin, updatePin, removePin, changePassword, getAuthMethods, sessionCheck, pingSession,
   getSessions, deleteSession, deactivateAccount,
   pinDeviceStatus, getPinDevices, deletePinDevice, resendVerification,
@@ -80,7 +80,6 @@ router.delete("/account",       sensitiveLimiter, authenticateToken, deleteAccou
 router.patch("/avatar",         authenticateToken, updateAvatar);
 router.patch("/weekly-email",   authenticateToken, updateWeeklyEmail);
 router.patch("/settings",       authenticateToken, updateUserSettings);
-router.post("/demo-login",      registerLimiter, demoLogin);
 router.post("/admin-login",     loginLimiter, adminLogin);
 router.post("/google",          loginLimiter, googleAuth);
 router.post("/pin-login",       pinLoginLimiter, pinLogin);

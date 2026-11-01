@@ -33,7 +33,6 @@ import {
 import { sendEmail, verificationEmailHtml, resetPasswordEmailHtml, resetPasswordEmailText, accountExistsEmailHtml } from "../lib/email";
 import { DEFAULT_CATEGORIES } from "../lib/defaultCategories";
 import { AuthRequest } from "../middleware/authenticate";
-import { resetDemoAccount, DEMO_EMAIL } from "../lib/resetDemo";
 import { parseImageDataUrl, saveAvatarFile, deleteAvatarFiles } from "../lib/avatarStorage";
 import { releaseOwnedHouseholds } from "../lib/household";
 import { isLocked, recordFailure, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
@@ -60,17 +59,6 @@ let dummyHash: Promise<string> | null = null;
 function dummyPasswordHash(): Promise<string> {
   dummyHash ??= bcrypt.hash(randomBytes(16).toString("hex"), env.BCRYPT_ROUNDS);
   return dummyHash;
-}
-
-// The shared demo account uses a publicly known password, so anything that
-// would lock the account for everyone else (or persist credentials on it) is
-// refused server-side — the UI-only isDemo flag is not a security boundary.
-function rejectDemo(req: AuthRequest, res: Response): boolean {
-  if (req.userEmail?.toLowerCase() === DEMO_EMAIL) {
-    res.status(403).json({ error: "Táto akcia nie je v demo účte povolená.", code: "DEMO_RESTRICTED" });
-    return true;
-  }
-  return false;
 }
 
 // Verification links stay valid for a week; "resend" issues a fresh one.
@@ -367,20 +355,8 @@ export async function login(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Reset demo account data on every login, then re-fetch the updated user record
-  let loginUser = user;
-  if (user.email.toLowerCase() === DEMO_EMAIL) {
-    try {
-      await resetDemoAccount(user.id);
-      const [refreshed] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
-      if (refreshed) loginUser = refreshed;
-    } catch (e) {
-      console.error("[demo-reset] failed:", e);
-    }
-  }
-
-  const { accessToken, sessionId } = await issueTokens(res, loginUser.id, loginUser.email, req);
-  res.json({ user: userPublic(loginUser), accessToken, sessionId });
+  const { accessToken, sessionId } = await issueTokens(res, user.id, user.email, req);
+  res.json({ user: userPublic(user), accessToken, sessionId });
 }
 
 export async function refresh(req: Request, res: Response): Promise<void> {
@@ -568,27 +544,6 @@ export async function updateAvatar(req: AuthRequest, res: Response): Promise<voi
   }
 
   res.status(400).json({ error: "avatarUrl must be an image data URL, an emoji, or empty" });
-}
-
-export async function demoLogin(req: Request, res: Response): Promise<void> {
-  const [user] = await db.select().from(users).where(eq(users.email, DEMO_EMAIL)).limit(1);
-  if (!user) {
-    res.status(404).json({ error: "Demo account not available. Run db:seed-demo first." });
-    return;
-  }
-
-  // Reset demo data, then re-fetch for updated household/savings state
-  let loginUser = user;
-  try {
-    await resetDemoAccount(user.id);
-    const [refreshed] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
-    if (refreshed) loginUser = refreshed;
-  } catch (e) {
-    console.error("[demo-reset] failed:", e);
-  }
-
-  const { accessToken, sessionId } = await issueTokens(res, loginUser.id, loginUser.email, req);
-  res.json({ user: userPublic(loginUser), accessToken, sessionId });
 }
 
 export async function verifyEmail(req: Request, res: Response): Promise<void> {
@@ -879,7 +834,6 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
 // A valid access token alone is not enough to wipe an account (a stolen
 // token or an unlocked, unattended phone would otherwise be).
 export async function deleteAccount(req: AuthRequest, res: Response): Promise<void> {
-  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
   const body = (req.body ?? {}) as { currentPassword?: unknown; passkey?: unknown; pin?: unknown; googleAccessToken?: unknown };
 
@@ -1027,7 +981,6 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
 }
 
 export async function updatePin(req: AuthRequest, res: Response): Promise<void> {
-  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
   const { pin, currentPassword, currentPin, googleAccessToken } = req.body as { pin?: string; currentPassword?: string; currentPin?: string; googleAccessToken?: unknown };
   if (!pin || typeof pin !== 'string' || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
@@ -1098,7 +1051,6 @@ export async function updatePin(req: AuthRequest, res: Response): Promise<void> 
 }
 
 export async function removePin(req: AuthRequest, res: Response): Promise<void> {
-  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
   const { currentPassword, currentPin } = req.body as { currentPassword?: string; currentPin?: string };
 
@@ -1177,7 +1129,6 @@ export async function deletePinDevice(req: AuthRequest, res: Response): Promise<
 }
 
 export async function changePassword(req: AuthRequest, res: Response): Promise<void> {
-  if (rejectDemo(req, res)) return;
   const userId = req.userId!;
   const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
 
@@ -1263,7 +1214,6 @@ export async function deleteSession(req: AuthRequest, res: Response): Promise<vo
 }
 
 export async function deactivateAccount(req: AuthRequest, res: Response): Promise<void> {
-  if (rejectDemo(req, res)) return
   const userId = req.userId!
   await db.update(users).set({ isDeactivated: true, updatedAt: new Date() }).where(eq(users.id, userId))
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId))

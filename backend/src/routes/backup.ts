@@ -2,7 +2,6 @@ import { Router, type Response } from "express";
 import rateLimit from "express-rate-limit";
 import { authenticateToken, type AuthRequest } from "../middleware/authenticate";
 import { buildBackup, restoreBackup, restoreSchema } from "../lib/backup";
-import { DEMO_EMAIL } from "../lib/resetDemo";
 import { zodDetails } from "../lib/validation";
 
 const router = Router();
@@ -37,10 +36,6 @@ router.get("/", exportLimiter, async (req: AuthRequest, res: Response) => {
 });
 
 router.post("/restore", restoreLimiter, async (req: AuthRequest, res: Response) => {
-  if (req.userEmail?.toLowerCase() === DEMO_EMAIL) {
-    res.status(403).json({ error: "Táto akcia nie je v demo účte povolená.", code: "DEMO_RESTRICTED" });
-    return;
-  }
   const body = restoreSchema.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Validation error", code: "INVALID_BACKUP", details: zodDetails(body.error).slice(0, 20) });

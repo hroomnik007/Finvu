@@ -138,15 +138,14 @@ docker exec finance-tracker-repo-backend-1 node dist/scripts/migrate.js
 - **"Preskočiť" na template kroku**: zachová default kategórie nezmenené
 - Onboarding sa zobrazí len raz — stav sleduje `user.onboarding_complete` (DB) a `user.onboarding_banner_dismissed`
 
-## Demo účet (zrušený) a lokálny vývojový používateľ
+## Lokálne overovanie (demo účet neexistuje)
 
-Demo účet `demo@finvu.sk` je zrušený (rozhodnutie 2026-11-01, rušenie ide po krokoch). Neoveruje sa cez neho. Lokálne sa overuje cez seed vývojového používateľa.
+Demo účet bol zrušený (2026-11-01) a z kódu aj databázy odstránený. Lokálne sa overuje cez seed vývojového používateľa:
 
 - **Seed**: `cd backend && npm run db:seed-dev-user` (`backend/src/scripts/seed-dev-user.ts`), idempotentný
 - **Email**: `dev@finvu.local`, **heslo**: `DevPass123!` (len lokálna DB; údaje sa nedávajú do README)
-- Bežný účet s overeným e-mailom (bez SMTP), bez demo príznaku a bez domácnosti. Dáta: kategórie, 3 mesiace transakcií, fixný výdavok (Nájom) a opakujúci sa príjem (Výplata)
+- Bežný účet s overeným e-mailom (bez SMTP), bez domácnosti. Dáta: kategórie, 3 mesiace transakcií, fixný výdavok (Nájom) a opakujúci sa príjem (Výplata)
 - Skript odmietne beh pri `NODE_ENV=production` aj pri `DATABASE_URL` mimo `localhost`/`127.0.0.1`
-- `seed-demo.ts` a ochrana `demo@finvu.sk` v kóde (`rejectDemo`, `resetDemoAccount`, `DEMO_INVITE_CODE`) zatiaľ zostávajú, odstránia sa až v kroku 3 spolu s účtom v produkčnej DB
 
 ### Kód
 - Vždy TypeScript — žiadny `any`, žiadne implicitné typy

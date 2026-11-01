@@ -17,7 +17,6 @@ import {
   refreshToken,
   getMe,
   deleteAccount as apiDeleteAccount,
-  demoLogin as apiDemoLogin,
   googleLogin as apiGoogleLogin,
   updateUserSettings,
   pinLogin as apiPinLogin,
@@ -36,7 +35,6 @@ interface AuthContextValue {
   isLoading: boolean
   isGuest: boolean
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>
-  loginDemo: () => Promise<void>
   loginWithGoogle: (accessToken: string) => Promise<void>
   loginWithPin: (email: string, pin: string) => Promise<void>
   loginWithToken: (user: AuthUser, accessToken: string, sessionId?: string) => void
@@ -55,7 +53,6 @@ const AuthContext = createContext<AuthContextValue>({
   isLoading: true,
   isGuest: false,
   login: async () => {},
-  loginDemo: async () => {},
   loginWithGoogle: async () => {},
   loginWithPin: async () => {},
   loginWithToken: () => {},
@@ -157,9 +154,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('online', onOnline)
   }, [])
 
-  // Remember the signed-in user for an offline start (demo accounts excluded).
+  // Remember the signed-in user for an offline start.
   useEffect(() => {
-    if (user && !user.isDemo) void kvSet(OFFLINE_USER_KEY, user)
+    if (user) void kvSet(OFFLINE_USER_KEY, user)
   }, [user])
 
   useEffect(() => {
@@ -187,22 +184,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         document.documentElement.setAttribute('data-theme', resolveTheme(me.theme as ThemePreference))
       }
       if (me.language) applyLanguageSetting(me.language)
-    } catch { /* ignore */ }
-  }, [])
-
-  const loginDemo = useCallback(async () => {
-    const { user: me, accessToken, sessionId } = await apiDemoLogin() as { user: AuthUser; accessToken: string; sessionId?: string }
-    setAccessToken(accessToken)
-    noteSignedInUser(me.id)
-    setUser({ ...me, onboardingComplete: false, isDemo: true })
-    setIsGuest(false)
-    try {
-      sessionStorage.removeItem('auth_guest')
-      localStorage.removeItem('auth_guest')
-      sessionStorage.setItem('just_logged_in', 'true')
-      // A full authentication just happened in this tab — PIN quick-unlock isn't needed.
-      sessionStorage.setItem('pin_verified_session', 'true')
-      if (sessionId) localStorage.setItem('finvu_session_id', sessionId)
     } catch { /* ignore */ }
   }, [])
 
@@ -299,7 +280,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isGuest,
     login,
-    loginDemo,
     loginWithGoogle,
     loginWithPin,
     loginWithToken,
@@ -310,7 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser,
     completeOnboarding,
     updateMonthlyEmail,
-  }), [user, isLoading, isGuest, login, loginDemo, loginWithGoogle, loginWithPin, loginWithToken, register, loginAsGuest, logout, deleteAccount, refreshUser, completeOnboarding, updateMonthlyEmail])
+  }), [user, isLoading, isGuest, login, loginWithGoogle, loginWithPin, loginWithToken, register, loginAsGuest, logout, deleteAccount, refreshUser, completeOnboarding, updateMonthlyEmail])
 
   return (
     <AuthContext.Provider value={contextValue}>

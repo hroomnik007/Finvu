@@ -176,7 +176,7 @@ describe("backup access control", () => {
     expect(rows.every(r => r.h === null)).toBe(true);
   });
 
-  it("rejects malformed backups and the demo account", async () => {
+  it("rejects malformed backups", async () => {
     const backup = await (await get(alice.token)).json();
     let res = await restore(frank.token, { mode: "wipe", backup });
     expect(res.status).toBe(400);
@@ -187,10 +187,6 @@ describe("backup access control", () => {
     res = await restore(frank.token, { mode: "merge", backup: bad });
     expect(res.status).toBe(400);
     expect((await aggregates(frank.id)).txCount).toBe(0);
-    const demoToken = signAccessToken({ userId: frank.id, email: "demo@finvu.sk" });
-    res = await restore(demoToken, { mode: "replace", backup });
-    expect(res.status).toBe(403);
-    expect((await res.json()).code).toBe("DEMO_RESTRICTED");
   });
 });
 

@@ -129,7 +129,6 @@ export interface AuthUser {
   has_password?: boolean
   has_google?: boolean
   language?: string | null
-  isDemo?: boolean
   phone?: string | null
   country?: string | null
   auto_lock_minutes?: number | null

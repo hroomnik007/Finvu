@@ -16,7 +16,6 @@ import { AuthRequest } from "../middleware/authenticate";
 import { randomUUID } from "crypto";
 import { ORIGIN, RP_ID, consumeChallenge, storeChallenge } from "../lib/webauthnChallenges";
 import { verifyReauth } from "../lib/reauth";
-import { DEMO_EMAIL } from "../lib/resetDemo";
 import { issueTokens, userPublic } from "./auth.controller";
 import { cleanPasskeyName, newPasskeyName } from "../lib/passkeyNames";
 import { passkeyReauthOptions } from "../lib/passkeyReauth";
@@ -31,10 +30,6 @@ const RP_NAME = "Finvu";
 // ends up in a URL or access log.)
 export async function webauthnRegisterOptions(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId!;
-  if (req.userEmail?.toLowerCase() === DEMO_EMAIL) {
-    res.status(403).json({ error: "Táto akcia nie je v demo účte povolená.", code: "DEMO_RESTRICTED" });
-    return;
-  }
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
 

@@ -145,19 +145,6 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
 
           {/* Login method selection step */}
           {isLoginMethodStep && (
-            user?.isDemo ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', padding: '20px', borderRadius: '16px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', textAlign: 'center' }}>
-                <span style={{ fontSize: 36 }}>🚀</span>
-                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{t.onboarding.demoTitle}</p>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>{t.onboarding.demoDesc}</p>
-                <button
-                  onClick={() => { window.location.hash = 'register' }}
-                  style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', color: 'white', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                >
-                  {t.onboarding.demoBtn}
-                </button>
-              </div>
-            ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
               {/* Email+heslo — already done */}
               <div
@@ -207,7 +194,6 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
               </button>
 
             </div>
-            )
           )}
 
           {/* Buttons */}

@@ -95,7 +95,6 @@ export function BackupModal({ open, mode, onClose }: BackupModalProps) {
       const s = e.response?.status
       if (s === 400) return b.errInvalid
       if (s === 429) return b.errTooMany
-      if (s === 403) return b.errDemo
       if (s === 413) return b.errTooLarge
     }
     return b.errGeneric

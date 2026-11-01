@@ -9,7 +9,7 @@ export function useOnboarding() {
 
   const showOnboarding =
     !isLoading &&
-    !(isGuest && !user?.isDemo) &&
+    !isGuest &&
     !!user && !user.onboardingComplete &&
     dismissedForUserId !== user.id
 
