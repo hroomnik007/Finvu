@@ -142,6 +142,9 @@ export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = t
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: pastHalf ? '#DC2626' : '#ef4444',
           borderRadius: `0 ${radius}px ${radius}px 0`,
+          // Show only the part the row has slid away from, so the red never
+          // shows through a translucent row on top of it.
+          clipPath: `inset(0 0 0 ${Math.max(0, REVEAL_PX + offset)}px)`,
           transition: 'background 0.15s',
         }}>
           <button

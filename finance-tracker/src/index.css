@@ -954,14 +954,16 @@ html.compact .card { padding: var(--card-padding); }
 
 /* Dense day-grouped lists: one card per day, rows separated by hairlines. */
 .dense-card {
-  background: var(--aurora-panel);
+  background: var(--aurora-glass);
   border: 1px solid var(--aurora-gline);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: var(--aurora-card-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 .dense-card > * + * { border-top: 1px solid var(--aurora-gline); }
-.dense-row { background: var(--aurora-panel); transition: background 0.12s; }
+.dense-row { background: transparent; transition: background 0.12s; }
 @media (hover: hover) { .dense-row:hover { background: var(--aurora-hover); } }
 
 /* Annual overview: stats row, then chart + table side by side on desktop. */

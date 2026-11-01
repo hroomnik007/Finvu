@@ -19,7 +19,7 @@ export function DenseCard({ children, style }: { children: ReactNode; style?: CS
   return <div className="dense-card" role="list" style={style}>{children}</div>
 }
 
-/** A row inside a DenseCard. Opaque so a swipe-to-delete action underneath does not bleed through. */
+/** A row inside a DenseCard. Transparent: the card's glass background shows through (SwipeableRow clips its delete action to the revealed part). */
 export function DenseRow({ children, onClick, selected, style, className }: { children: ReactNode; onClick?: () => void; selected?: boolean; style?: CSSProperties; className?: string }) {
   return (
     <div
