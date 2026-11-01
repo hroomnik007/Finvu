@@ -43,7 +43,7 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
 
   const householdEnabled = user?.household_enabled ?? false
   const showMonth = MONTH_PAGES.includes(page)
-  const showToggle = householdEnabled && page === 'dashboard'
+  const showToggle = householdEnabled && (page === 'dashboard' || page === 'annual')
   const showAdd = !(['household', 'settings'] as string[]).includes(page)
 
   const minDate = useMemo(() => {
@@ -234,9 +234,9 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
         </div>
 
         {/* Row 2: month nav + toggle — only on relevant pages */}
-        {showMonth && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 14px 8px', gap: 8 }}>
-            {monthNav}
+        {(showMonth || showToggle) && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: showMonth ? 'space-between' : 'flex-end', padding: '4px 14px 8px', gap: 8 }}>
+            {showMonth && monthNav}
             {showToggle && familyToggle}
           </div>
         )}
