@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 export type ExportFormat = 'CSV' | 'PDF' | 'XLSX'
 
@@ -41,6 +42,7 @@ function MonthPicker({
   const [cursorYear, setCursorYear] = useState(year)
   const now = new Date()
   const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1)
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open: true, onClose })
 
   return (
     <div
@@ -57,7 +59,10 @@ function MonthPicker({
     >
       <div
         className="modal-in"
+        ref={panelRef}
+        {...dialogProps}
         style={{
+          outline: 'none',
           width: '100%', maxWidth: 320,
           background: 'var(--aurora-panel)',
           border: '1px solid var(--aurora-gline)',
@@ -68,7 +73,7 @@ function MonthPicker({
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{title}</div>
+          <h2 id={titleId} tabIndex={-1} style={{ margin: 0, outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{title}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -161,17 +166,7 @@ export function ExportDataModal({ open, onClose, onGenerate, generating }: Expor
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open, onClose })
 
   if (!open) return null
 
@@ -215,7 +210,10 @@ export function ExportDataModal({ open, onClose, onGenerate, generating }: Expor
       >
         <div
           className="modal-in"
+          ref={panelRef}
+          {...dialogProps}
           style={{
+            outline: 'none', overscrollBehavior: 'contain',
             width: '100%', maxWidth: 380,
             background: 'var(--aurora-panel)',
             border: '1px solid var(--aurora-gline)',
@@ -228,9 +226,9 @@ export function ExportDataModal({ open, onClose, onGenerate, generating }: Expor
           onClick={e => e.stopPropagation()}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)' }}>
+            <h2 id={titleId} tabIndex={-1} style={{ margin: 0, outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)' }}>
               {t.settings.exportModalTitle}
-            </div>
+            </h2>
             <button
               type="button"
               onClick={onClose}

@@ -8,6 +8,7 @@ import AmountInput from './AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface SavingsDetailModalProps {
   goal: SavingsGoal | null
@@ -59,11 +60,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     return () => clearTimeout(timer)
   }, [goal?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open: !!goal, onClose })
 
   if (!goal) return null
 
@@ -198,7 +195,10 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     >
       <div
         className="modal-in"
+        ref={panelRef}
+        {...dialogProps}
         style={{
+          outline: 'none', overscrollBehavior: 'contain',
           width: '100%', maxWidth: 440,
           background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)',
           borderRadius: 26, padding: 22,
@@ -214,7 +214,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</span>
+              <h2 id={titleId} tabIndex={-1} style={{ margin: 0, outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</h2>
               {goal.paused && <span style={pausedBadge}>{t.savings.pausedBadge}</span>}
             </div>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -121,7 +121,7 @@ export function PasskeySection() {
                     value={renaming.name}
                     maxLength={64}
                     onChange={e => setRenaming({ id: p.id, name: e.target.value })}
-                    onKeyDown={e => { if (e.key === 'Escape') setRenaming(null) }}
+                    onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); setRenaming(null) } }}
                     style={{ flex: '1 1 140px', minWidth: 0, height: 34, borderRadius: 8, padding: '0 10px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13 }}
                   />
                   <button type="submit" disabled={!renaming.name.trim()} style={smallButton('var(--aurora-violet-text)', 'rgba(139,92,246,0.12)', 'rgba(139,92,246,0.3)')}>

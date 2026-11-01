@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef } from 'react'
+import { useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -24,32 +25,12 @@ interface ConfirmDialogProps {
  */
 export function ConfirmDialog({ open, message, onConfirm, onCancel, neutral = false, detail, confirmLabel }: ConfirmDialogProps) {
   const { t } = useTranslation()
-  const titleId = useId()
   const detailId = useId()
   const cancelRef = useRef<HTMLButtonElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
   const guard = useSubmitGuard()
-
-  useEffect(() => {
-    if (!open) return
-    const opener = document.activeElement as HTMLElement | null
-    cancelRef.current?.focus()
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onCancel() }
-      if (e.key === 'Tab' && panelRef.current) {
-        const items = [...panelRef.current.querySelectorAll<HTMLElement>('button:not([disabled])')]
-        if (items.length === 0) return
-        const first = items[0], last = items[items.length - 1]
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
-      }
-    }
-    document.addEventListener('keydown', handler, true)
-    return () => {
-      document.removeEventListener('keydown', handler, true)
-      if (opener && document.contains(opener)) opener.focus({ preventScroll: true })
-    }
-  }, [open, onCancel])
+  const { panelRef, titleId, dialogProps } = useModalA11y({
+    open, onClose: onCancel, initialFocus: cancelRef, role: 'alertdialog',
+  })
 
   if (!open) return null
 
@@ -64,9 +45,7 @@ export function ConfirmDialog({ open, message, onConfirm, onCancel, neutral = fa
       />
       <div
         ref={panelRef}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
+        {...dialogProps}
         aria-describedby={detail ? detailId : undefined}
         className="relative mx-4 w-full max-w-sm modal-in"
         style={{
@@ -76,6 +55,7 @@ export function ConfirmDialog({ open, message, onConfirm, onCancel, neutral = fa
           padding: 22,
           boxShadow: '0 30px 70px rgba(0,0,0,0.45)',
           textAlign: 'center',
+          outline: 'none',
         }}
       >
         {!neutral && (

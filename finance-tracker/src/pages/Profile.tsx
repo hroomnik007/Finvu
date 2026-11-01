@@ -7,6 +7,7 @@ import {
 import { useTranslation } from '../i18n'
 import { formatDateLocale } from '../utils/format'
 import { useFormatters } from '../hooks/useFormatters'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { updateAvatar, updateUserSettings, updateProfile } from '../api/auth'
 import { getTransactions } from '../api/transactions'
 import { getSavingsGoals } from '../api/savings'
@@ -161,11 +162,8 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
     }).catch(() => {})
   }, [])
 
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handleEsc)
-    return () => document.removeEventListener('keydown', handleEsc)
-  }, [onClose])
+  const profileModal = useModalA11y({ open: true, onClose })
+  const logoutModal = useModalA11y({ open: logoutConfirm, onClose: () => setLogoutConfirm(false), role: 'alertdialog' })
 
   async function handleSaveProfile() {
     setProfile(profileNameDraft, profileAvatarDraft)
@@ -224,7 +222,9 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
       onClick={onClose}
     >
       <div
+        ref={profileModal.panelRef} {...profileModal.dialogProps}
         style={{
+          outline: 'none',
           borderRadius: 22,
           overflow: 'hidden',
           background: 'var(--aurora-bg-image)',
@@ -571,7 +571,8 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
           onClick={() => setLogoutConfirm(false)}
         >
           <div
-            style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 340 }}
+            ref={logoutModal.panelRef} {...logoutModal.dialogProps}
+            style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 340 }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>

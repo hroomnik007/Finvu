@@ -21,6 +21,7 @@ import { ValidFromHint } from './ValidFromHint'
 import { todayISO } from '../utils/format'
 import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
 import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { SuggestedCategoryHint } from './SuggestedCategoryHint'
 import AmountInput from './AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
@@ -119,6 +120,7 @@ interface GlobalFABProps {
 export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: GlobalFABProps) {
   const [activeModal, setActiveModal] = useState<ModalType>(null)
   const [showTypeSelector, setShowTypeSelector] = useState(false)
+  const { panelRef: typeSelectorRef, titleId: typeSelectorTitleId, dialogProps: typeSelectorProps } = useModalA11y({ open: showTypeSelector, onClose: () => setShowTypeSelector(false) })
   const [isMobile] = useState(() => window.innerWidth < 1024)
 
   // openTrigger is an incrementing counter prop — react to it during render
@@ -367,12 +369,13 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
           onClick={e => { if (e.target === e.currentTarget) setShowTypeSelector(false) }}
         >
           <div
+            ref={typeSelectorRef} {...typeSelectorProps}
             className="modal-in"
-            style={{ width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
+            style={{ outline: 'none', width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ flex: 1, fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)' }}>{t.fab.title}</div>
+              <h2 id={typeSelectorTitleId} tabIndex={-1} style={{ outline: 'none', margin: 0, flex: 1, fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)' }}>{t.fab.title}</h2>
               <button
                 type="button" onClick={() => setShowTypeSelector(false)} aria-label={t.common.close}
                 style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}

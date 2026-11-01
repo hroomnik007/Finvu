@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { Plus, Pencil, Trash2, Tag, GripVertical } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
@@ -345,6 +346,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [autoLimitWarning, setAutoLimitWarning] = useState(false)
+  const { panelRef: autoLimitModalRef, titleId: autoLimitModalTitleId, dialogProps: autoLimitModalProps } = useModalA11y({ open: autoLimitWarning, onClose: () => setAutoLimitWarning(false), role: 'alertdialog' })
 
   // Local order for optimistic drag updates — synced during render
   const [localIds, setLocalIds] = useState<string[]>([])
@@ -994,11 +996,12 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
           onClick={() => setAutoLimitWarning(false)}
         >
           <div
+            ref={autoLimitModalRef} {...autoLimitModalProps}
             className="modal-in"
-            style={{ width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
+            style={{ outline: 'none', width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
             onClick={e => e.stopPropagation()}
           >
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 10px' }}>{t.expenses.overrideLimitTitle}</p>
+            <h2 id={autoLimitModalTitleId} tabIndex={-1} style={{ outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 10px' }}>{t.expenses.overrideLimitTitle}</h2>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.5, margin: '0 0 18px' }}>
               {t.expenses.overrideLimitManual} <strong style={{ color: 'var(--aurora-hi)' }}>{formatAmount(Number(editing?.budgetLimit ?? 0))}</strong>.
               {t.expenses.overrideLimitQuestion}

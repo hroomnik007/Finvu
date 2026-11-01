@@ -1,4 +1,5 @@
 import { useState, useMemo, type ReactNode } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, CalendarRange, X, Tag, Target, LayoutTemplate } from 'lucide-react'
 import { ExpenseHeatmap } from '../components/ExpenseHeatmap'
@@ -89,6 +90,7 @@ interface DashboardProps {
 
 export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOffer }: DashboardProps) {
   const [showTrackingModal, setShowTrackingModal] = useState(false)
+  const trackingModal = useModalA11y({ open: showTrackingModal, onClose: () => setShowTrackingModal(false) })
   const [streakModalOpen, setStreakModalOpen] = useState(false)
   const [trackingDate, setTrackingDate] = useState(() => todayISO())
   const [trackingSaving, setTrackingSaving] = useState(false)
@@ -724,7 +726,7 @@ const upcomingFixed = useMemo(() => {
           style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={e => { if (e.target === e.currentTarget) setShowTrackingModal(false) }}
         >
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div ref={trackingModal.panelRef} {...trackingModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
               <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>{t.dashboard.trackingFromTitle}</h3>
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.trackingFromNote}</p>

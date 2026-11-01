@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Delete, Check } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface PinSetupModalProps {
   open: boolean
@@ -121,6 +122,12 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin])
 
+  const { panelRef, titleId, dialogProps } = useModalA11y({
+    open, resetKey: step,
+    onClose: saving || step === 'success' ? undefined : () => handleClose(),
+    initialFocus: step === 'identity' && identityCheck !== 'pin' ? 'field' : 'heading',
+  })
+
   if (!open) return null
 
   function handleClose() {
@@ -139,7 +146,8 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }} />
-        <div style={{
+        <div ref={panelRef} {...dialogProps} style={{
+          outline: 'none',
           position: 'relative', width: '100%', maxWidth: 340,
           background: 'var(--bg2)', border: '1px solid var(--border)',
           borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
@@ -148,7 +156,7 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(52,211,153,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Check size={28} color="#34d399" />
           </div>
-          <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', textAlign: 'center' }}>{t.pin.pinSet}</p>
+          <p id={titleId} tabIndex={-1} style={{ outline: 'none', fontSize: 18, fontWeight: 700, color: 'var(--text)', textAlign: 'center' }}>{t.pin.pinSet}</p>
           <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>{t.pin.pinSetDesc}</p>
         </div>
       </div>
@@ -159,13 +167,14 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
     return (
       <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }} onClick={handleClose} />
-        <div style={{
+        <div ref={panelRef} {...dialogProps} style={{
+          outline: 'none',
           position: 'relative', width: '100%', maxWidth: 340,
           background: 'var(--bg2)', border: '1px solid var(--border)',
           borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{t.pin.identityTitle}</h2>
+            <h2 id={titleId} tabIndex={-1} style={{ outline: 'none', fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{t.pin.identityTitle}</h2>
             <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={18} /></button>
           </div>
 
@@ -247,13 +256,14 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }} onClick={handleClose} />
-      <div style={{
+      <div ref={panelRef} {...dialogProps} style={{
+        outline: 'none',
         position: 'relative', width: '100%', maxWidth: 340,
         background: 'var(--bg2)', border: '1px solid var(--border)',
         borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{title}</h2>
+          <h2 id={titleId} tabIndex={-1} style={{ outline: 'none', fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>{title}</h2>
           <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}><X size={18} /></button>
         </div>
 

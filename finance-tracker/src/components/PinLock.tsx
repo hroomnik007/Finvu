@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '../i18n'
 import { PinKeypad } from './PinKeypad'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface PinLockProps {
   onVerify: (pin: string) => Promise<boolean>
@@ -10,6 +11,8 @@ interface PinLockProps {
 export function PinLock({ onVerify, onFallbackToLogin }: PinLockProps) {
   const { t } = useTranslation()
   const [pin, setPin] = useState('')
+  // The lock covers the app: everything behind it is inert, no Esc.
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open: true })
   const [shake, setShake] = useState(false)
   const [checking, setChecking] = useState(false)
   const checkingRef = useRef(checking)
@@ -55,9 +58,9 @@ export function PinLock({ onVerify, onFallbackToLogin }: PinLockProps) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 24,
     }}>
-      <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div ref={panelRef} {...dialogProps} style={{ outline: 'none', width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <img src="/logo.svg" alt="Finvu" style={{ width: 64, height: 64, borderRadius: 20, marginBottom: 20 }} />
-        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 19, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 4px' }}>{t.pin.enterPin}</p>
+        <h2 id={titleId} tabIndex={-1} style={{ outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 19, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 4px' }}>{t.pin.enterPin}</h2>
         <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', margin: '0 0 26px' }}>{t.pin.appLocked}</p>
 
         <PinKeypad length={4} digits={pin.length} shake={shake} disabled={checking} onKey={handleKey} />

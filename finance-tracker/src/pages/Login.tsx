@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { Eye, EyeOff, ArrowRight, X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
@@ -32,6 +33,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
   const [pinModalOpen, setPinModalOpen] = useState(false)
+  const { panelRef: pinModalRef, titleId: pinModalTitleId, dialogProps: pinModalProps } = useModalA11y({ open: pinModalOpen, onClose: () => setPinModalOpen(false) })
   const [pinValue, setPinValue] = useState('')
   const [pinLoading, setPinLoading] = useState(false)
   const [pinError, setPinError] = useState<string | null>(null)
@@ -503,13 +505,14 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           onClick={() => setPinModalOpen(false)}
         >
           <div
+            ref={pinModalRef} {...pinModalProps}
             className="modal-in"
-            style={{ width: '100%', maxWidth: 340, padding: 24, borderRadius: 26, background: 'var(--aurora-bg-image)', border: '1px solid var(--aurora-gline)', boxShadow: '0 30px 70px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            style={{ outline: 'none', width: '100%', maxWidth: 340, padding: 24, borderRadius: 26, background: 'var(--aurora-bg-image)', border: '1px solid var(--aurora-gline)', boxShadow: '0 30px 70px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: 20 }}>
               <div style={{ flex: 1, textAlign: 'center' }}>
-                <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.auth.enterPinTitle}</p>
+                <h2 id={pinModalTitleId} tabIndex={-1} style={{ outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.auth.enterPinTitle}</h2>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', margin: '4px 0 0' }}>{t.auth.pin4Digit}</p>
               </div>
               <button

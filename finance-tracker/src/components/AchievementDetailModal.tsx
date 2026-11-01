@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { formatDateLocale } from '../utils/format'
@@ -17,11 +17,7 @@ interface AchievementDetailModalProps {
 export function AchievementDetailModal({ emoji, color, name, desc, hint, unlocked, unlockedAt, onClose }: AchievementDetailModalProps) {
   const { t, locale } = useTranslation()
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open: true, onClose })
 
   const unlockedDateStr = unlockedAt
     ? formatDateLocale(unlockedAt, locale, { day: 'numeric', month: 'long', year: 'numeric' })
@@ -33,7 +29,9 @@ export function AchievementDetailModal({ emoji, color, name, desc, hint, unlocke
       onClick={onClose}
     >
       <div
-        style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, width: '100%', maxWidth: 360, overflow: 'hidden' }}
+        ref={panelRef}
+        {...dialogProps}
+        style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, width: '100%', maxWidth: 360, overflow: 'hidden', outline: 'none' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Hero */}
@@ -62,7 +60,7 @@ export function AchievementDetailModal({ emoji, color, name, desc, hint, unlocke
           >
             {emoji}
           </div>
-          <div style={{ fontSize: 19, fontWeight: 800, color: 'white', marginTop: 10, letterSpacing: '-0.3px' }}>{name}</div>
+          <h2 id={titleId} tabIndex={-1} style={{ margin: '10px 0 0', outline: 'none', fontSize: 19, fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>{name}</h2>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{desc}</div>
         </div>
 

@@ -7,6 +7,7 @@ import { useCategories } from '../hooks/useCategories'
 import { matchRule, suggestKeyword } from '../utils/importRules'
 import { useTranslation } from '../i18n'
 import { useFormatters } from '../hooks/useFormatters'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { SettingsDropdown } from './SettingsDropdown'
 import type { ParseResult } from 'papaparse'
 // pdf.js worker: referenced as an asset URL so the worker file is emitted but its
@@ -425,6 +426,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
   const qc = useQueryClient()
   const { categories } = useCategories()
   const { data: rules = [] } = useQuery({ queryKey: ['categoryRules'], queryFn: getCategoryRules, enabled: open })
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open, onClose: importing ? undefined : onClose })
 
   if (!open) return null
 
@@ -600,11 +602,11 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(4,3,8,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} onClick={onClose} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '92vh', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}>
+      <div ref={panelRef} {...dialogProps} style={{ outline: 'none', position: 'relative', width: '100%', maxWidth: 560, maxHeight: '92vh', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--aurora-gline)' }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.csv.title}</h2>
+          <h2 id={titleId} tabIndex={-1} style={{ outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.csv.title}</h2>
           <button onClick={onClose} aria-label={t.common.close} style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}>
             <X size={14} />
           </button>

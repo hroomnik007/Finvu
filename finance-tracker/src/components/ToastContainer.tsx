@@ -16,6 +16,7 @@ export function ToastContainer({ toasts }: ToastContainerProps) {
           modals (z 1000) so an error is visible while the form stays open.
           The live region is always mounted so screen readers announce new toasts. */}
       <div
+        data-modal-keep
         role="status"
         aria-live="polite"
         className="fixed left-1/2 -translate-x-1/2 flex flex-col gap-2 w-full max-w-[390px] px-4 bottom-[calc(112px+env(safe-area-inset-bottom))] lg:bottom-6 lg:left-[calc(50%+120px)]"

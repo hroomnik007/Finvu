@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { FileUp } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface BottomSheetProps {
   open: boolean
@@ -17,7 +18,7 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
   const [isDragging, setIsDragging] = useState(false)
   const startYRef = useRef(0)
   const currentYRef = useRef(0)
-  const panelRef = useRef<HTMLDivElement>(null)
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open, onClose })
 
   // Reset drag offset when (re)opening — adjust state during render
   const [wasOpen, setWasOpen] = useState(open)
@@ -25,18 +26,6 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
     setWasOpen(open)
     if (open) setTranslateY(0)
   }
-
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startYRef.current = e.touches[0].clientY
@@ -87,6 +76,7 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
     >
       <div
         ref={panelRef}
+        {...dialogProps}
         className={isMobile ? 'slide-up' : 'modal-in'}
         style={{
           background: 'var(--bg2)',
@@ -101,6 +91,7 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
           transform: `translateY(${translateY}px)`,
           transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           touchAction: 'none',
+          outline: 'none',
         }}
       >
         {/* Drag handle — mobile only, touch area */}
@@ -133,7 +124,7 @@ export function BottomSheet({ open, onClose, title, children, footer, onImportCs
             cursor: isMobile ? 'grab' : 'default',
           }}
         >
-          <h2 style={{
+          <h2 id={titleId} tabIndex={-1} style={{ outline: 'none',
             fontSize: 17, fontWeight: 700, color: 'var(--text)',
             fontFamily: "'DM Sans', sans-serif", margin: 0,
           }}>{title}</h2>

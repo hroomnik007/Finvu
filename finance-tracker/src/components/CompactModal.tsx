@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback } from 'react'
 import { X, Check, FileUp, Loader2, Trash2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useSubmitGuard } from '../hooks/useSubmitGuard'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface CompactModalProps {
   open: boolean
@@ -42,26 +43,11 @@ export function CompactModal({
   }
   // Closing mid-save would hide an error toast's form; wait for the result.
   const requestClose = useCallback(() => { if (!busy) onClose() }, [busy, onClose])
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') requestClose() }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [open, requestClose])
-
-  const panelRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open || !autoFocusAmount) return
-    const id = requestAnimationFrame(() => {
-      panelRef.current?.querySelector<HTMLInputElement>('input[inputmode="decimal"]')?.focus({ preventScroll: true })
-    })
-    return () => cancelAnimationFrame(id)
-  }, [open, autoFocusAmount])
+  // Focus trap, Esc, focus return, inert page and scroll lock. Add forms
+  // focus the amount; edit forms focus the title so no keyboard pops up.
+  const { panelRef, titleId, dialogProps } = useModalA11y({
+    open, onClose: requestClose, initialFocus: autoFocusAmount ? 'field' : 'heading',
+  })
 
   // Enter in a single-line field saves (same guard as the button: ignored while
   // disabled or a save is pending). Not in textareas, on buttons or mid-IME.
@@ -93,6 +79,7 @@ export function CompactModal({
       <div
         className="modal-in"
         ref={panelRef}
+        {...dialogProps}
         onKeyDown={onKeyDown}
         style={{
           width: '100%', maxWidth,
@@ -103,6 +90,8 @@ export function CompactModal({
           boxShadow: '0 30px 70px rgba(0,0,0,0.6)',
           maxHeight: '90svh',
           overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          outline: 'none',
           display: 'flex', flexDirection: 'column',
         }}
         onClick={e => e.stopPropagation()}
@@ -111,7 +100,7 @@ export function CompactModal({
           <div style={{ width: 34, height: 34, borderRadius: 11, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Icon size={17} color={iconColor} strokeWidth={2.2} />
           </div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', flex: 1, minWidth: 0 }}>{title}</div>
+          <h2 id={titleId} tabIndex={-1} style={{ margin: 0, outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', flex: 1, minWidth: 0 }}>{title}</h2>
           {onImportCsv && (
             <button
               type="button"
