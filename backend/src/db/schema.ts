@@ -186,17 +186,6 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const sharedReports = pgTable("shared_reports", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  token: varchar("token", { length: 255 }).notNull().unique(),
-  data: text("data").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 export const savingsGoals = pgTable("savings_goals", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -218,7 +207,6 @@ export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
-export type SharedReport = typeof sharedReports.$inferSelect;
 export type WebAuthnCredential = typeof webauthnCredentials.$inferSelect;
 export type NewWebAuthnCredential = typeof webauthnCredentials.$inferInsert;
 export type Household = typeof households.$inferSelect;
