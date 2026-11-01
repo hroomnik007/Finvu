@@ -51,7 +51,7 @@ Database backup:
 docker exec finance-tracker-postgres-1 pg_dump -U user finance_tracker | gzip > backup-$(date +%F).sql.gz
 ```
 
-The backend runs a nightly cleanup (03:30) of expired tokens, shared reports and idle sessions, and
+The backend runs a nightly cleanup (03:30) of expired tokens and idle sessions, and
 the monthly summary e-mail job (last day of the month, at each user's chosen hour).
 
 ## Backend environment (`backend/.env`, never committed)

@@ -1073,16 +1073,6 @@ export const sk = {
     trackingLabel: 'Počiatočný dátum',
     trackingNote: 'Transakcie a príjmy pred týmto dátumom sa nebudú zobrazovať v histórii.',
   },
-  sharedReport: {
-    loading: 'Načítavam správu…',
-    loadError: 'Nepodarilo sa načítať správu.',
-    notFoundError: 'Správa nebola nájdená alebo platnosť vypršala.',
-    goToApp: 'Prejsť na Finvu',
-    defaultTitle: 'Finančný prehľad',
-    balance: 'Rozdiel',
-    byCategory: 'Výdavky podľa kategórií',
-    createdVia: 'Vytvorené cez',
-  },
   achievements: {
     countLabel: '{unlocked} z {total}',
     unlockedOn: 'Odomknuté {date}',

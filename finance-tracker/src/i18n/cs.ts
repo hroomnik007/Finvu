@@ -1075,16 +1075,6 @@ export const cs: Translations = {
     trackingLabel: 'Počáteční datum',
     trackingNote: 'Transakce a příjmy před tímto datem se nezobrazí v historii.',
   },
-  sharedReport: {
-    loading: 'Načítám zprávu…',
-    loadError: 'Zprávu se nepodařilo načíst.',
-    notFoundError: 'Zpráva nebyla nalezena nebo platnost vypršela.',
-    goToApp: 'Přejít na Finvu',
-    defaultTitle: 'Finanční přehled',
-    balance: 'Rozdíl',
-    byCategory: 'Výdaje podle kategorií',
-    createdVia: 'Vytvořeno přes',
-  },
   achievements: {
     countLabel: '{unlocked} z {total}',
     unlockedOn: 'Odemčeno {date}',

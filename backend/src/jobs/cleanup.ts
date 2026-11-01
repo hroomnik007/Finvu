@@ -1,12 +1,12 @@
 import cron from "node-cron";
 import { and, isNotNull, lt, notExists, eq, gt } from "drizzle-orm";
 import { db } from "../db";
-import { refreshTokens, passwordResetTokens, pinDeviceTokens, sharedReports, userSessions, users, idempotencyKeys } from "../db/schema";
+import { refreshTokens, passwordResetTokens, pinDeviceTokens, userSessions, users, idempotencyKeys } from "../db/schema";
 import { KEY_TTL_MS } from "../middleware/idempotency";
 import { cleanupCutoffs } from "../lib/cleanupCutoffs";
 import { pruneLockouts } from "../lib/loginLockout";
 
-// Removes rows that can no longer be used: expired tokens, expired shared reports and
+// Removes rows that can no longer be used: expired tokens and
 // sessions that have been idle for months without a live refresh token.
 export async function runCleanup(now: Date = new Date()): Promise<Record<string, number>> {
   const cut = cleanupCutoffs(now);
@@ -25,9 +25,6 @@ export async function runCleanup(now: Date = new Date()): Promise<Record<string,
 
   const pin = await db.delete(pinDeviceTokens).where(lt(pinDeviceTokens.expiresAt, cut.tokens)).returning({ id: pinDeviceTokens.id });
   removed.pinDeviceTokens = pin.length;
-
-  const reports = await db.delete(sharedReports).where(lt(sharedReports.expiresAt, cut.tokens)).returning({ id: sharedReports.id });
-  removed.sharedReports = reports.length;
 
   const sessions = await db
     .delete(userSessions)

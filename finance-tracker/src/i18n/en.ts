@@ -1075,16 +1075,6 @@ export const en: Translations = {
     trackingLabel: 'Start date',
     trackingNote: 'Transactions and income before this date will not appear in history.',
   },
-  sharedReport: {
-    loading: 'Loading report…',
-    loadError: 'Failed to load the report.',
-    notFoundError: 'Report not found or link has expired.',
-    goToApp: 'Go to Finvu',
-    defaultTitle: 'Financial overview',
-    balance: 'Balance',
-    byCategory: 'Expenses by category',
-    createdVia: 'Created via',
-  },
   achievements: {
     countLabel: '{unlocked} of {total}',
     unlockedOn: 'Unlocked {date}',

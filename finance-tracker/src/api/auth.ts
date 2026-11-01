@@ -116,11 +116,6 @@ export async function deactivateAccount(proof: DeleteAccountProof): Promise<void
   await apiClient.post('/api/auth/deactivate', proof)
 }
 
-export async function getSharedReport(token: string): Promise<{ data: string }> {
-  const { data } = await apiClient.get(`/api/reports/${token}`)
-  return data
-}
-
 export async function pinLogin(email: string, pin: string): Promise<{ user: import('../types').AuthUser; accessToken: string }> {
   const { data } = await apiClient.post('/api/auth/pin-login', { email, pin })
   return data

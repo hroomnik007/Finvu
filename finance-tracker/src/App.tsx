@@ -23,7 +23,6 @@ const SearchPage = lazy(() => import('./pages/Search').then(m => ({ default: m.S
 const SettingsPage = lazy(() => import('./pages/Settings').then(m => ({ default: m.SettingsPage })))
 const ProfileModal = lazy(() => import('./pages/Profile').then(m => ({ default: m.ProfileModal })))
 const AdminPage = lazy(() => import('./pages/Admin').then(m => ({ default: m.AdminPage })))
-const SharedReportPage = lazy(() => import('./pages/SharedReport').then(m => ({ default: m.SharedReportPage })))
 const RegisterPage = lazy(() => import('./pages/Register').then(m => ({ default: m.RegisterPage })))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPassword').then(m => ({ default: m.ResetPasswordPage })))
@@ -627,12 +626,6 @@ function App() {
   )
 }
 
-function getReportToken(): string | null {
-  const hash = window.location.hash
-  if (hash.startsWith('#report/')) return hash.slice('#report/'.length) || null
-  return null
-}
-
 function Root() {
   const [routeKey, setRouteKey] = useState(() => window.location.hash)
   const { shownLang } = useTranslation()
@@ -652,8 +645,6 @@ function Root() {
   }, [])
 
   if (routeKey.startsWith('#admin')) return <Suspense fallback={null}><AdminPage /></Suspense>
-  const reportToken = getReportToken()
-  if (reportToken) return <Suspense fallback={null}><SharedReportPage token={reportToken} /></Suspense>
   return <PinLockProvider><App /></PinLockProvider>
 }
 

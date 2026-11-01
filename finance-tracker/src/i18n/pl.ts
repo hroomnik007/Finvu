@@ -1075,16 +1075,6 @@ export const pl: Translations = {
     trackingLabel: 'Data początkowa',
     trackingNote: 'Transakcje i przychody przed tą datą nie będą widoczne w historii.',
   },
-  sharedReport: {
-    loading: 'Ładuję raport…',
-    loadError: 'Nie udało się załadować raportu.',
-    notFoundError: 'Raport nie został znaleziony lub link wygasł.',
-    goToApp: 'Przejdź do Finvu',
-    defaultTitle: 'Przegląd finansowy',
-    balance: 'Saldo',
-    byCategory: 'Wydatki według kategorii',
-    createdVia: 'Utworzone przez',
-  },
   achievements: {
     countLabel: '{unlocked} z {total}',
     unlockedOn: 'Odblokowano {date}',

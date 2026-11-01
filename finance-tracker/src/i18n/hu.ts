@@ -1075,16 +1075,6 @@ export const hu: Translations = {
     trackingLabel: 'Kezdő dátum',
     trackingNote: 'Az ezen dátum előtti tranzakciók és bevételek nem jelennek meg az előzményekben.',
   },
-  sharedReport: {
-    loading: 'Jelentés betöltése…',
-    loadError: 'A jelentés betöltése sikertelen.',
-    notFoundError: 'A jelentés nem található vagy a link lejárt.',
-    goToApp: 'Ugrás a Finvu-ra',
-    defaultTitle: 'Pénzügyi áttekintés',
-    balance: 'Egyenleg',
-    byCategory: 'Kiadások kategóriánként',
-    createdVia: 'Létrehozva:',
-  },
   achievements: {
     countLabel: '{unlocked}/{total}',
     unlockedOn: 'Feloldva: {date}',
