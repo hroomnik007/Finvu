@@ -130,7 +130,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
               </div>
             </GlassCard>
 
-            <GlassCard className="annual-table-card" radius={18} style={{ padding: '8px 10px', overflowX: 'auto', background: 'var(--aurora-panel)' }}>
+            <GlassCard className="annual-table-card" radius={18} style={{ padding: '8px 16px', overflowX: 'auto', background: 'var(--aurora-panel)' }}>
               <table className="annual-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <caption className="sr-only">{t.annual.title} {year}</caption>
                 <thead>
@@ -146,7 +146,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
                     const faint = r.empty ? { color: 'var(--aurora-faint)', opacity: 0.6 } : null
                     return (
                       <tr key={r.month} style={{ borderTop: '1px solid var(--aurora-gline)' }}>
-                        <th scope="row" style={{ ...td, ...stickyCol, fontWeight: 500, ...faint }}><span className="annual-m-full">{t.months[r.index]}</span><span className="annual-m-short" aria-hidden="true">{shortMonth(r.index)}</span></th>
+                        <th scope="row" style={{ ...td, ...stickyCol, fontWeight: 500, ...faint }}>{t.months[r.index]}</th>
                         <td style={{ ...td, color: 'var(--aurora-emerald)', ...faint }}>{r.income > 0 ? formatAmount(r.income) : dash}</td>
                         <td style={{ ...td, color: 'var(--aurora-rose)', ...faint }}>{r.expense > 0 ? `\u2212${formatAmount(r.expense)}` : dash}</td>
                         <td style={{ ...td, fontWeight: 700, color: r.balance >= 0 ? 'var(--aurora-hi)' : 'var(--aurora-rose)', ...faint }}>{r.empty ? dash : signed(r.balance)}</td>
