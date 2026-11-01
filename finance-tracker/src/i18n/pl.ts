@@ -693,6 +693,17 @@ export const pl: Translations = {
     signInAnotherWay: 'Zaloguj się inaczej',
     wrongPassword: 'Nieprawidłowe hasło.',
   },
+  offline: {
+    banner: 'Jesteś offline – pokazuję ostatnie dane',
+    waiting: { one: 'pozycja czeka na wysłanie', few: 'pozycje czekają na wysłanie', many: 'pozycji czeka na wysłanie' },
+    pendingBadge: 'Czeka na wysłanie',
+    failedBadge: 'Nie wysłano',
+    failedTitle: 'Nie udało się wysłać tych pozycji',
+    retry: 'Spróbuj ponownie',
+    discard: 'Odrzuć',
+    editOffline: 'Jesteś offline – edycja i usuwanie poczekają na połączenie',
+    synced: 'Wysłano po połączeniu: {n}',
+  },
   firstRun: {
     title: 'Pierwsze kroki',
     subtitle: 'Kilka kroków i Finvu zacznie mieć sens.',

@@ -25,7 +25,10 @@ import {
 import { applyLanguageSetting } from './SettingsContext'
 import type { AuthUser } from '../types'
 import type { DeleteAccountProof } from '../api/auth'
-import { clearUserData, noteSignedInUser } from '../lib/userDataReset'
+import { clearUserData, noteSignedInUser, OFFLINE_USER_KEY } from '../lib/userDataReset'
+import { isOfflineError } from '../lib/offlineQueue'
+import { kvGet, kvSet } from '../lib/kvStore'
+import { setServerReachable } from '../lib/connectivity'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -98,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    let offlineStart = false
     const initAuth = async () => {
       try {
         let accessToken: string
@@ -123,8 +127,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch { /* ignore */ }
         }
         if (me.language) applyLanguageSetting(me.language)
-      } catch {
-        setUser(null)
+        offlineStart = false
+      } catch (err) {
+        // No connection at all (not a rejected session): open the last
+        // signed-in account with its cached data; the session is checked
+        // again as soon as the device is back online.
+        const cached = isOfflineError(err) ? await kvGet<AuthUser>(OFFLINE_USER_KEY).catch(() => undefined) : undefined
+        if (cached && typeof cached === 'object' && typeof cached.id === 'string') {
+          offlineStart = true
+          setServerReachable(false)
+          noteSignedInUser(cached.id)
+          setUser(cached)
+        } else {
+          offlineStart = false
+          setUser(null)
+        }
       } finally {
         setInitializingAuth(false)
         setIsLoading(false)
@@ -132,7 +149,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     initAuth()
+    const onOnline = () => { if (offlineStart) void initAuth() }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
   }, [])
+
+  // Remember the signed-in user for an offline start (demo accounts excluded).
+  useEffect(() => {
+    if (user && !user.isDemo) void kvSet(OFFLINE_USER_KEY, user)
+  }, [user])
 
   useEffect(() => {
     const handler = () => doLogout(false)

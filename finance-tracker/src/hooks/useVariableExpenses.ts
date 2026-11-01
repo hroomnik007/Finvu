@@ -6,6 +6,9 @@ import { useAuth } from '../context/AuthContext'
 import type { VariableExpense, ApiTransaction } from '../types'
 import type { DataScope } from './useIncomes'
 import { getAllTransactions } from '../api/allTransactions'
+import { createOrQueue, isQueuedId, removeQueued } from '../lib/offlineQueue'
+import { useOfflineQueue } from './useOfflineQueue'
+import { queuedVariableRows } from '../utils/queuedRows'
 
 function toVariableExpense(t: ApiTransaction): VariableExpense {
   return {
@@ -50,9 +53,13 @@ export function useVariableExpenses(month?: number, year?: number, scope: DataSc
   })
   // Rows waiting in the delete-undo window are hidden (lib/pendingDelete).
   const hidden = usePendingDeleteIds()
+  // Offline adds waiting to be sent show up first, marked `pending` (personal view only).
+  const queue = useOfflineQueue()
+  const monthKey = variableExpenseQueryKey(month, year)[1]
   const variableExpenses = useMemo(
-    () => (variableExpensesAll ?? []).filter(r => !r.id || !hidden.has(r.id)),
-    [variableExpensesAll, hidden],
+    () => [...(scope === 'personal' ? queuedVariableRows(queue, monthKey) : []), ...(variableExpensesAll ?? [])]
+      .filter(r => !r.id || !hidden.has(r.id)),
+    [variableExpensesAll, hidden, queue, monthKey, scope],
   )
 
 
@@ -64,16 +71,16 @@ export function useVariableExpenses(month?: number, year?: number, scope: DataSc
   ]), [qc])
 
   const addVariableExpense = useCallback(async (expense: Omit<VariableExpense, 'id'>): Promise<string> => {
-    const { data } = await createTransaction({
+    const { id, queued } = await createOrQueue({
       type: 'expense',
       amount: expense.amount,
       categoryId: expense.categoryId || null,
       description: expense.note,
       date: expense.date,
       isFixed: false,
-    })
-    await invalidate()
-    return data.id
+    }, createTransaction)
+    if (!queued) await invalidate()
+    return id
   }, [invalidate])
 
   const updateVariableExpense = useCallback(async (id: string, changes: Partial<VariableExpense>): Promise<void> => {
@@ -87,6 +94,7 @@ export function useVariableExpenses(month?: number, year?: number, scope: DataSc
   }, [invalidate])
 
   const deleteVariableExpense = useCallback(async (id: string): Promise<void> => {
+    if (isQueuedId(id)) { removeQueued(id); return }
     await deleteTransaction(id)
     await invalidate()
   }, [invalidate])

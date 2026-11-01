@@ -691,6 +691,17 @@ export const sk = {
     signInAnotherWay: 'Prihlásiť sa inak',
     wrongPassword: 'Nesprávne heslo.',
   },
+  offline: {
+    banner: 'Si offline – zobrazujem posledné údaje',
+    waiting: { one: 'položka čaká na odoslanie', few: 'položky čakajú na odoslanie', many: 'položiek čaká na odoslanie' },
+    pendingBadge: 'Čaká na odoslanie',
+    failedBadge: 'Neodoslané',
+    failedTitle: 'Tieto položky sa nepodarilo odoslať',
+    retry: 'Skúsiť znova',
+    discard: 'Zahodiť',
+    editOffline: 'Si offline – úpravy a mazanie počkajú na pripojenie',
+    synced: 'Odoslané po pripojení: {n}',
+  },
   firstRun: {
     title: 'Prvé kroky',
     subtitle: 'Pár krokov a Finvu ti začne dávať zmysel.',

@@ -30,6 +30,10 @@ import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
 import { SuggestedCategoryHint } from '../components/SuggestedCategoryHint'
 import { useUndoableDelete } from '../hooks/useUndoableDelete'
 import type { VariableExpense, BudgetStatus } from '../types'
+import { useOffline } from '../hooks/useOfflineQueue'
+import { PendingBadge } from '../components/OfflineStatus'
+import { rowActions } from '../utils/queuedRows'
+import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
@@ -101,6 +105,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
+  const offline = useOffline()
   const feedback = useSaveFeedback()
 
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -130,6 +135,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const exitSelectMode = () => { setSelectMode(false); setSelectedIds(new Set()); setOpenSwipeId(null) }
   const rowClick = (e: VariableExpense) => {
     if (!selectMode) { openEdit(e); return }
+    if (e.pending) return
     setSelectedIds(prev => {
       const next = new Set(prev)
       if (next.has(e.id!)) next.delete(e.id!); else next.add(e.id!)
@@ -192,6 +198,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   }
 
   const openEdit = (e: VariableExpense) => {
+    if (!rowActions(e, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(e)
     setForm({ amount: formatAmountInput(e.amount, decimalSeparator(locale)), categoryId: String(e.categoryId), note: e.note, date: e.date })
     setNewCatMode(false)
@@ -370,7 +377,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                       // The day header carries the date; the row keeps just the category.
                       const subtitle = e.note ? (cat?.name ?? '—') : ''
                       return (
-                        <SwipeableRow key={e.id} radius={0} onDelete={() => removeWithUndo(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
+                        <SwipeableRow key={e.id} radius={0} disabled={!rowActions(e, offline).canDelete} onDelete={() => removeWithUndo(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
                           <DenseRow onClick={() => rowClick(e)} selected={selectedIds.has(e.id!)}>
                             <div style={{ width: 38, height: 38, borderRadius: 12, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
@@ -378,6 +385,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
                               {subtitle && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
+                              <PendingBadge state={e.pending} />
                             </div>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(e.amount)}</span>
                           </DenseRow>
@@ -418,11 +426,12 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
                             {subtitle && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
+                              <PendingBadge state={e.pending} />
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
-                            {!selectMode && <button onClick={() => openEdit(e)} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
-                            {!selectMode && <button onClick={() => removeWithUndo(e.id!)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
+                            {!selectMode && <button onClick={() => openEdit(e)} disabled={!rowActions(e, offline).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
+                            {!selectMode && <button onClick={() => removeWithUndo(e.id!)} disabled={!rowActions(e, offline).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
                           </div>
                         </DenseRow>
                       )

@@ -23,6 +23,8 @@ export interface Income {
   recurring: boolean
   endedOn?: string | null
   created_by?: string | null
+  /** Set while the row is only in the offline queue (not yet on the server). */
+  pending?: 'pending' | 'failed'
 }
 
 export interface FixedExpense {
@@ -43,6 +45,8 @@ export interface FixedExpense {
   endedOn?: string | null
   /** Price history of the item, oldest first (`from` = YYYY-MM). */
   history?: { from: string; amount: number }[]
+  /** Set while the row is only in the offline queue (not yet on the server). */
+  pending?: 'pending' | 'failed'
 }
 
 export interface VariableExpense {
@@ -55,6 +59,8 @@ export interface VariableExpense {
   categoryName?: string | null
   categoryColor?: string | null
   categoryIcon?: string | null
+  /** Set while the row is only in the offline queue (not yet on the server). */
+  pending?: 'pending' | 'failed'
 }
 
 export interface AppSetting {

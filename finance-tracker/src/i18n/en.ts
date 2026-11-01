@@ -693,6 +693,17 @@ export const en: Translations = {
     signInAnotherWay: 'Sign in another way',
     wrongPassword: 'Incorrect password.',
   },
+  offline: {
+    banner: 'You’re offline – showing the latest data',
+    waiting: { one: 'item waiting to be sent', few: 'items waiting to be sent', many: 'items waiting to be sent' },
+    pendingBadge: 'Waiting to send',
+    failedBadge: 'Not sent',
+    failedTitle: 'These items could not be sent',
+    retry: 'Try again',
+    discard: 'Discard',
+    editOffline: 'You’re offline – editing and deleting wait for a connection',
+    synced: 'Sent after reconnecting: {n}',
+  },
   firstRun: {
     title: 'First steps',
     subtitle: 'A few steps and Finvu starts making sense.',

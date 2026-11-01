@@ -693,6 +693,17 @@ export const cs: Translations = {
     signInAnotherWay: 'Přihlásit se jinak',
     wrongPassword: 'Nesprávné heslo.',
   },
+  offline: {
+    banner: 'Jsi offline – zobrazuji poslední data',
+    waiting: { one: 'položka čeká na odeslání', few: 'položky čekají na odeslání', many: 'položek čeká na odeslání' },
+    pendingBadge: 'Čeká na odeslání',
+    failedBadge: 'Neodesláno',
+    failedTitle: 'Tyto položky se nepodařilo odeslat',
+    retry: 'Zkusit znovu',
+    discard: 'Zahodit',
+    editOffline: 'Jsi offline – úpravy a mazání počkají na připojení',
+    synced: 'Odesláno po připojení: {n}',
+  },
   firstRun: {
     title: 'První kroky',
     subtitle: 'Pár kroků a Finvu ti začne dávat smysl.',

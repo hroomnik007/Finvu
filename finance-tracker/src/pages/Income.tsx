@@ -24,6 +24,10 @@ import { ValidFromHint } from '../components/ValidFromHint'
 import { useUndoableDelete } from '../hooks/useUndoableDelete'
 import { getAllTransactions } from '../api/allTransactions'
 import type { Income } from '../types'
+import { useOffline } from '../hooks/useOfflineQueue'
+import { PendingBadge } from '../components/OfflineStatus'
+import { rowActions } from '../utils/queuedRows'
+import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import AmountInput from '../components/AmountInput'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
@@ -108,6 +112,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
   const listFailed = listError && incomes.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
+  const offline = useOffline()
   const feedback = useSaveFeedback()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<Income | null>(null)
@@ -138,6 +143,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
 
   const openAdd = () => { setEditing(null); setIsCorrection(false); setEndOpen(false); setForm(makeEmpty(month, year)); setSheetOpen(true) }
   const openEdit = (income: Income) => {
+    if (!rowActions(income, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(income)
     setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
     setForm({ amount: formatAmountInput(income.amount, decimalSeparator(locale)), label: income.label, date: income.date, recurring: income.recurring })
@@ -275,7 +281,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                     <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · +${formatAmount(dayTotal)}`} />
                     <DenseCard>
                       {items.map(income => (
-                        <SwipeableRow key={income.id} radius={0} onDelete={() => requestDelete(income)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
+                        <SwipeableRow key={income.id} radius={0} disabled={!rowActions(income, offline).canDelete} onDelete={() => requestDelete(income)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
                           <DenseRow onClick={() => openEdit(income)}>
                             <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
@@ -287,6 +293,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                                   <Repeat size={8} /> {t.income.recurringBadge}
                                 </span>
                               )}
+                              <PendingBadge state={income.pending} />
                             </div>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', flexShrink: 0 }}>+{formatAmount(income.amount)}</span>
                           </DenseRow>
@@ -315,11 +322,12 @@ export function IncomePage({ month, year }: IncomePageProps) {
                                   <Repeat size={8} /> {t.income.recurringBadge}
                                 </span>
                               )}
+                              <PendingBadge state={income.pending} />
                             </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', marginRight: 8 }}>+{formatAmount(income.amount)}</span>
-                            <button onClick={() => openEdit(income)} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
-                            <button onClick={() => requestDelete(income)} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
+                            <button onClick={() => openEdit(income)} disabled={!rowActions(income, offline).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
+                            <button onClick={() => requestDelete(income)} disabled={!rowActions(income, offline).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
                           </div>
                         </DenseRow>
                       ))}

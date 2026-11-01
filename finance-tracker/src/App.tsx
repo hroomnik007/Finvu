@@ -6,6 +6,7 @@ import { Topbar } from './components/Topbar'
 import { GlobalFAB } from './components/GlobalFAB'
 import { PullToRefresh } from './components/PullToRefresh'
 import { ToastContainer } from './components/ToastContainer'
+import { OfflineStatus } from './components/OfflineStatus'
 import { LoginPage } from './pages/Login'
 
 // Pages are lazy-loaded so the entry chunk stays small (recharts, xlsx and
@@ -524,6 +525,7 @@ function App() {
           onNavigate={setPage}
           onToggleTheme={handleToggleTheme}
         />
+        <OfflineStatus />
         <PullToRefresh onRefresh={() => queryClient.refetchQueries()}>
           <Suspense fallback={null}>
           {page === 'dashboard' && (

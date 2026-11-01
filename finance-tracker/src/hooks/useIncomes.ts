@@ -7,6 +7,9 @@ import { trackingStartOf } from '../utils/trackingStart'
 import { isEndedInMonth, isNewerRow } from './useFixedExpenses'
 import type { Income, ApiTransaction } from '../types'
 import { getAllTransactions } from '../api/allTransactions'
+import { createOrQueue, isQueuedId, removeQueued } from '../lib/offlineQueue'
+import { useOfflineQueue } from './useOfflineQueue'
+import { queuedIncomeRows } from '../utils/queuedRows'
 
 function adjustDateToMonth(originalDate: string, targetMonth: number, targetYear: number): string {
   const originalDay = parseInt(originalDate.split('-')[2], 10)
@@ -98,9 +101,13 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
   })
   // Rows waiting in the delete-undo window are hidden (lib/pendingDelete).
   const hidden = usePendingDeleteIds()
+  // Offline adds waiting to be sent show up first, marked `pending` (personal view only).
+  const queue = useOfflineQueue()
+  const monthKey = month !== undefined && year !== undefined ? `${year}-${String(month).padStart(2, '0')}` : null
   const incomes = useMemo(
-    () => (incomesAll ?? []).filter(r => !r.id || !hidden.has(r.id)),
-    [incomesAll, hidden],
+    () => [...(scope === 'personal' ? queuedIncomeRows(queue, monthKey) : []), ...(incomesAll ?? [])]
+      .filter(r => !r.id || !hidden.has(r.id)),
+    [incomesAll, hidden, queue, monthKey, scope],
   )
 
 
@@ -112,15 +119,15 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
   ]), [qc])
 
   const addIncome = useCallback(async (income: Omit<Income, 'id'>): Promise<string> => {
-    const { data } = await createTransaction({
+    const { id, queued } = await createOrQueue({
       type: 'income',
       amount: income.amount,
       description: income.label,
       date: income.date,
       isFixed: income.recurring,
-    })
-    await invalidate()
-    return data.id
+    }, createTransaction)
+    if (!queued) await invalidate()
+    return id
   }, [invalidate])
 
   const updateIncome = useCallback(async (id: string, changes: Partial<Income>): Promise<void> => {
@@ -144,6 +151,7 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
   }, [invalidate])
 
   const deleteIncome = useCallback(async (id: string): Promise<void> => {
+    if (isQueuedId(id)) { removeQueued(id); return }
     await deleteTransaction(id)
     await invalidate()
   }, [invalidate])

@@ -20,6 +20,10 @@ import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
 import type { FixedExpense, Category } from '../types'
 import { DenseCard, DenseRow } from '../components/DenseList'
+import { useOffline } from '../hooks/useOfflineQueue'
+import { PendingBadge } from '../components/OfflineStatus'
+import { rowActions } from '../utils/queuedRows'
+import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
@@ -83,6 +87,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const { categories } = useCategories()
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
+  const offline = useOffline()
   const feedback = useSaveFeedback()
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
@@ -189,6 +194,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   }
 
   function openEdit(e: FixedExpense) {
+    if (!rowActions(e, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(e); setLabel(e.label); setAmount(formatAmountInput(e.amount, decimalSeparator(locale)))
     setDayOfMonth(String(e.dayOfMonth)); setCategoryId(e.categoryId ?? ''); setNote(e.note)
     setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
@@ -572,7 +578,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               const badge = countdownBadge(daysUntil)
               const monthAbbr = MONTHS_SK[month - 1] ?? ''
               return (
-                <SwipeableRow key={expense.id} radius={0} onDelete={() => setDeleteId(expense.id!)} isOpen={openSwipeId === expense.id} onOpen={() => setOpenSwipeId(expense.id!)}>
+                <SwipeableRow key={expense.id} radius={0} disabled={!rowActions(expense, offline).canDelete} onDelete={() => setDeleteId(expense.id!)} isOpen={openSwipeId === expense.id} onOpen={() => setOpenSwipeId(expense.id!)}>
                   <DenseRow onClick={() => openEdit(expense)} className="expense-row" style={{ opacity: isPast ? 0.65 : 1 }}>
                     {/* Date tile */}
                     <div style={{
@@ -591,6 +597,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 500, color: isPast ? 'var(--aurora-lo)' : 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{expense.label}</div>
                       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat?.name ?? '—'}</div>
+                      <PendingBadge state={expense.pending} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                       <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: isPast ? 'var(--aurora-faint)' : 'var(--aurora-rose)' }}>{formatAmount(expense.amount)}</span>
@@ -602,8 +609,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       )}
                     </div>
                     <div className="expense-actions hidden lg:flex" style={{ alignItems: 'center', gap: 2, flexShrink: 0 }} onClick={ev => ev.stopPropagation()}>
-                      <button type="button" className="hit-44" onClick={() => openEdit(expense)} aria-label={t.common.edit} title={t.common.edit} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
-                      <button type="button" className="hit-44" onClick={() => setDeleteId(expense.id!)} aria-label={t.common.delete} title={t.common.delete} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
+                      <button type="button" className="hit-44" onClick={() => openEdit(expense)} disabled={!rowActions(expense, offline).canEdit} aria-label={t.common.edit} title={t.common.edit} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
+                      <button type="button" className="hit-44" onClick={() => setDeleteId(expense.id!)} disabled={!rowActions(expense, offline).canDelete} aria-label={t.common.delete} title={t.common.delete} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
                     </div>
                   </DenseRow>
                 </SwipeableRow>

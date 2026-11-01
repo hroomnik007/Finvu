@@ -693,6 +693,17 @@ export const hu: Translations = {
     signInAnotherWay: 'Bejelentkezés másképp',
     wrongPassword: 'Hibás jelszó.',
   },
+  offline: {
+    banner: 'Offline vagy – a legutóbbi adatokat mutatom',
+    waiting: { one: 'tétel küldésre vár', few: 'tétel küldésre vár', many: 'tétel küldésre vár' },
+    pendingBadge: 'Küldésre vár',
+    failedBadge: 'Nincs elküldve',
+    failedTitle: 'Ezeket a tételeket nem sikerült elküldeni',
+    retry: 'Újra',
+    discard: 'Elvetés',
+    editOffline: 'Offline vagy – a szerkesztés és törlés a kapcsolatra vár',
+    synced: 'Elküldve a csatlakozás után: {n}',
+  },
   firstRun: {
     title: 'Első lépések',
     subtitle: 'Néhány lépés, és a Finvu máris hasznos lesz.',
