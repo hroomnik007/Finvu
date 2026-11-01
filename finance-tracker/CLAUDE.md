@@ -8,7 +8,7 @@ Na začiatku každého promptu si prečítaj tento CLAUDE.md súbor celý, pred 
 ## O projekte
 PWA aplikácia na sledovanie rodinných financií. Mobile-first, privacy-first.
 Inšpirovaná Monarch Money. Hostovaná na `pedani.eu` (Hetzner CX23).
-Aktuálna verzia: **Finvu 2026 v3** — design system z `colors_and_type.css` tokenov (DM Sans + DM Mono, CSS variables).
+Aktuálna verzia: **Finvu 2026 v3**, vizuál je Aurora design system: CSS premenné `--aurora-*` v `src/index.css`. Fonty (`@theme` v `index.css`): DM Sans (`--font-sans`, základný text), DM Mono (`--font-mono`), Outfit (`--font-outfit`) a Manrope (`--font-manrope`) pre Aurora komponenty, Plus Jakarta Sans (`--font-landing`) pre landing.
 
 ## Tech Stack
 
@@ -33,26 +33,20 @@ Aktuálna verzia: **Finvu 2026 v3** — design system z `colors_and_type.css` to
 - REST API cez axios (`src/api/client.ts`)
 - Backend: `https://api.pedani.eu` (Hetzner CX23)
 - Dev: `http://localhost:3001` (VITE_API_URL env)
-- `src/db/database.ts` je @deprecated — Dexie/IndexedDB nahradená API, možno zmazať
 
 ## Štruktúra projektu
+Pevné počty súborov sa tu nevedú (zastarávali) — aktuálny stav zisti cez `ls`.
 ```
 finance-tracker/src/
-├── api/          # axios klient + endpointy:
-│   ├── client.ts        # axios inštancia, interceptory, token refresh
-│   ├── auth.ts          # login, register, logout, refresh, WebAuthn, Google, PIN, admin
-│   ├── transactions.ts  # CRUD pre transakcie
-│   ├── categories.ts    # CRUD pre kategórie
-│   └── admin.ts         # admin endpointy
-├── components/   # 16 React komponentov
-├── pages/        # 16 stránok
-├── hooks/        # 9 custom hookov
-├── context/      # 2 kontexty (auth + app state)
-├── i18n/         # SK + EN preklady
-├── db/           # DEPRECATED — zmazať
+├── api/          # axios klient (client.ts: interceptory, token refresh) + jeden modul na oblasť
+│                 # (auth, transactions, allTransactions, categories, savings, households, admin, …)
+├── components/   # zdieľané React komponenty (GlassCard, HeroCard, CategoryDonutCard, BottomSheet, …)
+├── pages/        # jedna stránka na route/sekciu
+├── hooks/        # custom hooky
+├── context/      # React kontexty (Auth, Settings, PinLock, …)
+├── i18n/         # preklady sk/en/cs/pl/hu + index.ts
 ├── types/        # TypeScript typy
-└── utils/        # pomocné funkcie
-    └── csv365bank.ts    # parser pre 365.bank CSV export
+└── utils/        # pomocné funkcie (format.ts, parsery CSV výpisov, …)
 ```
 
 ## Auth flows (implementované)
@@ -68,7 +62,7 @@ finance-tracker/src/
 ## Internacionalizácia (i18n)
 
 - **5 jazykov**: SK (primárny), CS, PL, HU, EN
-- **Súbory**: `src/i18n/sk.ts`, `cs.ts`, `pl.ts`, `hu.ts`, `en.ts` — každý ~413 kľúčov, 16 skupín
+- **Súbory**: `finance-tracker/src/i18n/{sk,en,cs,pl,hu}.ts` (5 súborov) — každý ~413 kľúčov, 16 skupín
 - **Štruktúra**: všetkých 5 súborov musí mať **identickú štruktúru** zodpovedajúcu `typeof sk` — TypeScript to vynucuje cez `satisfies`
 - **Hook**: `useTranslation()` vracia `{ t: Translations }` — `t` je priamy objekt SK/CS/PL/HU/EN podľa aktívneho jazyka
 - **Auto-detekcia**: pri prvej návšteve sa jazyk deteguje z prehliadača (i18next-browser-languagedetector alebo `navigator.language`)
@@ -94,7 +88,7 @@ npm run preview   # preview buildu
 
 ## Databázové migrácie
 
-Migrácie sú číslované SQL súbory v `backend/migrations/` (aktuálne do 033), spúšťa ich `backend/src/scripts/migrate.ts` (`npm run db:migrate`) pri každom deployi v GitHub Actions. Nové zmeny schémy patria **len sem**. `backend/drizzle/` je zmrazená pôvodná schéma (len pre prázdnu databázu cez `npm run db:setup`), nič do nej nepridávať. CI overuje, že schéma postavená od nuly zodpovedá `backend/src/db/schema.ts` (`npm run db:check-schema`).
+Migrácie sú číslované SQL súbory v `backend/migrations/` (posledná v čase písania je 036; vždy over cez `ls backend/migrations`), spúšťa ich `backend/src/scripts/migrate.ts` (`npm run db:migrate`) pri každom deployi v GitHub Actions. Nová migrácia = **ďalšie číslo** za poslednou a patrí **len do `backend/migrations/`**. `backend/drizzle/` je zmrazená pôvodná schéma (len pre prázdnu databázu cez `npm run db:setup`) — **nič do nej nepridávať**. CI overuje, že schéma postavená od nuly zodpovedá `backend/src/db/schema.ts` (`npm run db:check-schema`).
 
 **Spustenie migrácií v produkcii** (vnútri Docker kontajnera):
 ```bash
@@ -161,7 +155,8 @@ Demo účet bol zrušený (2026-11-01) a z kódu aj databázy odstránený. Lok�
 
 ### API a dáta
 - Všetky API volania cez `src/api/client.ts` — nikdy priamy fetch/axios mimo klienta
-- `src/db/database.ts` je deprecated — nepoužívať, nereferencovať
+- **Dátumy**: nikdy `toISOString().slice(0, 10)` na „dnes“ (je to UTC, o polnoci dá zlý deň). Frontend používa `todayISO()` / `toLocalISO()` z `src/utils/format.ts`, backend `localDateISO()` z `backend/src/lib/localDate.ts`
+- **Zoznamy transakcií**: nikdy jedna požiadavka s `limit: 200` (server vráti max. 200 riadkov). Používa sa `getAllTransactions` (`src/api/allTransactions.ts`), ktorá stránkuje
 - Token nikdy do localStorage — iba pamäť (access) + httpOnly cookie (refresh)
 - `household_enabled` sa ukladá do DB (`users.household_enabled`) — nie len localStorage
 - Stav domácnosti sa číta z `user.household_enabled` (AuthContext) — nie localStorage
@@ -171,7 +166,7 @@ Demo účet bol zrušený (2026-11-01) a z kódu aj databázy odstránený. Lok�
 ### Deploy
 - Server: pedani.eu (Hetzner CX23), deploy cez SSH → `./deploy.sh frontend`
 - `.npmrc` má `legacy-peer-deps=true` kvôli vite-plugin-pwa@1.2/vite@8 konfliktu
-- Po každej zmene: `git add -A && git commit -m "<popis>" && git push origin main && git push gitea main`
+- Do gitu pridávaj **len konkrétne upravené súbory explicitne** (`git add cesta/k/súboru …`), nikdy `git add -A` ani `git commit -a` — priečinok `rev/` v koreni repozitára je cudzí a untracked. Potom `git commit` a push na `origin` aj `gitea`
 - git remotes: `origin` = GitHub (triggers Actions), `gitea` = self-hosted Gitea
 - VŽDY pushuj na oba: `git push origin main && git push gitea main`
 - Ak je `gitea` nedostupná, uveď to v zhrnutí a remote nemeň (ani URL, ani token)
@@ -187,7 +182,6 @@ Demo účet bol zrušený (2026-11-01) a z kódu aj databázy odstránený. Lok�
 - Projekt je PWA rodinný finance tracker, backend na api.pedani.eu
 - Frontend volá REST API cez axios klienta, nie Dexie
 - Auth: WebAuthn + Google OAuth + PIN + JWT/httpOnly cookies
-- database.ts je deprecated
 - Žiadny TweaksPanel — bol odstránený
 - Notifikácie (NotificationCenter.tsx): jeden server-computed feed `GET /api/notifications/feed?today=YYYY-MM-DD` (kind + params, texty sa prekladajú na klientovi vo `feedItemToNotification`); read stav sa persistuje do `localStorage` kľúča `finvu_read_notifications`
 - Topbar má `NotificationCenter` ako self-contained komponent (vlastný state, vlastné API volania)
@@ -246,7 +240,7 @@ docker compose up --build -d
 ### Grid a šírky
 - Main content wrapper v App.tsx: `className="flex-1 overflow-y-auto w-full min-w-0"`
 - Content div inside main: `className="w-full h-full p-6"`
-- Šírku a centrovanie obsahu riadi centrálne `PullToRefresh` (`PAGE_MAX_WIDTH` = 1232, `margin auto`) — NIKDY nepoužívať `max-w-*` na page-level komponentoch (Dashboard, Income, atď.). Sidebar a Topbar zostávajú na celú šírku
+- Šírku a centrovanie obsahu riadi `PullToRefresh` (`PAGE_MAX_WIDTH` = 1232): nastaví CSS premennú `--page-inset` na scroll kontajneri a stránky ju pridávajú do horizontálneho paddingu (`padding: 20px calc(20px + var(--page-inset, 0px))`), takže scrollbar ostáva na okraji obrazovky. Na page-level komponentoch (Dashboard, Income, …) sa nepoužíva `max-w-*`; k 2026-11-01 sa `max-w-*` v `src/` vyskytuje len v `ConfirmDialog` a `ToastContainer` (dialóg/toast, nie stránky). Sidebar a Topbar zostávajú na celú šírku
 - Dashboard 2-stĺpcový layout: `grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-6 w-full`
   - Ľavý stĺpec: hlavný obsah (rastie)
   - Pravý stĺpec: kontextový panel (fixed 340–380px)
@@ -258,8 +252,7 @@ docker compose up --build -d
 - Prechod: `transition-all duration-200` na sidebar aj main
 
 ### Farby a pozadie
-- Page background: `#0f0a1e`
-- Sticky greeting row: `background: #0f0a1e`, `position: sticky`, `top: 0`, `zIndex: 20`
+- Pozadie stránky a farby všeobecne: tokeny `--aurora-bg` / `--aurora-bg-image` a ostatné `--aurora-*` z `src/index.css` (dark aj light), nie hardcoded hex
 - Greeting margin kompenzácia: `margin: -24px -24px 0 -24px`, `padding: 16px 24px 12px`
 
 ### Dashboard — sekcie (v3)
@@ -347,7 +340,7 @@ docker compose up --build -d
 - `BottomSheet` `onImportCsv` must be `undefined` when in edit mode — import only makes sense when adding new records
 - Never render both mobile and desktop Import CSV buttons simultaneously — use `hidden lg:flex` / `lg:hidden` pattern
 - `dashView` force-reset to `'personal'` requires `user` to be loaded — add `&& user` guard to prevent premature reset on initial render
-- **i18n — nový jazykový kľúč**: pridať do **všetkých 5 súborov** (sk/en/cs/pl/hu) naraz; TypeScript build zlyhá ak chýba kľúč v niektorom súbore
+- **i18n — nový jazykový kľúč**: pridať do **všetkých 5 súborov** (`finance-tracker/src/i18n/{sk,en,cs,pl,hu}.ts`) naraz; v angličtine (`en.ts`) sa apostrofy escapujú (`'You\'re'`); TypeScript build zlyhá ak chýba kľúč v niektorom súbore
 - **LanguageSwitcher dropdown**: používa `position: fixed` + `getBoundingClientRect()` — **nie** `position: absolute`, pretože `SectionCard` má `overflow: hidden` ktoré by dropdown orizlo
 - **Savings deep link**: `App.tsx → getPageFromHash()` stripuje `?` query params — bez toho by `#sporenie?id=X` padlo na dashboard
 - **Docker migrácie**: spustiť `docker exec ... node dist/scripts/migrate.js` po každej novej migrácii; migrácie musia byť COPY-ované v Dockerfile pred `npm run build`
