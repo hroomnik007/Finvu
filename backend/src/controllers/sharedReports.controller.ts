@@ -19,6 +19,12 @@ export async function createSharedReport(req: AuthRequest, res: Response): Promi
     return;
   }
 
+  // An expiry in the past (or ~0) would keep the report out of the active-report cap.
+  if (typeof expiresInHours !== "number" || !Number.isFinite(expiresInHours) || expiresInHours < 1) {
+    res.status(400).json({ error: "expiresInHours must be a number of at least 1" });
+    return;
+  }
+
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + Math.min(expiresInHours, 24 * 30) * 3600 * 1000);
 

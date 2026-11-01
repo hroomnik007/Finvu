@@ -39,4 +39,9 @@ describe("createSharedReport cap", () => {
     expect((await run({})).status).toBe(400);
     expect(state.calls).toBe(0);
   });
+
+  it.each([0, -5, NaN, "24", Infinity])("expiresInHours %s is rejected before the cap is consulted", async (v) => {
+    expect((await run({ data: "x", expiresInHours: v })).status).toBe(400);
+    expect(state.calls).toBe(0);
+  });
 });
