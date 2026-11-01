@@ -51,6 +51,10 @@
     "vitest": "^5.0.5"
   },
   "overrides": {
-    "fast-uri": "^3.1.9"
+    "fast-uri": "^3.1.9",
+    "workbox-build": {
+      "glob": "^14.0.2"
+    },
+    "minimatch": "^11.0.1"
   }
 }
