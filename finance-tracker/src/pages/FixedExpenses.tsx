@@ -182,6 +182,12 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     return (n.getFullYear() === year && n.getMonth() + 1 === month) ? n.getDate() : -1
   })()
 
+  // Viewed month entirely before the real current month → all its payments are already paid
+  const isPastMonth = (() => {
+    const n = new Date()
+    return year < n.getFullYear() || (year === n.getFullYear() && month < n.getMonth() + 1)
+  })()
+
   // Monday-first weekday offset for the compact mobile month grid
   const monthStartWeekday = useMemo(() => (new Date(year, month - 1, 1).getDay() + 6) % 7, [year, month])
   const calendarCells = useMemo(() => {
@@ -597,8 +603,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.fixed.filteredEmpty}</p>
             </GlassCard>
           ) : (() => {
-            const upcomingList = filtered.filter(e => calendarToday === -1 || e.dayOfMonth >= calendarToday).sort((a, b) => a.dayOfMonth - b.dayOfMonth)
-            const pastList = calendarToday === -1 ? [] : filtered.filter(e => e.dayOfMonth < calendarToday).sort((a, b) => b.dayOfMonth - a.dayOfMonth)
+            const upcomingList = filtered.filter(e => !isPastMonth && (calendarToday === -1 || e.dayOfMonth >= calendarToday)).sort((a, b) => a.dayOfMonth - b.dayOfMonth)
+            const pastList = isPastMonth ? filtered.slice().sort((a, b) => a.dayOfMonth - b.dayOfMonth) : calendarToday === -1 ? [] : filtered.filter(e => e.dayOfMonth < calendarToday).sort((a, b) => b.dayOfMonth - a.dayOfMonth)
 
             const renderCard = (expense: typeof filtered[0], isPast = false) => {
               const cat = getCat(expense.categoryId)

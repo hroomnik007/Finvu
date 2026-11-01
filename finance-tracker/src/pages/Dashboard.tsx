@@ -235,12 +235,15 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   }
 
 const upcomingFixed = useMemo(() => {
-    const today = new Date().getDate()
+    const n = new Date()
+    const today = n.getDate()
+    // Whole viewed month is before the real current month → everything in it is already paid
+    const isPastMonth = year < n.getFullYear() || (year === n.getFullYear() && month < n.getMonth() + 1)
     return [...allFixedExpenses]
-      .map(e => ({ ...e, daysUntil: ((e.dayOfMonth - today + 31) % 31) }))
-      .sort((a, b) => a.daysUntil - b.daysUntil)
+      .map(e => ({ ...e, daysUntil: ((e.dayOfMonth - today + 31) % 31), paid: isPastMonth }))
+      .sort((a, b) => isPastMonth ? a.dayOfMonth - b.dayOfMonth : a.daysUntil - b.daysUntil)
       .slice(0, 4)
-  }, [allFixedExpenses])
+  }, [allFixedExpenses, year, month])
 
   const motivationalMsg = (() => {
     if (totalIncome < 0.01) {
@@ -473,7 +476,7 @@ const upcomingFixed = useMemo(() => {
         {upcomingFixed.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {upcomingFixed.map(fe => {
-              const badge = countdownBadge(fe.daysUntil)
+              const badge = fe.paid ? { text: t.expenses.paid, color: 'var(--aurora-emerald)', bg: 'rgba(52,211,153,0.15)' } : countdownBadge(fe.daysUntil)
               const cat = categories.find(c => c.id === fe.categoryId)
               const color = cat?.color ?? FALLBACK_COLOR
               const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
