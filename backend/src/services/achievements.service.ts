@@ -6,7 +6,6 @@ import {
   transactions,
   categories,
   savingsGoals,
-  sharedReports,
   householdMembers,
   userAchievements,
 } from "../db/schema";
@@ -15,7 +14,8 @@ import {
 // first_transaction  🎯 Prvý krok        — ≥ 1 transaction
 // week_streak        🔥 Týždeň v rade     — longest streak ≥ 7 days
 // first_savings_goal 💰 Sporiteľ          — ≥ 1 savings goal created
-// first_report       📊 Analytik          — ≥ 1 shared report created
+// first_report       📊 Analytik          — RETIRED: shared reports were removed, it can no longer be earned.
+//                                          The key stays so rows already in user_achievements keep resolving.
 // budget_met         🏆 Mesačný cieľ      — a completed month kept under total budget
 // speedster          ⚡ Rýchly            — ≥ 10 transactions logged on a single day
 // team_player        👥 Tímový hráč       — household has ≥ 2 members
@@ -82,7 +82,6 @@ export async function evaluateAchievements(userId: string): Promise<EvaluateAchi
   const [
     [{ txCount }],
     [{ savingsCount }],
-    [{ reportCount }],
     perDayRows,
     budgetCats,
     monthlyExpenses,
@@ -90,7 +89,6 @@ export async function evaluateAchievements(userId: string): Promise<EvaluateAchi
   ] = await Promise.all([
     db.select({ txCount: count() }).from(transactions).where(eq(transactions.userId, userId)),
     db.select({ savingsCount: count() }).from(savingsGoals).where(eq(savingsGoals.userId, userId)),
-    db.select({ reportCount: count() }).from(sharedReports).where(eq(sharedReports.userId, userId)),
     // Transactions grouped per calendar day → max count in any single day.
     db
       .select({ c: count() })
@@ -143,7 +141,7 @@ export async function evaluateAchievements(userId: string): Promise<EvaluateAchi
     first_transaction: totalTx >= 1,
     week_streak: (user.longestStreak ?? 0) >= 7,
     first_savings_goal: Number(savingsCount) >= 1,
-    first_report: Number(reportCount) >= 1,
+    first_report: false, // retired, see the key list above
     budget_met: budgetMet,
     speedster: maxPerDay >= 10,
     team_player: memberCount >= 2,

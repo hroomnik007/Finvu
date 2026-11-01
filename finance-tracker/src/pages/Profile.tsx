@@ -13,7 +13,7 @@ import { updateAvatar, updateUserSettings, updateProfile } from '../api/auth'
 import { getTransactions } from '../api/transactions'
 import { getSavingsGoals } from '../api/savings'
 import { getAchievements, type AchievementState } from '../api/achievements'
-import { ACHIEVEMENTS } from '../data/achievements'
+import { visibleAchievements } from '../data/achievements'
 import { AchievementDetailModal } from '../components/AchievementDetailModal'
 import { GlassCard } from '../components/GlassCard'
 import { useSettingsContext } from '../context/SettingsContext'
@@ -45,7 +45,8 @@ function AchievementsTab() {
       .finally(() => setLoaded(true))
   }, [])
 
-  const items = ACHIEVEMENTS.map(a => ({
+  const unlockedKeys = new Set([...remoteState.values()].filter(s => s.unlocked).map(s => s.key))
+  const items = visibleAchievements(unlockedKeys).map(a => ({
     ...a,
     name: t.achievements.items[a.i18nKey].name,
     desc: t.achievements.items[a.i18nKey].desc,
@@ -54,7 +55,7 @@ function AchievementsTab() {
     unlockedAt: remoteState.get(a.key)?.unlockedAt ?? null,
   }))
   const unlockedCount = items.filter(a => a.unlocked).length
-  const countLabel = t.achievements.countLabel.replace('{unlocked}', String(unlockedCount)).replace('{total}', String(ACHIEVEMENTS.length))
+  const countLabel = t.achievements.countLabel.replace('{unlocked}', String(unlockedCount)).replace('{total}', String(items.length))
 
   return (
     <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
