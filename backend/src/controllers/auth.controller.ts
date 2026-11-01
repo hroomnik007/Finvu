@@ -3,6 +3,7 @@ import { lookupLocation } from "../lib/geoip";
 import { localDateISO } from "../lib/localDate";
 import { isIP } from "net";
 import { Request, Response } from "express";
+import { ipKeyGenerator } from "express-rate-limit";
 import bcrypt from "bcrypt";
 import { eq, and, gt, desc, sql, isNull, or } from "drizzle-orm";
 import { z } from "zod";
@@ -35,7 +36,7 @@ import { DEFAULT_CATEGORIES } from "../lib/defaultCategories";
 import { AuthRequest } from "../middleware/authenticate";
 import { parseImageDataUrl, saveAvatarFile, deleteAvatarFiles } from "../lib/avatarStorage";
 import { releaseOwnedHouseholds } from "../lib/household";
-import { isLocked, recordFailure, reserveAttempt, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
+import { isLocked, recordFailure, reserveAttempt, clearFailures, passwordKey, pinKey, adminKey, LOCKED_RESPONSE } from "../lib/loginLockout";
 import { authError } from "../lib/authErrors";
 import { verifyGoogleAccessToken, FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN } from "../lib/googleToken";
 import { checkGoogleReauth, verifyReauth } from "../lib/reauth";
@@ -697,8 +698,13 @@ export async function adminLogin(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // There is one admin account, so one lock for it.
-  if (await isLocked(ADMIN_KEY)) {
+  // The lock is per client address (the same address the route's IP limiter
+  // counts), so someone else's wrong guesses can't lock the admin out from
+  // another address. The attempt is reserved BEFORE the comparison, so parallel
+  // guesses can't exceed the limit, and a locked address is refused even with
+  // the right password, without comparing anything.
+  const lockKey = adminKey(ipKeyGenerator(req.ip ?? ""));
+  if ((await reserveAttempt(lockKey)).locked) {
     res.status(429).json(LOCKED_RESPONSE);
     return;
   }
@@ -707,11 +713,10 @@ export async function adminLogin(req: Request, res: Response): Promise<void> {
   const passOk = safeCompare(password, env.ADMIN_PASSWORD);
 
   if (!userOk || !passOk) {
-    await recordFailure(ADMIN_KEY);
     res.status(401).json(authError("INVALID_CREDENTIALS"));
     return;
   }
-  await clearFailures(ADMIN_KEY);
+  await clearFailures(lockKey);
 
   const token = signAdminToken();
   const csrfToken = randomBytes(32).toString("hex");

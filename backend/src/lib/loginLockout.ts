@@ -21,7 +21,13 @@ export function passwordKey(normalizedEmail: string): string {
 export function pinKey(userId: string): string {
   return `pin:${userId}`;
 }
-export const ADMIN_KEY = "admin";
+// Admin sign-in is locked per client address, not globally: one shared lock would
+// let anyone keep the single admin out with five wrong guesses. `ip` is the same
+// value the route's per-IP limiter keys on (ipKeyGenerator(req.ip)); the old
+// global "admin" row in login_lockouts is simply left to expire.
+export function adminKey(ip: string): string {
+  return `admin:${ip}`;
+}
 
 // The counting itself lives in lockoutStore.ts (Postgres, so locks survive a
 // restart and are shared if the API ever runs more than one process).

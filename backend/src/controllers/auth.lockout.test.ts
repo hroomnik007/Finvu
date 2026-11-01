@@ -217,19 +217,65 @@ describe("PIN login lockout", () => {
   });
 });
 
-describe("admin login lockout", () => {
-  const attempt = async (password: string) => {
+describe("admin login lockout (per IP)", () => {
+  const IP_A = "203.0.113.10";
+  const IP_B = "198.51.100.20";
+  const attempt = async (password: string, ip = IP_A) => {
     const r = fakeRes();
-    await adminLogin(req({ username: "admin", password }), r.res);
+    await adminLogin({ ...req({ username: "admin", password }), ip } as unknown as Request, r.res);
     return r.out;
   };
+  const GOOD = "test-admin-password";
 
-  it(`locks after ${MAX_FAILURES} failures, resets on success, expires`, async () => {
-    for (let i = 0; i < MAX_FAILURES - 1; i++) expect((await attempt("nope")).status).toBe(401);
-    expect((await attempt("test-admin-password")).status).toBe(200);
+  it(`locks the address after ${MAX_FAILURES} failures, refuses even the right password, then expires`, async () => {
     for (let i = 0; i < MAX_FAILURES; i++) expect((await attempt("nope")).status).toBe(401);
-    expect(await attempt("test-admin-password")).toEqual(LOCKED);
-    later(LOCK_MS + 1000);
-    expect((await attempt("test-admin-password")).status).toBe(200);
+    expect(await attempt(GOOD)).toEqual(LOCKED);
+    expect(await attempt("nope")).toEqual(LOCKED);
+    later(LOCK_MS - 1000);
+    expect(await attempt(GOOD)).toEqual(LOCKED);
+    later(2000);
+    expect((await attempt(GOOD)).status).toBe(200);
+  });
+
+  it("a lock on one address doesn't touch the admin on another", async () => {
+    for (let i = 0; i < MAX_FAILURES; i++) await attempt("nope", IP_A);
+    expect(await attempt(GOOD, IP_A)).toEqual(LOCKED);
+    expect((await attempt(GOOD, IP_B)).status).toBe(200);
+    // B's success clears only B's row; A stays locked
+    expect(await attempt(GOOD, IP_A)).toEqual(LOCKED);
+    expect([...lockouts.rows.keys()]).toEqual([`admin:${IP_A}`]);
+  });
+
+  it("wrong guesses from one address never count against another", async () => {
+    for (let i = 0; i < MAX_FAILURES * 3; i++) await attempt("nope", IP_A);
+    for (let i = 0; i < MAX_FAILURES - 1; i++) expect((await attempt("nope", IP_B)).status).toBe(401);
+    expect((await attempt(GOOD, IP_B)).status).toBe(200);
+  });
+
+  it("resets the count after a successful login", async () => {
+    for (let i = 0; i < MAX_FAILURES - 1; i++) await attempt("nope");
+    expect((await attempt(GOOD)).status).toBe(200);
+    expect(lockouts.rows.size).toBe(0);
+    for (let i = 0; i < MAX_FAILURES; i++) expect((await attempt("nope")).status).toBe(401);
+  });
+
+  it("doesn't compare anything while the address is locked", async () => {
+    for (let i = 0; i < MAX_FAILURES; i++) await attempt("nope");
+    const r = fakeRes();
+    await adminLogin({ ...req({ username: "admin" }), ip: IP_A, body: { username: "admin", password: GOOD } } as unknown as Request, r.res);
+    expect(r.out).toEqual(LOCKED);
+  });
+
+  it(`parallel wrong guesses from one address: only ${MAX_FAILURES} are evaluated`, async () => {
+    const results = await Promise.all(Array.from({ length: 20 }, () => attempt("nope")));
+    expect(results.filter(o => o.status === 401)).toHaveLength(MAX_FAILURES);
+    expect(results.filter(o => JSON.stringify(o) === JSON.stringify(LOCKED))).toHaveLength(20 - MAX_FAILURES);
+  });
+
+  it("keys by the same address the IP limiter uses (IPv6 grouped by subnet)", async () => {
+    await attempt("nope", "2001:db8:1:2::1");
+    await attempt("nope", "2001:db8:1:2::ffff");
+    expect([...lockouts.rows.keys()]).toEqual(["admin:2001:db8:1::/56"]);
+    expect(lockouts.rows.get("admin:2001:db8:1::/56")!.failedCount).toBe(2);
   });
 });
