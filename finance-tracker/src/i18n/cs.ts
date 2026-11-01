@@ -475,6 +475,8 @@ export const cs: Translations = {
     dangerResetDesc: 'Tato akce smaže VŠECHNY transakce a nastavení. Akce je nevratná.',
     dangerResetConfirmLabel: 'Pro potvrzení napiš "VYMAZAT"',
     dangerDeleting: 'Mažu...',
+    dangerDeletePartial: 'Počet nesmazaných záznamů: {n}. Zkus to znovu později.',
+    dangerDeleteFailed: 'Mazání selhalo. Zkus to znovu později.',
     dangerDeleteBtn: 'Smazat',
     autoLock: 'Automatické zamknutí',
     autoLockSubtitle: 'Zamknout aplikaci po nečinnosti',

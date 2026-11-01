@@ -475,6 +475,8 @@ export const hu: Translations = {
     dangerResetDesc: 'Ez a művelet törli az ÖSSZES tranzakciót és beállítást. Ez visszafordíthatatlan.',
     dangerResetConfirmLabel: 'Írd be a "TÖRLÉS" szót a megerősítéshez',
     dangerDeleting: 'Törlés...',
+    dangerDeletePartial: 'Nem törölt rekordok száma: {n}. Próbáld újra később.',
+    dangerDeleteFailed: 'A törlés nem sikerült. Próbáld újra később.',
     dangerDeleteBtn: 'Törlés',
     autoLock: 'Automatikus zárolás',
     autoLockSubtitle: 'Az alkalmazás zárolása tétlenség után',

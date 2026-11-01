@@ -18,7 +18,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
 import { parseUserAgent } from '../utils/parseUserAgent'
 import { getAllTransactions } from '../api/allTransactions'
-import { getTransactions, deleteTransaction } from '../api/transactions'
+import { deleteAllTransactions } from '../lib/deleteAllTransactions'
 import { getCategories } from '../api/categories'
 import { createHousehold, joinHousehold, toggleHousehold } from '../api/households'
 import {
@@ -691,28 +691,24 @@ export function SettingsPage() {
   const [dangerAction, setDangerAction] = useState<DangerAction | null>(null)
   const [dangerConfirmText, setDangerConfirmText] = useState('')
   const [dangerLoading, setDangerLoading] = useState(false)
+  const [dangerError, setDangerError] = useState<string | null>(null)
 
   async function executeDangerAction() {
     if (!dangerAction) return
     setDangerLoading(true)
+    setDangerError(null)
     try {
-      if (dangerAction === 'transactions') {
-        while (true) {
-          const { data } = await getTransactions({ limit: 200 })
-          if (data.length === 0) break
-          await Promise.all(data.map(t => deleteTransaction(t.id)))
-        }
-      } else if (dangerAction === 'reset') {
-        while (true) {
-          const { data } = await getTransactions({ limit: 200 })
-          if (data.length === 0) break
-          await Promise.all(data.map(t => deleteTransaction(t.id)))
-        }
+      const { failed } = await deleteAllTransactions()
+      if (failed > 0) {
+        setDangerError(t.settings.dangerDeletePartial.replace('{n}', String(failed)))
+        return
+      }
+      if (dangerAction === 'reset') {
         try { localStorage.removeItem('app_settings') } catch { /* ignore */ }
       }
       setDangerAction(null)
       setDangerConfirmText('')
-    } catch { /* fail silently */ }
+    } catch { setDangerError(t.settings.dangerDeleteFailed) }
     finally { setDangerLoading(false) }
   }
 
@@ -795,6 +791,7 @@ export function SettingsPage() {
 
   // Inline modals: shared focus/Esc/inert/scroll-lock behaviour (Esc is off while busy).
   const pinRemoveModal = useModalA11y({ open: pinRemoveOpen, onClose: pinRemoveLoading ? undefined : () => setPinRemoveOpen(false) })
+  useEffect(() => { setDangerError(null) }, [dangerAction])
   const dangerModal = useModalA11y({ open: !!dangerAction, onClose: dangerLoading ? undefined : () => setDangerAction(null) })
   const changePwModal = useModalA11y({ open: changePwOpen, onClose: changePwLoading ? undefined : () => setChangePwOpen(false) })
   const devicesModal = useModalA11y({ open: devicesModalOpen, onClose: () => setDevicesModalOpen(false) })
@@ -1480,6 +1477,9 @@ export function SettingsPage() {
             <p className="text-sm text-[color:var(--aurora-faint)] mb-5">
               {dangerAction === 'reset' ? t.settings.dangerResetDesc : t.settings.dangerDeleteDesc}
             </p>
+            {dangerError && (
+              <p role="alert" className="text-sm mb-4" style={{ color: 'var(--aurora-rose)' }}>{dangerError}</p>
+            )}
             {dangerAction === 'reset' && (
               <div className="mb-4">
                 <label className="text-[12px] font-semibold uppercase tracking-wider text-red-400 mb-2 block">

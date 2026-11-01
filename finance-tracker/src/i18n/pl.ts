@@ -475,6 +475,8 @@ export const pl: Translations = {
     dangerResetDesc: 'Ta akcja usunie WSZYSTKIE transakcje i ustawienia. Akcja jest nieodwracalna.',
     dangerResetConfirmLabel: 'Wpisz "USUNĄĆ" aby potwierdzić',
     dangerDeleting: 'Usuwam...',
+    dangerDeletePartial: 'Liczba nieusuniętych wpisów: {n}. Spróbuj ponownie później.',
+    dangerDeleteFailed: 'Usuwanie nie powiodło się. Spróbuj ponownie później.',
     dangerDeleteBtn: 'Usuń',
     autoLock: 'Automatyczna blokada',
     autoLockSubtitle: 'Zablokuj aplikację po bezczynności',

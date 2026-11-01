@@ -475,6 +475,8 @@ export const en: Translations = {
     dangerResetDesc: 'This action will delete ALL transactions and settings. This is irreversible.',
     dangerResetConfirmLabel: 'Type "DELETE" to confirm',
     dangerDeleting: 'Deleting...',
+    dangerDeletePartial: 'Records not deleted: {n}. Please try again later.',
+    dangerDeleteFailed: 'Deleting failed. Please try again later.',
     dangerDeleteBtn: 'Delete',
     autoLock: 'Auto lock',
     autoLockSubtitle: 'Lock app after inactivity',

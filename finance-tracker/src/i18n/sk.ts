@@ -473,6 +473,8 @@ export const sk = {
     dangerResetDesc: 'Táto akcia vymaže VŠETKY transakcie a nastavenia. Akcia je nevratná.',
     dangerResetConfirmLabel: 'Pre potvrdenie napíš "VYMAZAŤ"',
     dangerDeleting: 'Mažem...',
+    dangerDeletePartial: 'Počet nezmazaných záznamov: {n}. Skús to znova neskôr.',
+    dangerDeleteFailed: 'Mazanie zlyhalo. Skús to znova neskôr.',
     dangerDeleteBtn: 'Vymazať',
     autoLock: 'Automatické uzamknutie',
     autoLockSubtitle: 'Uzamknúť aplikáciu po nečinnosti',

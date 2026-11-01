@@ -217,16 +217,27 @@ docker compose up --build -d
 - **`gh secret set`**: hodnotu posielať cez **stdin** (`printf '...' | gh secret set DATABASE_URL --repo ...`) — **NIE** `--body -` (nastaví doslovný reťazec, prejaví sa ako `getaddrinfo ENOTFOUND base`)
 
 ### Nginx
-- Config: `/etc/nginx/sites-enabled/api.pedani.eu.conf`
+- Konfigurácia v repozitári: `nginx/api.pedani.eu.conf` (a `nginx/finvu.pedani.eu.conf`). Živý súbor `/etc/nginx/sites-enabled/api.pedani.eu.conf` je **symlink** na `/etc/nginx/sites-available/api.pedani.eu.conf`
+- **Pravidlo: najprv diff, potom nasadiť.** Živý súbor nikdy neprepisuj naslepo, môže obsahovať ručné opravy, ktoré v repe nie sú. Postup: diff repo vs. živý súbor, záloha živého súboru s časovou pečiatkou mimo `sites-enabled`, skopírovať, `sudo nginx -t`, až potom `sudo systemctl reload nginx` (reload, nie restart). Pri zlyhaní `nginx -t` vrátiť zálohu
+- `api.pedani.eu` má **rate limit 30 r/s s burstom 100 na IP** (`limit_req_zone api_per_ip`, `limit_req ... burst=100 nodelay` v `location /`); nad limit prichádza **429**. Hromadné akcie vo frontende preto musia posielať požiadavky po dávkach (pozri `src/lib/deleteAllTransactions.ts`)
+- **Security hlavičky (HSTS, X-XSS-Protection a pod.) posiela helmet** z `backend/src/index.ts`; nginx ich nemá duplikovať. Nginx pridáva `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` a `Permissions-Policy`
 - `client_max_body_size 20M` — potrebné pre avatar upload (base64 ~5MB)
-- Po zmene nginx configu: `sudo nginx -t && sudo systemctl reload nginx`
 
-### Rate limiting (`backend/src/routes/auth.ts`)
-- `registerLimiter`: 5 req / 15 min
-- `loginLimiter`: 10 req / 15 min
+### Rate limiting (`backend/src/routes/auth.ts`, `backend/src/lib/authLimiters.ts`)
+Limity na IP (express-rate-limit), všetky odpovedajú rovnakým telom `AUTH_RATE_LIMITED`:
+- `registerLimiter` (aj `resend-verification`): 5 req / 15 min
+- `loginLimiter` (`admin-login`, `google`): 20 req / 15 min, počíta všetky požiadavky
+- `passwordLoginLimiter` (`login`): 20 req / 15 min; `pinLoginLimiter` (`pin-login`): 8 req / 10 min; `webauthnVerifyLimiter`: 20 req / 10 min — to sú `signInLimiter`, ktoré počítajú **len zlyhané pokusy** (`skipSuccessfulRequests`)
+- `generalLimiter` (verify-email, forgot/reset-password): 20 req / 15 min
+- `sensitiveLimiter` (zmena hesla/PIN, zmazanie účtu, deaktivácia, reauth): 10 req / 15 min
+- `webauthnOptionsLimiter`: 20 req / 10 min; `pinDeviceStatusLimiter`: 30 req / 10 min
+- `methodsLimiter`, `sessionCheckLimiter`, `pingLimiter`: 60 req / 15 min
 - `refreshLimiter`: 200 req / 15 min — **MUSÍ byť vysoký**, inak F5 spôsobuje logout
-- `generalLimiter`: 20 req / 15 min
 - `refreshLimiter` **NESMIE** používať custom `keyGenerator` s `req.ip` priamo (IPv6 bug)
+
+Zámok prihlasovania (`lib/loginLockout.ts`, `lib/lockoutStore.ts`, politika v `lib/lockoutPolicy.ts`) je samostatný a beží nad limitmi: 5 pokusov v okne 15 min zamkne kľúč na 15 min, uložené v Postgrese (`login_lockouts`).
+- Pokus sa **rezervuje pred porovnaním hesla** (`reserveAttempt`, jeden atomický upsert pred vyhľadaním používateľa a bcrypt), takže paralelné požiadavky nemôžu prejsť kontrolou naraz; zamknutý kľúč dostane 429 aj so správnym heslom
+- Kľúče: heslo = `passwordKey` (hash e-mailu, funguje aj pre neexistujúci účet), PIN = `pinKey` (userId), **admin = `adminKey` viazaný na IP** (nie jeden globálny zámok)
 
 ### Avatar upload
 - Max veľkosť: 10MB binárne (kontrolované v `auth.controller.ts` — `avatarUrl.length > 14_000_000` base64 znakov)
