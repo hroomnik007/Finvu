@@ -9,6 +9,9 @@ import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CsvImportModal } from '../components/CsvImportModal'
+import { SubscriptionSuggestions } from '../components/SubscriptionSuggestions'
+import type { SubscriptionSuggestion } from '../api/subscriptions'
+import { peekFixedPrefill, clearFixedPrefill } from '../utils/fixedPrefill'
 import { GlassCard } from '../components/GlassCard'
 import { ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
@@ -85,7 +88,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const endedExpenses = useMemo(() => allFixed.filter(e => isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
   const { variableExpenses } = useVariableExpenses(month, year)
   const { categories } = useCategories()
-  const { formatAmount, formatAmountParts } = useFormatters()
+  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
   const { t, locale } = useTranslation()
   const offline = useOffline()
   const feedback = useSaveFeedback()
@@ -103,7 +106,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const getCat = (id?: string | null): Category | null =>
     expenseCategories.find(c => c.id === id) ?? null
 
-  const [sheetOpen, setSheetOpen] = useState(false)
+  // A subscription card on the dashboard can send us here with the form to prefill
+  const [initialPrefill] = useState(peekFixedPrefill)
+  useEffect(() => { clearFixedPrefill() }, [])
+  const [sheetOpen, setSheetOpen] = useState(initialPrefill !== null)
   const [editing, setEditing] = useState<FixedExpense | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
@@ -112,17 +118,21 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const [mobileView, setMobileView] = useState<'list' | 'calendar'>('list')
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null)
 
-  const [label, setLabel] = useState('')
-  const [amount, setAmount] = useState('')
-  const [dayOfMonth, setDayOfMonth] = useState('1')
-  const [categoryId, setCategoryId] = useState<string>('')
+  const [label, setLabel] = useState(initialPrefill?.name ?? '')
+  const [amount, setAmount] = useState(initialPrefill ? formatAmountInput(initialPrefill.amount, decimalSeparator(locale)) : '')
+  const [dayOfMonth, setDayOfMonth] = useState(String(initialPrefill?.dayOfMonth ?? 1))
+  const [categoryId, setCategoryId] = useState<string>(initialPrefill?.categoryId ?? '')
+  // Adding a detected subscription: its expected next charge, and the month it starts (YYYY-MM)
+  const [suggestedStart, setSuggestedStart] = useState<string | null>(initialPrefill?.nextDate ?? null)
+  const [startMonth, setStartMonth] = useState(initialPrefill?.nextDate.slice(0, 7) ?? nowYM)
   const suggestion = useCategorySuggestion({
     text: label,
     active: sheetOpen && !editing,
     currentId: categoryId,
     validIds: expenseCategories.map(c => c.id ?? ''),
     select: setCategoryId,
-    defaultId: expenseCategories[0]?.id,
+    // A category handed over by a subscription card is kept, never replaced.
+    defaultId: suggestedStart ? undefined : expenseCategories[0]?.id,
   })
   const [note, setNote] = useState('')
   // Editing an existing item: a changed amount is a price change from `priceFrom`
@@ -190,6 +200,16 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     setLabel(''); setAmount(''); setDayOfMonth('1')
     setCategoryId(expenseCategories[0]?.id ?? '')
     setNote('')
+    setSuggestedStart(null)
+    setSheetOpen(true)
+  }
+
+  function openFromSuggestion(s: SubscriptionSuggestion) {
+    setEditing(null)
+    setLabel(s.name); setAmount(formatAmountInput(s.amount, decimalSeparator(locale))); setDayOfMonth(String(s.dayOfMonth))
+    setCategoryId(s.categoryId && expenseCategories.some(c => c.id === s.categoryId) ? s.categoryId : '')
+    setNote('')
+    setSuggestedStart(s.nextDate); setStartMonth(s.nextDate.slice(0, 7))
     setSheetOpen(true)
   }
 
@@ -201,7 +221,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     setSheetOpen(true)
   }
 
-  function closeSheet() { setSheetOpen(false); setEditing(null) }
+  function closeSheet() { setSheetOpen(false); setEditing(null); setSuggestedStart(null) }
 
   // Clear selected day when the visible month changes — adjust state during render
   const [prevMonthKey, setPrevMonthKey] = useState(`${month}-${year}`)
@@ -219,8 +239,12 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
       if (editing?.id != null) {
         await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, isCorrection ? undefined : priceFrom)
       } else {
+        // From a subscription card: start at its next charge, or the first of the month picked instead
+        const start = suggestedStart
+          ? (startMonth === suggestedStart.slice(0, 7) ? suggestedStart : `${startMonth}-01`)
+          : undefined
         // No undo: deleting a fixed expense removes its whole series by name.
-        await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note })
+        await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, start)
       }
       closeSheet()
       feedback.saved()
@@ -366,6 +390,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               </div>
             </div>
           </HeroCard>
+
+          <SubscriptionSuggestions onAdd={openFromSuggestion} />
 
           {/* View toggle — mobile only (desktop always shows calendar + list stacked) */}
           <div className="lg:hidden">
@@ -761,6 +787,24 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
           onChange={e => setNote(e.target.value)}
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
         />
+
+        {!editing && suggestedStart && (
+          <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.subscriptions.startLabel}</span>
+              <input
+                type="month"
+                aria-label={t.subscriptions.startLabel}
+                value={startMonth}
+                onChange={e => e.target.value && setStartMonth(e.target.value)}
+                style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 10, padding: '6px 10px', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13 }}
+              />
+            </div>
+            <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '6px 0 0', lineHeight: 1.5 }}>
+              {t.subscriptions.startHint.replace('{date}', formatDate(suggestedStart))}
+            </p>
+          </div>
+        )}
 
         {editing && (() => {
           const newAmount = (parseAmountInput(amount) ?? NaN)

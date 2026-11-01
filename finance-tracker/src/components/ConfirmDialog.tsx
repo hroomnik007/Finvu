@@ -15,6 +15,7 @@ interface ConfirmDialogProps {
   neutral?: boolean
   /** Optional second line under the message. */
   detail?: string
+  /** Label of the confirm button, when neither "Zmazať" nor "Potvrdiť" fits. */
   confirmLabel?: string
 }
 

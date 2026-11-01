@@ -11,6 +11,8 @@ import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
 import { HeroAmountPlaceholder, QueryError, Skeleton } from '../components/QueryState'
 import { DailyBudgetCard } from '../components/DailyBudgetCard'
+import { SubscriptionSuggestions } from '../components/SubscriptionSuggestions'
+import { setFixedPrefill } from '../utils/fixedPrefill'
 import { dailyBudget } from '../utils/dailyBudget'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
@@ -665,6 +667,11 @@ const upcomingFixed = useMemo(() => {
             </button>
           </div>
         </GlassCard>
+      )}
+
+      {/* Monthly charges that look like subscriptions: add them as fixed on the Fixed page */}
+      {dashView === 'personal' && (
+        <SubscriptionSuggestions className="lg:mb-4" max={2} onAdd={sub => { setFixedPrefill(sub); onNavigate('fixed-expenses') }} />
       )}
 
       {/* Tracking start date banner */}

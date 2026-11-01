@@ -5,8 +5,10 @@ import {
   X, Palette, Bell, Shield, Database, User, Monitor, Laptop, Smartphone, Tablet,
   CalendarClock, Users, PiggyBank, KeyRound, Hash, ChevronRight, Check, Sun, Moon, SunMoon,
   AlertTriangle, Trash2, RotateCcw, UserX, Ban, ArrowLeft,
+  ShieldCheck,
 } from 'lucide-react'
 import { CsvImportModal } from '../components/CsvImportModal'
+import { BackupModal } from '../components/BackupModal'
 import { GlassCard } from '../components/GlassCard'
 import { getNotificationsEnabled, setNotificationsEnabled } from '../hooks/useFixedExpenseNotifications'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -524,6 +526,7 @@ export function SettingsPage() {
 
   // Data section
   const [csvImportOpen, setCsvImportOpen] = useState(false)
+  const [backupModal, setBackupModal] = useState<'download' | 'restore' | null>(null)
 
   // Deactivation modals
   const [deactivateOpen, setDeactivateOpen] = useState(false)
@@ -1413,6 +1416,27 @@ export function SettingsPage() {
                 </div>
                 {exportError && <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-rose)', padding: '0 20px 12px', margin: 0 }}>{exportError}</p>}
               </SectionCard>
+              <SectionCard>
+                <SectionHeader icon={ShieldCheck} label={t.backup.sectionTitle} />
+                <div className="divide-y divide-white/[0.04] lg:grid lg:grid-cols-2 lg:gap-x-6 lg:divide-y-0">
+                  <SettingRow label={t.backup.downloadTitle} sublabel={t.backup.downloadSub}>
+                    <button
+                      onClick={() => setBackupModal('download')}
+                      style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                    >
+                      {t.backup.downloadTitle}
+                    </button>
+                  </SettingRow>
+                  <SettingRow label={t.backup.restoreTitle} sublabel={t.backup.restoreSub}>
+                    <button
+                      onClick={() => setBackupModal('restore')}
+                      style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                    >
+                      {t.backup.restore}
+                    </button>
+                  </SettingRow>
+                </div>
+              </SectionCard>
               </div>
             </>
           )}
@@ -1804,6 +1828,9 @@ export function SettingsPage() {
 
       {/* ── CSV IMPORT MODAL ── */}
       <CsvImportModal open={csvImportOpen} onClose={() => setCsvImportOpen(false)} />
+
+      {/* ── BACKUP / RESTORE MODAL ── */}
+      <BackupModal open={backupModal !== null} mode={backupModal ?? 'download'} onClose={() => setBackupModal(null)} />
 
       <PinSetupModal
         open={pinSetupOpen}

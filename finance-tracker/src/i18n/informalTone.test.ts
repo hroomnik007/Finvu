@@ -21,7 +21,7 @@ const PRONOUNS = /(^|[^\p{L}])([Vv]á[šm]|[Vv]aš\p{L}*|[Vv]ás|[Vv]ámi|ste|js
 // 2nd person plural verb endings (imperative and present), e.g. Skúste, Zadajte,
 // Přidejte, Můžete, máte. Words that merely end in -te and are not verbs are listed.
 const VERB = /(^|[^\p{L}])(\p{L}+(?:ajte|ejte|ujte|ijte|ite|ete|íte|áte|ťte|ďte|ňte|ste|šte|žte|čte|vte|lte|rte|ěte|ote))(?=[^\p{L}]|$)/u
-const NOT_VERBS = new Set(['mieste', 'ešte', 'limite', 'okamžite', 'importe', 'roste', 'místě', 'účte', 'Ešte'])
+const NOT_VERBS = new Set(['mieste', 'ešte', 'limite', 'okamžite', 'importe', 'roste', 'místě', 'účte', 'Ešte', 'formáte'])
 
 function formalHits(locale: unknown) {
   const hits: string[] = []

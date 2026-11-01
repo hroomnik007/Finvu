@@ -13,12 +13,14 @@ import authRouter from "./routes/auth";
 import transactionsRouter from "./routes/transactions";
 import categoriesRouter from "./routes/categories";
 import categoryRulesRouter from "./routes/categoryRules";
+import subscriptionsRouter from "./routes/subscriptions";
 import adminRouter from "./routes/admin";
 import sharedReportsRouter from "./routes/sharedReports";
 import householdsRouter from "./routes/households";
 import savingsRouter from "./routes/savings";
 import notificationsRouter from "./routes/notifications";
 import achievementsRouter from "./routes/achievements";
+import backupRouter from "./routes/backup";
 import { authenticateToken, AuthRequest } from "./middleware/authenticate";
 
 const app = express();
@@ -56,12 +58,16 @@ app.use(
 // gets a tight limit so oversized payloads are rejected early.
 const jsonDefault = express.json({ limit: "1mb" });
 const jsonAvatar = express.json({ limit: "15mb" });
+// A restored backup carries every transaction the user has
+const jsonBackup = express.json({ limit: "25mb" });
 // The 15mb parser runs only after the caller is authenticated — otherwise anyone
 // could make the server buffer 15mb bodies on that path.
 app.use((req, res, next) =>
   req.path === "/api/auth/avatar"
     ? authenticateToken(req as AuthRequest, res, () => jsonAvatar(req, res, next)).catch(next)
-    : jsonDefault(req, res, next)
+    : req.path === "/api/backup/restore"
+      ? authenticateToken(req as AuthRequest, res, () => jsonBackup(req, res, next)).catch(next)
+      : jsonDefault(req, res, next)
 );
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
@@ -80,12 +86,14 @@ app.use("/api/auth", authRouter);
 app.use("/api/transactions", transactionsRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/category-rules", categoryRulesRouter);
+app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/reports", sharedReportsRouter);
 app.use("/api/households", authenticateToken, householdsRouter);
 app.use("/api/savings", savingsRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/achievements", achievementsRouter);
+app.use("/api/backup", backupRouter);
 
 app.use(errorHandler);
 

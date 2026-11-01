@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>TATRSKBX20261031</MsgId><CreDtTm>2026-10-31T08:00:00</CreDtTm></GrpHdr>
+    <Stmt>
+      <Id>STMT-2026-10</Id>
+      <ElctrncSeqNb>10</ElctrncSeqNb>
+      <CreDtTm>2026-10-31T08:00:00</CreDtTm>
+      <FrToDt><FrDtTm>2026-10-01T00:00:00</FrDtTm><ToDtTm>2026-10-31T23:59:59</ToDtTm></FrToDt>
+      <Acct><Id><IBAN>SK3111000000002612345678</IBAN></Id><Ccy>EUR</Ccy></Acct>
+      <Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp><Amt Ccy="EUR">1520.40</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-10-01</Dt></Dt></Bal>
+      <!-- Salary: credit, debtor name, unstructured remittance -->
+      <Ntry>
+        <NtryRef>1</NtryRef>
+        <Amt Ccy="EUR">2150.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-10-10</Dt></BookgDt>
+        <ValDt><Dt>2026-10-10</Dt></ValDt>
+        <AcctSvcrRef>TB2026101000001</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>RCDT</Cd><SubFmlyCd>ESCT</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>MZDA102026</EndToEndId></Refs>
+          <AmtDtls><TxAmt><Amt Ccy="EUR">2150.00</Amt></TxAmt></AmtDtls>
+          <RltdPties><Dbtr><Nm>ACME Slovakia s.r.o.</Nm></Dbtr><DbtrAcct><Id><IBAN>SK8975000000000012345671</IBAN></Id></DbtrAcct></RltdPties>
+          <RmtInf><Ustrd>Mzda 09/2026</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <!-- Card payment: debit, no related parties, merchant only in AddtlNtryInf, booking date as DtTm -->
+      <Ntry>
+        <Amt Ccy="EUR">23.45</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><DtTm>2026-10-12T14:31:05+02:00</DtTm></BookgDt>
+        <ValDt><Dt>2026-10-11</Dt></ValDt>
+        <AcctSvcrRef>TB2026101200007</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd><Fmly><Cd>CCRD</Cd><SubFmlyCd>POSD</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <AddtlNtryInf>Platba kartou LIDL BRATISLAVA</AddtlNtryInf>
+      </Ntry>
+      <!-- Rent: debit, creditor name, remittance -->
+      <Ntry>
+        <Amt Ccy="EUR">650.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-10-15</Dt></BookgDt>
+        <ValDt><Dt>2026-10-15</Dt></ValDt>
+        <AcctSvcrRef>TB2026101500003</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>NOTPROVIDED</EndToEndId></Refs>
+          <RltdPties><Cdtr><Nm>Ján Prenajímateľ</Nm></Cdtr></RltdPties>
+          <RmtInf><Ustrd>Nájom október</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <!-- Pending: must be skipped -->
+      <Ntry>
+        <Amt Ccy="EUR">9.99</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>PDNG</Sts>
+        <BookgDt><Dt>2026-10-30</Dt></BookgDt>
+        <AddtlNtryInf>Platba kartou SPOTIFY</AddtlNtryInf>
+      </Ntry>
+      <!-- Reversal: must be skipped -->
+      <Ntry>
+        <Amt Ccy="EUR">23.45</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <RvslInd>true</RvslInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-10-13</Dt></BookgDt>
+        <AddtlNtryInf>Storno LIDL</AddtlNtryInf>
+      </Ntry>
+      <!-- Only a value date, no booking date; structured remittance -->
+      <Ntry>
+        <Amt Ccy="EUR">45.20</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <ValDt><Dt>2026-10-20</Dt></ValDt>
+        <NtryDtls><TxDtls>
+          <RltdPties><Cdtr><Nm>ZSE Energia, a.s.</Nm></Cdtr></RltdPties>
+          <RmtInf><Strd><CdtrRefInf><Ref>VS1234567890</Ref></CdtrRefInf></Strd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

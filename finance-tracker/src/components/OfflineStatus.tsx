@@ -38,7 +38,7 @@ export function OfflineStatus() {
     window.addEventListener('online', flush)
     document.addEventListener('visibilitychange', onVisible)
     const offFlushed = onQueueFlushed(r => {
-      for (const key of ['variableExpenses', 'incomes', 'fixedExpenses', 'summaryCards', 'dashboardChart', 'monthlySeries', 'transactions']) {
+      for (const key of ['variableExpenses', 'incomes', 'fixedExpenses', 'summaryCards', 'dashboardChart', 'monthlySeries', 'transactions', 'subscriptionSuggestions']) {
         void qc.invalidateQueries({ queryKey: [key] })
       }
       showToast(t.offline.synced.replace('{n}', String(r.sent)), { variant: 'success' })

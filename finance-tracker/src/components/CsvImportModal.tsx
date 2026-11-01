@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Upload, Check, Landmark, FileText, Trash2 } from 'lucide-react'
 import { createTransactionsBulk, findDuplicateRows } from '../api/transactions'
 import { getCategoryRules, saveCategoryRule, deleteCategoryRule } from '../api/categoryRules'
 import { useCategories } from '../hooks/useCategories'
 import { matchRule, suggestKeyword } from '../utils/importRules'
+import { CamtError, looksLikeXml, parseCamt053 } from '../utils/camt053'
 import { useTranslation } from '../i18n'
 import { useFormatters } from '../hooks/useFormatters'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -28,15 +29,19 @@ interface ImportRow {
   duplicate?: boolean
   /** Save a rule for this row's keyword on import. */
   remember?: boolean
+  /** Statement currency when it is not EUR (camt.053); such rows start unticked. */
+  currency?: string
 }
 
 interface CsvImportModalProps {
   open: boolean
   onClose: () => void
   filterType?: 'income' | 'expense'
+  /** A file handed over by the share sheet; read as soon as the modal opens. */
+  initialFile?: File | null
 }
 
-type BankFormat = 'revolut' | 'tatra' | 'csob' | 'slsp' | 'mbank' | 'bank365' | 'custom'
+type BankFormat = 'camt053' | 'revolut' | 'tatra' | 'csob' | 'slsp' | 'mbank' | 'bank365' | 'custom'
 
 // No brand/finance icon library (e.g. simple-icons) is installed in this project, and
 // adding one wasn't part of this fix — see task summary. Real bank logos aren't
@@ -59,6 +64,7 @@ function CustomIconBox() {
 }
 
 const BANK_FORMATS: { id: BankFormat; label: string }[] = [
+  { id: 'camt053', label: 'XML (camt.053)' },
   { id: 'revolut', label: 'Revolut' },
   { id: 'tatra',   label: 'Tatra banka' },
   { id: 'csob',    label: 'ČSOB' },
@@ -73,6 +79,8 @@ const BANK_FORMAT_OPTIONS = BANK_FORMATS.map(b => ({
   label: b.label,
   icon: b.id === 'custom' ? <CustomIconBox /> : <BankIconBox />,
 }))
+
+const XML_ACCEPT = '.xml,application/xml,text/xml'
 
 function parseDate(raw: string): string {
   if (!raw) return ''
@@ -409,15 +417,17 @@ function parseMBank(rows: CsvRow[]): ImportRow[] {
     .filter(r => r.amount > 0 && /^\d{4}-\d{2}-\d{2}$/.test(r.date))
 }
 
-export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProps) {
+export function CsvImportModal({ open, onClose, filterType, initialFile }: CsvImportModalProps) {
   const { t } = useTranslation()
-  const { formatAmount, formatDate } = useFormatters()
+  const { formatAmount, formatDate, formatNumber } = useFormatters()
   const [format, setFormat] = useState<BankFormat>('revolut')
   const [rows, setRows] = useState<ImportRow[]>([])
   const [importing, setImporting] = useState(false)
   const [importedCount, setImportedCount] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
+  // Notes about entries a camt.053 file had but that were left out or need a look.
+  const [notes, setNotes] = useState<string[]>([])
   // Custom CSV mapping
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
   const [rawCsvRows, setRawCsvRows] = useState<CsvRow[]>([])
@@ -427,6 +437,16 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
   const { categories } = useCategories()
   const { data: rules = [] } = useQuery({ queryKey: ['categoryRules'], queryFn: getCategoryRules, enabled: open })
   const { panelRef, titleId, dialogProps } = useModalA11y({ open, onClose: importing ? undefined : onClose })
+  const loadedFile = useRef<File | null>(null)
+
+  useEffect(() => {
+    if (!open || !initialFile || loadedFile.current === initialFile) return
+    loadedFile.current = initialFile
+    setFormat('camt053')
+    void handleFile(initialFile, 'camt053')
+  // Runs once per handed-over file; handleFile is recreated every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialFile])
 
   if (!open) return null
 
@@ -446,7 +466,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
   }
 
   function applyFilter(parsed: ImportRow[]): ImportRow[] {
-    return parsed.map(r => ({ ...r, selected: filterType ? r.type === filterType : true }))
+    return parsed.map(r => ({ ...r, selected: (filterType ? r.type === filterType : true) && !r.currency }))
   }
 
   function acceptParsed(parsed: ImportRow[]) {
@@ -463,13 +483,40 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
     }
   }
 
-  async function handleFile(file: File) {
+  async function handleFile(file: File, pickedFormat: BankFormat = format) {
     setError(null)
     setImportedCount(null)
     setRows([])
+    setNotes([])
+
+    // camt.053 XML is the same for every bank, so it is detected whatever format is picked.
+    const head = await file.slice(0, 512).text()
+    if (pickedFormat === 'camt053' || looksLikeXml(file.name, head)) {
+      try {
+        const result = parseCamt053(await file.text())
+        const n = (tpl: string, count: number) => tpl.replace('{n}', String(count))
+        const list: string[] = []
+        if (result.skippedPending) list.push(n(t.csv.camtPending, result.skippedPending))
+        if (result.skippedReversal) list.push(n(t.csv.camtReversal, result.skippedReversal))
+        if (result.skippedRepeat) list.push(n(t.csv.camtRepeat, result.skippedRepeat))
+        if (result.foreign) list.push(n(t.csv.camtForeign, result.foreign))
+        setNotes(list)
+        acceptParsed(result.rows.map(r => ({
+          date: r.date,
+          description: r.description,
+          amount: r.amount,
+          type: r.type,
+          selected: true,
+          ...(r.currency !== 'EUR' ? { currency: r.currency } : {}),
+        })))
+      } catch (e) {
+        setError(e instanceof CamtError && e.code === 'not-camt053' ? t.csv.camtNotStatement : t.csv.readError)
+      }
+      return
+    }
 
     // 365.bank ships a PDF statement instead of CSV — extract text, then parse.
-    if (format === 'bank365') {
+    if (pickedFormat === 'bank365') {
       try {
         const text = await extractPdfText(file)
         acceptParsed(parse365BankPDF(text))
@@ -481,7 +528,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
 
     // Revolut also offers a PDF statement alongside its CSV export — dispatch on the
     // uploaded file's extension since both are accepted for this bank.
-    if (format === 'revolut' && /\.pdf$/i.test(file.name)) {
+    if (pickedFormat === 'revolut' && /\.pdf$/i.test(file.name)) {
       try {
         const text = await extractPdfText(file)
         acceptParsed(parseRevolutPDF(text))
@@ -496,14 +543,14 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
 
     function handleParsed(result: ParseResult<CsvRow>) {
       const headers = result.meta.fields ?? []
-      if (format === 'custom') {
+      if (pickedFormat === 'custom') {
         setCsvHeaders(headers)
         setRawCsvRows(result.data)
         setCustomMapping({ date: headers[0] ?? '', description: headers[1] ?? '', amount: headers[2] ?? '' })
         return
       }
       let parsed: ImportRow[] = []
-      switch (format) {
+      switch (pickedFormat) {
         case 'revolut':  parsed = parseRevolut(result.data); break
         case 'tatra':    parsed = parseTatra(result.data); break
         case 'csob':     parsed = parseCSOB(result.data); break
@@ -513,7 +560,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
       acceptParsed(parsed)
     }
 
-    if (format === 'csob') {
+    if (pickedFormat === 'csob') {
       // ČSOB export starts with an account summary line + a blank line before the real
       // column header row — strip those so header:true picks up the actual columns.
       const text = await file.text()
@@ -530,7 +577,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
     Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
-      delimiter: format === 'mbank' ? ';' : undefined,
+      delimiter: pickedFormat === 'mbank' ? ';' : undefined,
       complete: handleParsed,
       error: () => setError(t.csv.readError),
     })
@@ -583,6 +630,8 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
         await Promise.allSettled(toRemember.map(r => saveCategoryRule(suggestKeyword(r.description), r.categoryId!)))
         await qc.invalidateQueries({ queryKey: ['categoryRules'] })
       }
+      // Lists, summaries and charts all read transactions, so refresh everything
+      void qc.invalidateQueries()
       setImportedCount(selected.length)
       setRows([])
     } catch {
@@ -593,7 +642,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
   }
 
   function reset() {
-    setRows([]); setError(null); setWarning(null); setCsvHeaders([]); setRawCsvRows([])
+    setRows([]); setError(null); setWarning(null); setNotes([]); setCsvHeaders([]); setRawCsvRows([])
   }
 
   const allSelected = rows.length > 0 && rows.every(r => r.selected)
@@ -626,7 +675,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
               <div style={{ marginBottom: 14 }}>
                 <SettingsDropdown
                   value={format}
-                  options={BANK_FORMAT_OPTIONS.map(o => o.value === 'custom' ? { ...o, label: t.csv.customCsv } : o)}
+                  options={BANK_FORMAT_OPTIONS.map(o => o.value === 'custom' ? { ...o, label: t.csv.customCsv } : o.value === 'camt053' ? { ...o, label: t.csv.camtLabel } : o)}
                   onChange={v => setFormat(v as BankFormat)}
                   size="sm"
                 />
@@ -641,12 +690,15 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
               >
                 <Upload size={24} style={{ color: 'var(--aurora-violet-text)', margin: '0 auto 8px', display: 'block' }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', marginBottom: 4 }}>
-                  {format === 'bank365' ? t.csv.dragHerePdf : format === 'revolut' ? t.csv.dragHereCsvOrPdf : t.csv.dragHere}
+                  {format === 'camt053' ? t.csv.dragHereXml : format === 'bank365' ? t.csv.dragHerePdf : format === 'revolut' ? t.csv.dragHereCsvOrPdf : t.csv.dragHere}
                 </p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.csv.orClick}</p>
-                <input ref={fileRef} type="file" accept={format === 'bank365' ? '.pdf,application/pdf' : format === 'revolut' ? '.csv,text/csv,.pdf,application/pdf' : '.csv,text/csv'} style={{ display: 'none' }}
+                <input ref={fileRef} type="file" accept={format === 'camt053' ? XML_ACCEPT : format === 'bank365' ? '.pdf,application/pdf' : format === 'revolut' ? `.csv,text/csv,.pdf,application/pdf,${XML_ACCEPT}` : `.csv,text/csv,${XML_ACCEPT}`} style={{ display: 'none' }}
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = '' }} />
               </div>
+              {format === 'camt053' && (
+                <p style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text3)', marginTop: 12, marginBottom: 0 }}>{t.csv.camtHint}</p>
+              )}
               {error && <p style={{ color: '#F87171', fontSize: 13, marginTop: 14, textAlign: 'center' }}>{error}</p>}
             </div>
           ) : csvHeaders.length > 0 ? (
@@ -678,6 +730,11 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
             <div>
               {warning && (
                 <p style={{ fontSize: 12, color: '#FBBF24', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '8px 12px', marginBottom: 12 }}>{warning}</p>
+              )}
+              {notes.length > 0 && (
+                <ul style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px 8px 26px', margin: '0 0 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {notes.map(note => <li key={note}>{note}</li>)}
+                </ul>
               )}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>{rows.length} {t.csv.records} · <span style={{ color: 'var(--violet)' }}>{selectedCount}</span> {t.csv.selectedCount}
@@ -713,6 +770,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                         </select>
                         {row.auto && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--violet)' }}>{t.csv.byRule}</span>}
                         {row.duplicate && <span style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24' }}>{t.csv.possibleDuplicate}</span>}
+                        {row.currency && <span style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24' }}>{t.csv.foreignCurrency.replace('{ccy}', row.currency)}</span>}
                         {row.categoryId && !row.auto && suggestKeyword(row.description) && (
                           <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text3)', cursor: 'pointer' }}>
                             <input type="checkbox" checked={!!row.remember} onChange={e => setRows(r => r.map((x, j) => (j === i ? { ...x, remember: e.target.checked } : x)))} />
@@ -722,7 +780,7 @@ export function CsvImportModal({ open, onClose, filterType }: CsvImportModalProp
                       </div>
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: row.type === 'income' ? '#34D399' : '#F87171', flexShrink: 0 }}>
-                      {row.type === 'income' ? '+' : '−'}{formatAmount(row.amount)}
+                      {row.type === 'income' ? '+' : '−'}{row.currency ? `${formatNumber(row.amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${row.currency}` : formatAmount(row.amount)}
                     </span>
                   </div>
                 ))}

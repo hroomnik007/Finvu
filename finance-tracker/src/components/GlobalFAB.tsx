@@ -109,15 +109,24 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
   )
 }
 
+/** Opens an add modal from outside (home-screen shortcut, share sheet). `id` changes per request. */
+export interface FabLaunch {
+  id: number
+  type: 'income' | 'variable'
+  amount?: string
+  note?: string
+}
+
 interface GlobalFABProps {
   month: number
   year: number
   showToast: (msg: string) => void
   currentPage: string
   openTrigger?: number
+  launch?: FabLaunch | null
 }
 
-export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: GlobalFABProps) {
+export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, launch }: GlobalFABProps) {
   const [activeModal, setActiveModal] = useState<ModalType>(null)
   const [showTypeSelector, setShowTypeSelector] = useState(false)
   const { panelRef: typeSelectorRef, titleId: typeSelectorTitleId, dialogProps: typeSelectorProps } = useModalA11y({ open: showTypeSelector, onClose: () => setShowTypeSelector(false) })
@@ -198,12 +207,12 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   const [savDeadline, setSavDeadline] = useState('')
 
   // ── Open / close helpers ──────────────────────────────────────────────────
-  function openModal(type: ModalType) {
+  function openModal(type: ModalType, prefill?: { amount?: string; note?: string }) {
     setTimeout(() => {
       if (type === 'income') {
-        setIncAmt(''); setIncLabel(''); setIncDate(defaultEntryDate(month, year)); setIncRecurring(false)
+        setIncAmt(prefill?.amount ?? ''); setIncLabel(prefill?.note ?? ''); setIncDate(defaultEntryDate(month, year)); setIncRecurring(false)
       } else if (type === 'variable') {
-        setVarAmt(''); setVarCatId(''); setVarNote(''); setVarDate(defaultEntryDate(month, year))
+        setVarAmt(prefill?.amount ?? ''); setVarCatId(''); setVarNote(prefill?.note ?? ''); setVarDate(defaultEntryDate(month, year))
         setVarNewCatMode(false); setVarNewCatName('')
       } else if (type === 'fixed') {
         setFixLabel(''); setFixAmt(''); setFixDay('1'); setFixCatId('')
@@ -217,6 +226,14 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger }: 
   }
 
   function closeModal() { setActiveModal(null) }
+
+  // A new launch object means a new request; the form is prefilled, never saved.
+  useEffect(() => {
+    if (!launch) return
+    openModal(launch.type, { amount: launch.amount, note: launch.note })
+  // openModal is recreated every render; only a new launch should reopen the form.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [launch])
 
   // ── Save handlers ─────────────────────────────────────────────────────────
   // CompactModal awaits these: while one is pending its button shows a spinner

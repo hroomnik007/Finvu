@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<c:Document xmlns:c="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <c:BkToCstmrStmt>
+    <c:GrpHdr><c:MsgId>GIBASKBX-2026-10</c:MsgId><c:CreDtTm>2026-10-31T06:00:00+01:00</c:CreDtTm></c:GrpHdr>
+    <c:Stmt>
+      <c:Id>2026-10-31-001</c:Id>
+      <c:Acct><c:Id><c:IBAN>SK0809000000005123456789</c:IBAN></c:Id><c:Ccy>EUR</c:Ccy></c:Acct>
+      <!-- Batched debit with three transactions, each with its own amount -->
+      <c:Ntry>
+        <c:Amt Ccy="EUR">120.50</c:Amt>
+        <c:CdtDbtInd>DBIT</c:CdtDbtInd>
+        <c:Sts><c:Cd>BOOK</c:Cd></c:Sts>
+        <c:BookgDt><c:Dt>2026-10-05</c:Dt></c:BookgDt>
+        <c:ValDt><c:Dt>2026-10-05</c:Dt></c:ValDt>
+        <c:AcctSvcrRef>SLSP-B-778</c:AcctSvcrRef>
+        <c:NtryDtls>
+          <c:Btch><c:NbOfTxs>3</c:NbOfTxs></c:Btch>
+          <c:TxDtls>
+            <c:Refs><c:AcctSvcrRef>SLSP-B-778-1</c:AcctSvcrRef><c:EndToEndId>E2E-1</c:EndToEndId></c:Refs>
+            <c:Amt Ccy="EUR">80.00</c:Amt>
+            <c:CdtDbtInd>DBIT</c:CdtDbtInd>
+            <c:RltdPties><c:Cdtr><c:Pty><c:Nm>Orange Slovensko</c:Nm></c:Pty></c:Cdtr></c:RltdPties>
+            <c:RmtInf><c:Ustrd>Faktúra 10/2026</c:Ustrd></c:RmtInf>
+          </c:TxDtls>
+          <c:TxDtls>
+            <c:Refs><c:EndToEndId>E2E-2</c:EndToEndId></c:Refs>
+            <c:Amt Ccy="EUR">30.50</c:Amt>
+            <c:RltdPties><c:Cdtr><c:Pty><c:Nm>Bratislavská vodárenská</c:Nm></c:Pty></c:Cdtr></c:RltdPties>
+          </c:TxDtls>
+          <c:TxDtls>
+            <c:Amt Ccy="EUR">10.00</c:Amt>
+            <c:RmtInf><c:Ustrd>Poplatok za vedenie účtu</c:Ustrd></c:RmtInf>
+          </c:TxDtls>
+        </c:NtryDtls>
+      </c:Ntry>
+      <!-- Credit with an ultimate debtor only and DtTm value date -->
+      <c:Ntry>
+        <c:Amt Ccy="EUR">50.00</c:Amt>
+        <c:CdtDbtInd>CRDT</c:CdtDbtInd>
+        <c:Sts><c:Cd>BOOK</c:Cd></c:Sts>
+        <c:BookgDt><c:DtTm>2026-10-08T09:15:00</c:DtTm></c:BookgDt>
+        <c:AcctSvcrRef>SLSP-77001</c:AcctSvcrRef>
+        <c:NtryDtls><c:TxDtls>
+          <c:Refs><c:EndToEndId>BABKA-OKT</c:EndToEndId></c:Refs>
+          <c:RltdPties><c:UltmtDbtr><c:Pty><c:Nm>Mária Nováková</c:Nm></c:Pty></c:UltmtDbtr></c:RltdPties>
+          <c:RmtInf><c:Ustrd>Pre vnúča</c:Ustrd></c:RmtInf>
+        </c:TxDtls></c:NtryDtls>
+      </c:Ntry>
+      <!-- Non-EUR entry -->
+      <c:Ntry>
+        <c:Amt Ccy="CZK">499.00</c:Amt>
+        <c:CdtDbtInd>DBIT</c:CdtDbtInd>
+        <c:Sts><c:Cd>BOOK</c:Cd></c:Sts>
+        <c:BookgDt><c:Dt>2026-10-09</c:Dt></c:BookgDt>
+        <c:AcctSvcrRef>SLSP-CZ-1</c:AcctSvcrRef>
+        <c:AddtlNtryInf>Platba kartou ALZA.CZ PRAHA</c:AddtlNtryInf>
+      </c:Ntry>
+      <!-- Information-only entry: must be skipped -->
+      <c:Ntry>
+        <c:Amt Ccy="EUR">15.00</c:Amt>
+        <c:CdtDbtInd>DBIT</c:CdtDbtInd>
+        <c:Sts><c:Cd>INFO</c:Cd></c:Sts>
+        <c:BookgDt><c:Dt>2026-10-31</c:Dt></c:BookgDt>
+      </c:Ntry>
+      <!-- Batch whose transactions have no own amounts: kept as one row -->
+      <c:Ntry>
+        <c:Amt Ccy="EUR">42.00</c:Amt>
+        <c:CdtDbtInd>DBIT</c:CdtDbtInd>
+        <c:Sts><c:Cd>BOOK</c:Cd></c:Sts>
+        <c:BookgDt><c:Dt>2026-10-21</c:Dt></c:BookgDt>
+        <c:AcctSvcrRef>SLSP-B-900</c:AcctSvcrRef>
+        <c:AddtlNtryInf>Hromadný príkaz</c:AddtlNtryInf>
+        <c:NtryDtls>
+          <c:TxDtls><c:RltdPties><c:Cdtr><c:Pty><c:Nm>Škôlka Slniečko</c:Nm></c:Pty></c:Cdtr></c:RltdPties></c:TxDtls>
+          <c:TxDtls><c:RltdPties><c:Cdtr><c:Pty><c:Nm>ZUŠ Bratislava</c:Nm></c:Pty></c:Cdtr></c:RltdPties></c:TxDtls>
+        </c:NtryDtls>
+      </c:Ntry>
+    </c:Stmt>
+    <!-- A second statement repeats the Orange transaction (overlapping export) -->
+    <c:Stmt>
+      <c:Id>2026-10-31-002</c:Id>
+      <c:Acct><c:Id><c:IBAN>SK0809000000005123456789</c:IBAN></c:Id><c:Ccy>EUR</c:Ccy></c:Acct>
+      <c:Ntry>
+        <c:Amt Ccy="EUR">80.00</c:Amt>
+        <c:CdtDbtInd>DBIT</c:CdtDbtInd>
+        <c:Sts><c:Cd>BOOK</c:Cd></c:Sts>
+        <c:BookgDt><c:Dt>2026-10-05</c:Dt></c:BookgDt>
+        <c:NtryDtls><c:TxDtls>
+          <c:Refs><c:AcctSvcrRef>SLSP-B-778-1</c:AcctSvcrRef></c:Refs>
+          <c:RltdPties><c:Cdtr><c:Pty><c:Nm>Orange Slovensko</c:Nm></c:Pty></c:Cdtr></c:RltdPties>
+        </c:TxDtls></c:NtryDtls>
+      </c:Ntry>
+    </c:Stmt>
+  </c:BkToCstmrStmt>
+</c:Document>
