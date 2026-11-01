@@ -19,3 +19,22 @@ export async function verifyReauth(
   if (user.passwordHash) return passwordOk();
   return true;
 }
+
+// Passwordless account with no PIN yet (Google-only) setting its very first PIN:
+// there is no password/PIN to confirm, so the proof is a Google token the user
+// just obtained for the linked Google account — the same rule deleteAccount
+// applies (account match + freshness). `google` is the verifyGoogleAccessToken result.
+export function checkGoogleReauth(
+  user: { googleId: string | null },
+  google: { ok: true; sub: string; expiresIn: number } | { ok: false; status: number; error: string },
+  minExpiresIn: number,
+): { ok: true } | { ok: false; status: number; error: string } {
+  if (!google.ok) return google;
+  if (!user.googleId || google.sub !== user.googleId) {
+    return { ok: false, status: 401, error: "Prihlás sa Google účtom, ktorý patrí k tomuto účtu." };
+  }
+  if (google.expiresIn < minExpiresIn) {
+    return { ok: false, status: 401, error: "Prihlásenie cez Google je príliš staré. Skús to znova." };
+  }
+  return { ok: true };
+}

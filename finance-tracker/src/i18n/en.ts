@@ -995,6 +995,7 @@ export const en: Translations = {
     identityTitle: 'Verify your identity',
     identityPasswordHint: 'To set a PIN, enter your password first.',
     identityPinHint: 'To change your PIN, enter your current PIN first.',
+    identityGoogleHint: 'To set a PIN, first sign in with Google again.',
   },
   search: {
     title: 'Search transactions',

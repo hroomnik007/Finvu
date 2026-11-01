@@ -68,7 +68,8 @@ describe('offline wiring', () => {
   })
   it('an offline start opens the cached account only on a network error', () => {
     const s = src('context/AuthContext.tsx')
-    expect(s).toMatch(/isOfflineError\(err\) \? await kvGet<AuthUser>\(OFFLINE_USER_KEY\)/)
+    expect(s).toMatch(/resolveStartupFailure\(err, \{\s*readCachedUser: \(\) => kvGet<AuthUser>\(OFFLINE_USER_KEY\),\s*clearUserData,/)
+    expect(src('lib/authStartup.ts')).toContain('if (isOfflineError(err)) {')
     expect(s).toContain("window.addEventListener('online', onOnline)")
   })
   it('strings exist in all five languages, informal in sk/cs', () => {

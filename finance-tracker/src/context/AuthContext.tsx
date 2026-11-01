@@ -26,7 +26,7 @@ import { applyLanguageSetting } from './SettingsContext'
 import type { AuthUser } from '../types'
 import type { DeleteAccountProof } from '../api/auth'
 import { clearUserData, noteSignedInUser, OFFLINE_USER_KEY } from '../lib/userDataReset'
-import { isOfflineError } from '../lib/offlineQueue'
+import { resolveStartupFailure } from '../lib/authStartup'
 import { kvGet, kvSet } from '../lib/kvStore'
 import { setServerReachable } from '../lib/connectivity'
 
@@ -132,8 +132,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // No connection at all (not a rejected session): open the last
         // signed-in account with its cached data; the session is checked
         // again as soon as the device is back online.
-        const cached = isOfflineError(err) ? await kvGet<AuthUser>(OFFLINE_USER_KEY).catch(() => undefined) : undefined
-        if (cached && typeof cached === 'object' && typeof cached.id === 'string') {
+        const cached = await resolveStartupFailure(err, {
+          readCachedUser: () => kvGet<AuthUser>(OFFLINE_USER_KEY),
+          clearUserData,
+        })
+        if (cached) {
           offlineStart = true
           setServerReachable(false)
           noteSignedInUser(cached.id)

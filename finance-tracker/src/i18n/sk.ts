@@ -993,6 +993,7 @@ export const sk = {
     identityTitle: 'Overenie totožnosti',
     identityPasswordHint: 'Pre nastavenie PIN kódu najprv zadaj svoje heslo.',
     identityPinHint: 'Pre zmenu PIN kódu najprv zadaj aktuálny PIN.',
+    identityGoogleHint: 'Pre nastavenie PIN kódu sa najprv znova prihlás cez Google.',
   },
   search: {
     title: 'Hľadať transakcie',

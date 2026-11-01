@@ -42,3 +42,6 @@ public/workbox-*.js
 # Unrelated local projects
 Finvu/
 privyzap_phase1/
+
+# Foreign screenshots folder (not part of the project)
+rev/

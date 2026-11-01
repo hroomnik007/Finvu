@@ -140,8 +140,10 @@ export async function pinLogin(email: string, pin: string): Promise<{ user: impo
 // currentPassword/currentPin: re-auth factor required by the backend before
 // planting/replacing a PIN (a bare access token is no longer enough — see
 // security audit run-1). Pass whichever the caller already collected.
-export async function savePin(pin: string, currentPassword?: string, currentPin?: string): Promise<void> {
-  await apiClient.patch('/api/auth/pin', { pin, currentPassword, currentPin })
+// googleAccessToken: a Google-only account setting its first PIN proves itself
+// with a token just obtained for the linked Google account (audit run-2).
+export async function savePin(pin: string, currentPassword?: string, currentPin?: string, googleAccessToken?: string): Promise<void> {
+  await apiClient.patch('/api/auth/pin', { pin, currentPassword, currentPin, googleAccessToken })
 }
 
 export async function deletePin(currentPassword?: string, currentPin?: string): Promise<void> {

@@ -995,6 +995,7 @@ export const hu: Translations = {
     identityTitle: 'Személyazonosság ellenőrzése',
     identityPasswordHint: 'A PIN beállításához először add meg a jelszavadat.',
     identityPinHint: 'A PIN módosításához először add meg a jelenlegi PIN-t.',
+    identityGoogleHint: 'A PIN beállításához először jelentkezz be újra a Google-lal.',
   },
   search: {
     title: 'Tranzakciók keresése',

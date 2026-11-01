@@ -39,6 +39,7 @@ import { releaseOwnedHouseholds } from "../lib/household";
 import { isLocked, recordFailure, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
 import { authError } from "../lib/authErrors";
 import { verifyGoogleAccessToken, FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN } from "../lib/googleToken";
+import { checkGoogleReauth } from "../lib/reauth";
 import { verifyPasskeyReauth } from "../lib/passkeyReauth";
 
 // Emails are stored and matched lower-case. Legacy rows may still be mixed-case,
@@ -1028,7 +1029,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
 export async function updatePin(req: AuthRequest, res: Response): Promise<void> {
   if (rejectDemo(req, res)) return;
   const userId = req.userId!;
-  const { pin, currentPassword, currentPin } = req.body as { pin?: string; currentPassword?: string; currentPin?: string };
+  const { pin, currentPassword, currentPin, googleAccessToken } = req.body as { pin?: string; currentPassword?: string; currentPin?: string; googleAccessToken?: unknown };
   if (!pin || typeof pin !== 'string' || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
     res.status(400).json({ error: "PIN musí byť 4-miestne číslo." });
     return;
@@ -1042,8 +1043,9 @@ export async function updatePin(req: AuthRequest, res: Response): Promise<void> 
   // stolen token could otherwise silently set a PIN as a durable backdoor).
   // Whichever factor the account actually has is accepted: current PIN if
   // one is already set, current password if the account has one. A
-  // Google-only account setting its very first PIN has no factor to check —
-  // consistent with deleteAccount's existing exemption for the same case.
+  // Google-only account setting its very first PIN has no password/PIN to
+  // check: it must prove itself with a fresh token for the linked Google
+  // account instead (security audit run-2), as deleteAccount does.
   if (user.pinHash) {
     const pinOk = typeof currentPin === 'string' && currentPin.length === 4 && await bcrypt.compare(currentPin, user.pinHash);
     const pwOk = !pinOk && !!user.passwordHash && typeof currentPassword === 'string' && await bcrypt.compare(currentPassword, user.passwordHash);
@@ -1055,6 +1057,17 @@ export async function updatePin(req: AuthRequest, res: Response): Promise<void> 
     const pwOk = typeof currentPassword === 'string' && await bcrypt.compare(currentPassword, user.passwordHash);
     if (!pwOk) {
       res.status(401).json({ error: "Nesprávne heslo." });
+      return;
+    }
+  } else {
+    if (googleAccessToken === undefined) {
+      res.status(400).json({ error: "Pre nastavenie PIN-u potvrď svoju totožnosť.", code: "REAUTH_REQUIRED", methods: ["google"] });
+      return;
+    }
+    const google = await verifyGoogleAccessToken(googleAccessToken);
+    const verdict = checkGoogleReauth(user, google, FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN);
+    if (!verdict.ok) {
+      res.status(verdict.status).json({ error: verdict.error });
       return;
     }
   }

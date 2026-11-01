@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { describe, expect, it } from "vitest";
-import { verifyReauth } from "./reauth";
+import { checkGoogleReauth, verifyReauth } from "./reauth";
 
 const hash = (v: string) => bcrypt.hashSync(v, 4);
 
@@ -36,5 +36,21 @@ describe("verifyReauth", () => {
 
   it("ignores values that are not strings", async () => {
     expect(await verifyReauth(withPin, { currentPin: 1234, currentPassword: { $ne: "" } })).toBe(false);
+  });
+});
+
+describe("checkGoogleReauth", () => {
+  const ok = { ok: true as const, sub: "g1", expiresIn: 3599 };
+  const MIN = 55 * 60;
+  it("accepts a fresh token for the linked account", () => {
+    expect(checkGoogleReauth({ googleId: "g1" }, ok, MIN)).toEqual({ ok: true });
+  });
+  it("rejects another Google account or an account without a linked one", () => {
+    expect(checkGoogleReauth({ googleId: "g2" }, ok, MIN)).toMatchObject({ ok: false, status: 401 });
+    expect(checkGoogleReauth({ googleId: null }, ok, MIN)).toMatchObject({ ok: false, status: 401 });
+  });
+  it("rejects a stale token and passes verification failures through", () => {
+    expect(checkGoogleReauth({ googleId: "g1" }, { ...ok, expiresIn: MIN - 1 }, MIN)).toMatchObject({ ok: false, status: 401 });
+    expect(checkGoogleReauth({ googleId: "g1" }, { ok: false, status: 503, error: "x" }, MIN)).toEqual({ ok: false, status: 503, error: "x" });
   });
 });

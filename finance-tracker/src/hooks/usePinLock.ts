@@ -156,8 +156,8 @@ export function usePinLock() {
     }
   }, [user])
 
-  const setupPin = useCallback(async (pin: string, currentPassword?: string, currentPin?: string) => {
-    await savePin(pin, currentPassword, currentPin)
+  const setupPin = useCallback(async (pin: string, currentPassword?: string, currentPin?: string, googleAccessToken?: string) => {
+    await savePin(pin, currentPassword, currentPin, googleAccessToken)
     localStorage.setItem(LOCK_METHOD_KEY, 'pin')
     sessionStorage.setItem(PIN_SESSION_KEY, 'true')
     setLockMethod('pin')

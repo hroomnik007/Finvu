@@ -71,13 +71,16 @@ const FIXED_DEFS = [
   { desc: "Životné poistenie",   cat: "Životné poistenie", amount: "35",   day: 15 },
 ];
 
-async function getOrCreateUser(email: string, name: string): Promise<typeof users.$inferSelect> {
+// Only demo@finvu.sk is a public, restricted demo login (rejectDemo). The three
+// household helpers are never signed into, so they get no password at all
+// (passwordHash null => password sign-in is impossible) instead of the public one.
+async function getOrCreateUser(email: string, name: string, publicPassword = false): Promise<typeof users.$inferSelect> {
   const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (existing) {
     await db.update(users).set({ name }).where(eq(users.id, existing.id));
     return { ...existing, name };
   }
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+  const passwordHash = publicPassword ? await bcrypt.hash(DEMO_PASSWORD, 10) : null;
   const [created] = await db.insert(users).values({
     email,
     passwordHash,
@@ -93,7 +96,7 @@ async function main() {
   console.log("=== Seeding demo account ===");
 
   // ── 1. Create/get users ──────────────────────────────────────────────────
-  const peter = await getOrCreateUser(DEMO_EMAIL,  "Demo");
+  const peter = await getOrCreateUser(DEMO_EMAIL,  "Demo", true);
   const lucia = await getOrCreateUser(DEMO1_EMAIL, "Demo 1");
   const tomas = await getOrCreateUser(DEMO2_EMAIL, "Demo 2");
   const adam  = await getOrCreateUser(DEMO3_EMAIL, "Demo 3");

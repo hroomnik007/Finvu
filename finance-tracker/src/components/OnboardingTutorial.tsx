@@ -255,9 +255,9 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
       <PinSetupModal
         open={pinSetupOpen}
         onClose={() => setPinSetupOpen(false)}
-        identityCheck={user?.has_password ? 'password' : null}
+        identityCheck={user?.has_password ? 'password' : (user?.has_google ? 'google' : null)}
         onSetPin={async (pin, identity) => {
-          await setupPin(pin, identity?.currentPassword, identity?.currentPin)
+          await setupPin(pin, identity?.currentPassword, identity?.currentPin, identity?.googleAccessToken)
           setPinDone(true)
         }}
       />

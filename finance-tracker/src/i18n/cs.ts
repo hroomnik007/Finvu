@@ -995,6 +995,7 @@ export const cs: Translations = {
     identityTitle: 'Ověření totožnosti',
     identityPasswordHint: 'Pro nastavení PIN kódu nejprve zadej své heslo.',
     identityPinHint: 'Pro změnu PIN kódu nejprve zadej aktuální PIN.',
+    identityGoogleHint: 'Pro nastavení PIN kódu se nejprve znovu přihlas přes Google.',
   },
   search: {
     title: 'Hledat transakce',

@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react'
+import { useGoogleLogin } from '@react-oauth/google'
 import { X, Delete, Check } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useModalA11y } from '../hooks/useModalA11y'
 
+export interface PinIdentity { currentPassword?: string; currentPin?: string; googleAccessToken?: string }
+
 interface PinSetupModalProps {
   open: boolean
   onClose: () => void
-  onSetPin: (pin: string, identity?: { currentPassword?: string; currentPin?: string }) => Promise<void>
+  onSetPin: (pin: string, identity?: PinIdentity) => Promise<void>
   /**
    * Which re-auth factor the backend will require before accepting the new
    * PIN (see security audit run-1 — a valid access token alone is no longer
    * enough to plant/replace a PIN). 'pin' when the account already has one
    * (asks for it via the same keypad UI); 'password' for a first-time setup
-   * on a password account. Omit/null when neither applies (e.g. a
-   * Google-only account setting its very first PIN — nothing to confirm).
+   * on a password account; 'google' for a Google-only account setting its
+   * very first PIN (signs in to the linked Google account again, as the
+   * delete-account flow does). Omit/null when nothing applies.
    */
-  identityCheck?: 'pin' | 'password' | null
+  identityCheck?: 'pin' | 'password' | 'google' | null
 }
 
 const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫']
@@ -25,6 +29,7 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
   const [step, setStep] = useState<'identity' | 'enter' | 'confirm' | 'success'>(identityCheck ? 'identity' : 'enter')
   const [identityPin, setIdentityPin] = useState('')
   const [identityPassword, setIdentityPassword] = useState('')
+  const [identityGoogleToken, setIdentityGoogleToken] = useState('')
   const [identityError, setIdentityError] = useState<string | null>(null)
   const [first, setFirst] = useState('')
   const [pin, setPin] = useState('')
@@ -66,7 +71,7 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
     return () => window.removeEventListener('keydown', onKey)
   }, [open, step, identityCheck, saving])
 
-  async function trySetPin(newPin: string, identity?: { currentPassword?: string; currentPin?: string }) {
+  async function trySetPin(newPin: string, identity?: PinIdentity) {
     setSaving(true)
     try {
       await onSetPin(newPin, identity)
@@ -74,7 +79,7 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
       setStep('success')
       setTimeout(() => {
         setStep(identityCheck ? 'identity' : 'enter'); setFirst(''); setPin('')
-        setIdentityPin(''); setIdentityPassword(''); setIdentityError(null)
+        setIdentityPin(''); setIdentityPassword(''); setIdentityGoogleToken(''); setIdentityError(null)
         onClose()
       }, 1500)
     } catch {
@@ -83,8 +88,9 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
       if (identityCheck) {
         // Most likely cause: wrong current password/PIN — send the user back
         // to re-enter it rather than silently failing on the new-PIN screen.
-        setIdentityError(identityCheck === 'password' ? t.auth.wrongPassword : t.profile.incorrectPin)
+        setIdentityError(identityCheck === 'password' ? t.auth.wrongPassword : identityCheck === 'google' ? t.auth.googleError : t.profile.incorrectPin)
         setIdentityPin('')
+        setIdentityGoogleToken('') // the server wants a brand-new token on the next try
         setStep('identity')
       } else {
         // No identity factor was required (e.g. Google-only first PIN) — a
@@ -115,6 +121,7 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
       } else {
         const identity = identityCheck === 'pin' ? { currentPin: identityPin }
           : identityCheck === 'password' ? { currentPassword: identityPassword }
+          : identityCheck === 'google' ? { googleAccessToken: identityGoogleToken }
           : undefined
         trySetPin(pin, identity)
       }
@@ -122,17 +129,29 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin])
 
+  // Implicit flow: every popup sign-in yields a brand-new access token, which
+  // is what the server checks for freshness and for the linked Google account.
+  const googleReauth = useGoogleLogin({
+    onSuccess: tokenResponse => {
+      setIdentityGoogleToken(tokenResponse.access_token)
+      setIdentityError(null)
+      setStep('enter')
+    },
+    onError: () => setIdentityError(t.auth.googleError),
+    onNonOAuthError: () => { /* popup closed / blocked */ },
+  })
+
   const { panelRef, titleId, dialogProps } = useModalA11y({
     open, resetKey: step,
     onClose: saving || step === 'success' ? undefined : () => handleClose(),
-    initialFocus: step === 'identity' && identityCheck !== 'pin' ? 'field' : 'heading',
+    initialFocus: step === 'identity' && identityCheck === 'password' ? 'field' : 'heading',
   })
 
   if (!open) return null
 
   function handleClose() {
     setStep(identityCheck ? 'identity' : 'enter'); setFirst(''); setPin('')
-    setIdentityPin(''); setIdentityPassword(''); setIdentityError(null)
+    setIdentityPin(''); setIdentityPassword(''); setIdentityGoogleToken(''); setIdentityError(null)
     onClose()
   }
 
@@ -179,7 +198,19 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
           </div>
 
           <div style={{ padding: '32px 24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
-            {identityCheck === 'password' ? (
+            {identityCheck === 'google' ? (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>{t.pin.identityGoogleHint}</p>
+                {identityError && <p style={{ fontSize: 12, color: '#f87171', margin: 0, textAlign: 'center' }}>{identityError}</p>}
+                <button
+                  type="button"
+                  onClick={() => googleReauth()}
+                  style={{ height: 44, width: '100%', borderRadius: 10, fontSize: 14, fontWeight: 600, background: 'var(--violet)', color: 'white', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  {t.auth.continueWithGoogle}
+                </button>
+              </>
+            ) : identityCheck === 'password' ? (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>{t.pin.identityPasswordHint}</p>
                 {identityError && <p style={{ fontSize: 12, color: '#f87171', margin: 0, textAlign: 'center' }}>{identityError}</p>}

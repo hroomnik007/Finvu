@@ -995,6 +995,7 @@ export const pl: Translations = {
     identityTitle: 'Weryfikacja tożsamości',
     identityPasswordHint: 'Aby ustawić PIN, najpierw wpisz swoje hasło.',
     identityPinHint: 'Aby zmienić PIN, najpierw wpisz obecny PIN.',
+    identityGoogleHint: 'Aby ustawić PIN, najpierw zaloguj się ponownie przez Google.',
   },
   search: {
     title: 'Szukaj transakcji',
