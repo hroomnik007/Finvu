@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { sk } from './sk'
 import { cs } from './cs'
+import { hu } from './hu'
 
 // Finvu speaks to the user informally ("ty") in Slovak and Czech. These checks
 // catch formal "vy" forms (2nd person plural verbs and Váš/Vaše/Vám) creeping
@@ -70,5 +71,34 @@ describe('informal tone (ty) in sk/cs', () => {
       return src.split('\n').filter((l) => bad.test(l)).map((l) => `${f}: ${l.trim()}`)
     })
     expect(hits).toEqual([])
+  })
+})
+
+// Hungarian uses tegezés too. Catch the formal (magázó) imperatives, Ön/Önnek,
+// "Kérjük," openers and the 3rd-person polite verb forms used for "you".
+const HU_FORMAL = /(^|[^\p{L}])(Ön|Önnek|Önt|Öné|Kérjük|[Kk]attintson|[Aa]dja|[Aa]djon|[Vv]álasszon|[Vv]álassza|[Pp]róbálja|[Ee]llenőrizze|[Tt]öltse|[Áá]llítsa|[Áá]llítson|[Hh]ozzon|[Hh]ozza|[Íí]rja|[Hh]úzza|[Jj]elentkezzen|[Rr]egisztráljon|[Kk]ezdjen|[Tt]örli|[Tt]örölje|[Ee]ltávolítja|[Ff]elülírja|[Ff]olytatja|[Ss]zeretne|[Jj]elölje|[Oo]ssza|[Ee]rősítse|[Ff]iókja|[Aa]datai|bejelentkezhet|[Ee]mlékezzen|[Mm]utassa|[Hh]agyja)(?=[^\p{L}]|$)/u
+// Third-person "adja meg"/"törli" are fine where the subject is someone else.
+const HU_ALLOWED = new Set(['household.inviteCodeDesc', 'backup.modeMergeSub', 'expenses.categories.autoLimitDesc',
+  'settings.dangerResetDesc', 'settings.deleteAccountSub', 'backup.modeReplaceSub'])
+
+function huFormalHits(locale: unknown) {
+  return strings(locale)
+    .filter(([key]) => !HU_ALLOWED.has(key))
+    .flatMap(([key, value]) => {
+      const m = value.match(HU_FORMAL)
+      return m ? [`${key}: "${m[2]}" in ${JSON.stringify(value)}`] : []
+    })
+}
+
+describe('informal tone (tegezés) in hu', () => {
+  it('Hungarian translations use no formal forms', () => {
+    expect(huFormalHits(hu)).toEqual([])
+  })
+  it('the detector catches formal Hungarian', () => {
+    expect(huFormalHits({ a: 'Kérjük, próbálja újra.', b: 'vagy kattintson ide', c: 'Az Ön neve', d: 'Biztosan törli?' })).toHaveLength(4)
+    expect(huFormalHits({ a: 'Próbáld újra.', b: 'vagy kattints ide', c: 'A neved', d: 'Biztosan törlöd?' })).toEqual([])
+  })
+  it('the register name placeholder is informal', () => {
+    expect(hu.auth.namePlaceholder).toBe('A neved')
   })
 })
