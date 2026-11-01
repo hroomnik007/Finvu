@@ -34,7 +34,7 @@ describe('auth form autofill attributes', () => {
   })
 
   it('PIN re-auth fields never offer saved passwords', () => {
-    for (const f of ['components/OnboardingTutorial.tsx', 'components/PasskeySection.tsx', 'components/DeleteAccountModal.tsx']) {
+    for (const f of ['components/OnboardingTutorial.tsx', 'components/DeleteAccountModal.tsx']) {
       expect(src(f)).toMatch(/autoComplete=\{[a-zA-Z]+ === 'pin' \? 'off' : 'current-password'\}/)
     }
   })

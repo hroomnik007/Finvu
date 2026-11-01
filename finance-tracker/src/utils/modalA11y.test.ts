@@ -193,9 +193,8 @@ describe('modal wiring', () => {
     expect(h).toMatch(/passive: false/)
   })
 
-  it('toasts stay announced while a modal is open; inner Esc users claim the key', () => {
+  it('toasts stay announced while a modal is open', () => {
     expect(src('components/ToastContainer.tsx')).toContain('data-modal-keep')
-    expect(src('components/PasskeySection.tsx')).toMatch(/'Escape'\) \{ e\.preventDefault\(\)/)
   })
 
   it('focus returns to an opener that unmounted and came back (page FABs)', () => {

@@ -15,7 +15,6 @@ import { useModalA11y } from '../hooks/useModalA11y'
 import { updateWeeklyEmail, updateUserSettings, changePassword, getSessions, deleteSessionById, deactivateAccount as apiDeactivateAccount, getPinDevices, deletePinDevice } from '../api/auth'
 import type { PinDevice } from '../api/auth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { PasskeySection } from '../components/PasskeySection'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
 import { parseUserAgent } from '../utils/parseUserAgent'
 import { getAllTransactions } from '../api/allTransactions'
@@ -1603,8 +1602,8 @@ export function SettingsPage() {
 
       {/* ── ZARIADENIA A RELÁCIE MODAL — 2 nezávislé sekcie: Aktívne relácie + PIN rýchly prístup ── */}
       {devicesModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => setDevicesModalOpen(false)}>
-          <div ref={devicesModal.panelRef} {...devicesModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 420, maxHeight: '80vh', overflowY: 'auto' }} className="modal-in" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fade-in" style={{ background: 'rgba(4,3,8,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} onClick={() => setDevicesModalOpen(false)}>
+          <div ref={devicesModal.panelRef} {...devicesModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-bg-image)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 420, maxHeight: '80vh', overflowY: 'auto' }} className="modal-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.devicesAndSessionsTitle}</h2>
               <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setDevicesModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
@@ -1717,8 +1716,6 @@ export function SettingsPage() {
                 )}
               </>
             )}
-
-            <PasskeySection />
           </div>
         </div>
       )}
