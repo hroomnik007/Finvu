@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from 'react'
 export function DayHeader({ dayNum, weekday, full, summary }: { dayNum: number; weekday: string; full: string; summary: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '10px 2px 8px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }} title={full}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, position: 'relative' }} title={full}>
         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
         <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{weekday}</span>
         <span className="sr-only">{full}</span>
