@@ -112,8 +112,9 @@ export async function deleteSessionById(sessionId: string): Promise<void> {
   await apiClient.delete(`/api/auth/sessions/${sessionId}`)
 }
 
-export async function deactivateAccount(): Promise<void> {
-  await apiClient.post('/api/auth/deactivate')
+// Same fresh proof of identity as deleteAccount (see DeleteAccountProof).
+export async function deactivateAccount(proof: DeleteAccountProof): Promise<void> {
+  await apiClient.post('/api/auth/deactivate', proof)
 }
 
 export async function createSharedReport(data: string, expiresInHours?: number): Promise<{ token: string }> {

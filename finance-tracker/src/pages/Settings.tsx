@@ -12,7 +12,7 @@ import { BackupModal } from '../components/BackupModal'
 import { GlassCard } from '../components/GlassCard'
 import { getNotificationsEnabled, setNotificationsEnabled } from '../hooks/useFixedExpenseNotifications'
 import { useModalA11y } from '../hooks/useModalA11y'
-import { updateWeeklyEmail, updateUserSettings, changePassword, getSessions, deleteSessionById, deactivateAccount as apiDeactivateAccount, getPinDevices, deletePinDevice } from '../api/auth'
+import { updateWeeklyEmail, updateUserSettings, changePassword, getSessions, deleteSessionById, getPinDevices, deletePinDevice } from '../api/auth'
 import type { PinDevice } from '../api/auth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
@@ -251,7 +251,7 @@ export function SettingsPage() {
   const { t, locale } = useTranslation()
   const CURRENCIES = useMemo(() => currencyOptions(locale), [locale])
   const pluralForm = (n: number, one: string, few: string, many: string) => pluralFormOf(n, { one, few, many }, locale)
-  const { user, updateMonthlyEmail, refreshUser, logout } = useAuth()
+  const { user, updateMonthlyEmail, refreshUser } = useAuth()
   const { setupPin, hasPin, removePin } = usePinLockContext()
 
   const compactStorageKey = window.innerWidth < 768 ? 'finvu_compact_mobile' : 'finvu_compact_desktop'
@@ -462,9 +462,6 @@ export function SettingsPage() {
   }
 
   // Deactivate account
-  const [deactivateConfirm, setDeactivateConfirm] = useState('')
-  const [deactivateError, setDeactivateError] = useState<string | null>(null)
-  const [isDeactivating, setIsDeactivating] = useState(false)
 
   async function handleChangePassword() {
     setChangePwError(null)
@@ -799,7 +796,6 @@ export function SettingsPage() {
   // Inline modals: shared focus/Esc/inert/scroll-lock behaviour (Esc is off while busy).
   const pinRemoveModal = useModalA11y({ open: pinRemoveOpen, onClose: pinRemoveLoading ? undefined : () => setPinRemoveOpen(false) })
   const dangerModal = useModalA11y({ open: !!dangerAction, onClose: dangerLoading ? undefined : () => setDangerAction(null) })
-  const deactivateModal = useModalA11y({ open: deactivateOpen, onClose: () => setDeactivateOpen(false) })
   const changePwModal = useModalA11y({ open: changePwOpen, onClose: changePwLoading ? undefined : () => setChangePwOpen(false) })
   const devicesModal = useModalA11y({ open: devicesModalOpen, onClose: () => setDevicesModalOpen(false) })
   const deactivationModal = useModalA11y({ open: deactivationModalOpen, onClose: () => setDeactivationModalOpen(false) })
@@ -1518,51 +1514,7 @@ export function SettingsPage() {
       )}
 
       {/* ── DEACTIVATE ACCOUNT MODAL ── */}
-      {deactivateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
-          <div ref={deactivateModal.panelRef} {...deactivateModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
-            <div className="flex items-center justify-between mb-4">
-              <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deactivateAccount}</h2>
-              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setDeactivateOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}><X size={16} /></button>
-            </div>
-            <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deactivateAccountDesc}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' }}>
-                {t.settings.deactivateAccountConfirmLabel}
-              </label>
-              <input
-                type="text"
-                placeholder={t.settings.deactivateConfirmWord}
-                value={deactivateConfirm}
-                onChange={e => { setDeactivateConfirm(e.target.value); setDeactivateError(null) }}
-                style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }}
-              />
-            </div>
-            {deactivateError && <p style={{ fontSize: 12, color: 'var(--aurora-rose)', marginBottom: 8 }}>{deactivateError}</p>}
-            <div className="flex gap-3">
-              <button onClick={() => setDeactivateOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-white/5 border border-white/10 text-[color:var(--aurora-faint)] hover:bg-white/10 transition-colors cursor-pointer">
-                {t.common.cancel}
-              </button>
-              <button
-                disabled={deactivateConfirm.trim().toUpperCase() !== t.settings.deactivateConfirmWord || isDeactivating}
-                onClick={async () => {
-                  setIsDeactivating(true)
-                  try {
-                    await apiDeactivateAccount()
-                    await logout()
-                  } catch {
-                    setDeactivateError(t.settings.deactivateFailed)
-                    setIsDeactivating(false)
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {isDeactivating ? t.settings.deactivating : t.settings.deactivateAccountConfirmBtn}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {deactivateOpen && <DeleteAccountModal mode="deactivate" onClose={() => setDeactivateOpen(false)} />}
 
       {/* ── DELETE ACCOUNT MODAL ── */}
       {deleteOpen && <DeleteAccountModal onClose={() => setDeleteOpen(false)} />}
@@ -1751,7 +1703,7 @@ export function SettingsPage() {
               <ChevronRow
                 icon={Ban} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"
                 label={t.settings.deactivateAccount} sublabel={t.settings.deactivateSub}
-                onClick={() => { setDeactivationModalOpen(false); setDeactivateOpen(true); setDeactivateConfirm(''); setDeactivateError(null) }}
+                onClick={() => { setDeactivationModalOpen(false); setDeactivateOpen(true) }}
               />
               <ChevronRow
                 icon={UserX} iconColor="var(--aurora-rose)" iconBg="rgba(251,113,133,0.12)"

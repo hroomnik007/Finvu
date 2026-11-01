@@ -4,7 +4,7 @@ import { useGoogleLogin } from '@react-oauth/google'
 import { useTranslation } from '../i18n'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { useAuth } from '../context/AuthContext'
-import { getPinDeviceStatus } from '../api/auth'
+import { getPinDeviceStatus, deactivateAccount } from '../api/auth'
 import type { DeleteAccountProof } from '../api/auth'
 
 type Method = 'password' | 'pin' | 'google'
@@ -13,13 +13,14 @@ const inputStyle = { height: 44, width: '100%', background: 'var(--aurora-glass)
 const labelStyle = { fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' } as const
 
 /**
- * Account deletion needs a fresh proof of identity, not just the session:
+ * Account deletion (and deactivation, `mode="deactivate"`) needs a fresh proof of identity, not just the session:
  * the password for password accounts; for passwordless ones the PIN
  * (only on a device bound to it) or signing in to the linked Google account again.
  */
-export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
+export function DeleteAccountModal({ onClose, mode = 'delete' }: { onClose: () => void; mode?: 'delete' | 'deactivate' }) {
   const { t } = useTranslation()
-  const { user, deleteAccount } = useAuth()
+  const { user, deleteAccount, logout } = useAuth()
+  const deactivating = mode === 'deactivate'
   const [methods, setMethods] = useState<Method[] | null>(user?.has_password ? ['password'] : null)
   const [method, setMethod] = useState<Method | null>(user?.has_password ? 'password' : null)
   const [secret, setSecret] = useState('')
@@ -44,7 +45,8 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
     return () => { cancelled = true }
   }, [user?.has_password, user?.has_pin, user?.has_google])
 
-  const confirmed = confirm.trim().toUpperCase() === t.settings.deleteConfirmWord
+  const confirmWord = deactivating ? t.settings.deactivateConfirmWord : t.settings.deleteConfirmWord
+  const confirmed = confirm.trim().toUpperCase() === confirmWord
 
   function showError(err: unknown, m: Method) {
     const status = (err as { response?: { status?: number } })?.response?.status
@@ -56,12 +58,17 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
       setError(m === 'password' ? t.settings.wrongCurrentPassword
         : m === 'pin' ? t.auth.wrongPin
         : t.settings.deleteGoogleMismatch)
-    } else setError(t.settings.deleteFailed)
+    } else setError(deactivating ? t.settings.deactivateFailed : t.settings.deleteFailed)
   }
 
   async function submit(proof: DeleteAccountProof, m: Method) {
     try {
-      await deleteAccount(proof) // logs out on success
+      if (deactivating) {
+        await deactivateAccount(proof)
+        await logout()
+      } else {
+        await deleteAccount(proof) // logs out on success
+      }
     } catch (err) {
       showError(err, m)
       setBusy(false)
@@ -98,10 +105,10 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
       <div ref={panelRef} {...dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
         <div className="flex items-center justify-between mb-4">
-          <h2 id={titleId} tabIndex={-1} style={{ outline: 'none', fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deleteAccount}</h2>
+          <h2 id={titleId} tabIndex={-1} style={{ outline: 'none', fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{deactivating ? t.settings.deactivateAccount : t.settings.deleteAccount}</h2>
           <button onClick={onClose} aria-label={t.common.cancel} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}><X size={16} /></button>
         </div>
-        <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deleteAccountDesc}</p>
+        <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{deactivating ? t.settings.deactivateAccountDesc : t.settings.deleteAccountDesc}</p>
 
         {methods && methods.length > 1 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
@@ -147,11 +154,11 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-          <label htmlFor="delete-confirm" style={labelStyle}>{t.settings.deleteAccountConfirmLabel}</label>
+          <label htmlFor="delete-confirm" style={labelStyle}>{deactivating ? t.settings.deactivateAccountConfirmLabel : t.settings.deleteAccountConfirmLabel}</label>
           <input
             id="delete-confirm"
             type="text"
-            placeholder={t.settings.deleteConfirmWord}
+            placeholder={confirmWord}
             value={confirm}
             onChange={e => { setConfirm(e.target.value); setError(null) }}
             style={inputStyle}
@@ -168,7 +175,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
             className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ background: canDelete ? '#DC2626' : undefined }}
           >
-            {busy ? t.settings.dangerDeleting : t.settings.deleteAccountConfirmBtn}
+            {busy ? (deactivating ? t.settings.deactivating : t.settings.dangerDeleting) : (deactivating ? t.settings.deactivateAccountConfirmBtn : t.settings.deleteAccountConfirmBtn)}
           </button>
         </div>
       </div>

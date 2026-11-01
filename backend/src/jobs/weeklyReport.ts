@@ -63,7 +63,7 @@ async function sendMidMonthReports(): Promise<void> {
   const subscribers = await db
     .select({ id: users.id, email: users.email, name: users.name, trackingStartDate: users.trackingStartDate, createdAt: users.createdAt })
     .from(users)
-    .where(eq(users.weeklyEmailEnabled, true));
+    .where(and(eq(users.weeklyEmailEnabled, true), eq(users.isDeactivated, false)));
 
   for (const user of subscribers) {
     const { income: totalIncome, expense: totalExpense } = await periodTotals(user.id, from, to, new Date(), startMonthOf(user.trackingStartDate, user.createdAt));

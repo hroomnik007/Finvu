@@ -170,7 +170,7 @@ describe('modal wiring', () => {
 
   it('Settings wires each inline modal', () => {
     const s = src('pages/Settings.tsx')
-    for (const m of ['pinRemoveModal', 'dangerModal', 'deactivateModal', 'changePwModal', 'devicesModal', 'deactivationModal', 'trackingModal']) {
+    for (const m of ['pinRemoveModal', 'dangerModal', 'changePwModal', 'devicesModal', 'deactivationModal', 'trackingModal']) {
       expect(s).toContain(`ref={${m}.panelRef} {...${m}.dialogProps}`)
     }
   })

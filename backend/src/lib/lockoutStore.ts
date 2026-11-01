@@ -36,6 +36,37 @@ export async function recordFailure(key: string, now = new Date()): Promise<void
     });
 }
 
+// Reserves one sign-in attempt BEFORE the (slow) credential comparison, in one
+// atomic upsert: it counts this attempt and returns the new count, so parallel
+// requests each get their own number and only the first MAX_FAILURES are ever
+// evaluated. Everything above the limit is "locked", whatever the credential.
+//  - The lock starts at the MAX_FAILURES-th attempt and is not extended by later
+//    ones, so hammering a locked key can't keep its owner out longer.
+//  - While a lock is active the window is not restarted, so the count stays above
+//    the limit until the lock is over; then the (by then expired) window resets it.
+// A successful sign-in clears the row (clearFailures), so one wrong attempt never
+// leaves a trace once the right one follows.
+export async function reserveAttempt(key: string, now = new Date()): Promise<{ locked: boolean }> {
+  const windowStart = new Date(now.getTime() - WINDOW_MS);
+  const lockUntil = new Date(now.getTime() + LOCK_MS);
+  const lockActive = sql`(${loginLockouts.lockedUntil} IS NOT NULL AND ${loginLockouts.lockedUntil} > ${now})`;
+  const restart = sql`(${loginLockouts.windowStartedAt} <= ${windowStart} AND NOT ${lockActive})`;
+  const nextCount = sql`CASE WHEN ${restart} THEN 1 ELSE ${loginLockouts.failedCount} + 1 END`;
+  const [row] = await db
+    .insert(loginLockouts)
+    .values({ key, failedCount: 1, windowStartedAt: now, lockedUntil: null })
+    .onConflictDoUpdate({
+      target: loginLockouts.key,
+      set: {
+        failedCount: nextCount,
+        windowStartedAt: sql`CASE WHEN ${restart} THEN ${now} ELSE ${loginLockouts.windowStartedAt} END`,
+        lockedUntil: sql`CASE WHEN ${nextCount} >= ${MAX_FAILURES} AND NOT ${lockActive} THEN ${lockUntil} ELSE ${loginLockouts.lockedUntil} END`,
+      },
+    })
+    .returning({ failedCount: loginLockouts.failedCount });
+  return { locked: row.failedCount > MAX_FAILURES };
+}
+
 export async function clearFailures(key: string): Promise<void> {
   await db.delete(loginLockouts).where(eq(loginLockouts.key, key));
 }

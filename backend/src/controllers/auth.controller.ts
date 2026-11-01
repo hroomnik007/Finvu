@@ -35,10 +35,10 @@ import { DEFAULT_CATEGORIES } from "../lib/defaultCategories";
 import { AuthRequest } from "../middleware/authenticate";
 import { parseImageDataUrl, saveAvatarFile, deleteAvatarFiles } from "../lib/avatarStorage";
 import { releaseOwnedHouseholds } from "../lib/household";
-import { isLocked, recordFailure, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
+import { isLocked, recordFailure, reserveAttempt, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
 import { authError } from "../lib/authErrors";
 import { verifyGoogleAccessToken, FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN } from "../lib/googleToken";
-import { checkGoogleReauth } from "../lib/reauth";
+import { checkGoogleReauth, verifyReauth } from "../lib/reauth";
 import { verifyPasskeyReauth } from "../lib/passkeyReauth";
 
 // Emails are stored and matched lower-case. Legacy rows may still be mixed-case,
@@ -323,11 +323,13 @@ export async function login(req: Request, res: Response): Promise<void> {
   const { email, password } = body.data;
 
   // Per-account lockout, keyed by the e-mail so it works the same whether or
-  // not the account exists. Checked before the user lookup: a locked address
-  // gets the same answer, after the same work, either way — and even the right
+  // not the account exists. The attempt is reserved (counted atomically) BEFORE
+  // the user lookup and the slow bcrypt compare, so parallel requests can't all
+  // pass a check that only the finished ones would update. A locked address gets
+  // the same answer, after the same work, either way — and even the right
   // password is refused until the lock runs out.
   const lockKey = passwordKey(normalizeEmail(email));
-  if (await isLocked(lockKey)) {
+  if ((await reserveAttempt(lockKey)).locked) {
     res.status(429).json(LOCKED_RESPONSE);
     return;
   }
@@ -339,7 +341,6 @@ export async function login(req: Request, res: Response): Promise<void> {
   // them apart either.
   const valid = await bcrypt.compare(password, user?.passwordHash ?? await dummyPasswordHash());
   if (!user || !user.passwordHash || !valid) {
-    await recordFailure(lockKey);
     res.status(401).json(authError("INVALID_CREDENTIALS"));
     return;
   }
@@ -610,24 +611,30 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     return;
   }
 
-  const [user] = await db.select({ id: users.id }).from(users).where(byEmail(email)).limit(1);
-  if (user) {
-    const token = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id));
-    // Stored hashed; the raw token only exists in the e-mail link.
-    await db.insert(passwordResetTokens).values({ userId: user.id, token: await hashToken(token), expiresAt });
-
-    await sendEmail(
-      email,
-      "Obnova hesla — FinVu",
-      resetPasswordEmailHtml(token),
-      resetPasswordEmailText(token),
-    );
-  }
-
+  // Answer first, with the same body and no database or SMTP work in front of
+  // it, so neither the content nor the latency tells whether the account exists.
+  // The lookup, the token and the e-mail run afterwards; a failure there is only
+  // logged (it must never become an unhandled rejection that takes the process down).
   res.json({ message: OK_MSG });
+  void sendPasswordResetMail(email).catch((err) => console.error("[forgotPassword] failed:", err));
+}
+
+async function sendPasswordResetMail(email: string): Promise<void> {
+  const [user] = await db.select({ id: users.id }).from(users).where(byEmail(email)).limit(1);
+  if (!user) return;
+  const token = randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id));
+  // Stored hashed; the raw token only exists in the e-mail link.
+  await db.insert(passwordResetTokens).values({ userId: user.id, token: await hashToken(token), expiresAt });
+
+  await sendEmail(
+    email,
+    "Obnova hesla — FinVu",
+    resetPasswordEmailHtml(token),
+    resetPasswordEmailText(token),
+  );
 }
 
 export async function resetPassword(req: Request, res: Response): Promise<void> {
@@ -655,7 +662,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     .update(users)
     // Receiving the reset link proves control of the mailbox, so an account
     // that was registered but never verified becomes usable here too.
-    .set({ passwordHash, pinHash: null, emailVerified: true, verificationToken: null })
+    // Same proof of the mailbox lifts a deactivation (the way back in after deactivateAccount).
+    .set({ passwordHash, pinHash: null, emailVerified: true, verificationToken: null, isDeactivated: false })
     .where(eq(users.id, resetRecord.userId))
     .returning({ email: users.email });
   // The link also proves who this is, so a lock from earlier guesses goes too.
@@ -795,8 +803,15 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
   let [user] = await db.select().from(users).where(byEmail(email)).limit(1);
 
   if (user?.isDeactivated) {
-    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
-    return;
+    // A fresh Google sign-in proves control of the mailbox (and, if linked, the
+    // same Google account), which is the way back in; a different Google account
+    // linked to this address stays locked out.
+    if (user.googleId && user.googleId !== googleId) {
+      res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
+      return;
+    }
+    await db.update(users).set({ isDeactivated: false, updatedAt: new Date() }).where(eq(users.id, user.id));
+    user = { ...user, isDeactivated: false };
   }
 
   if (!user) {
@@ -952,19 +967,19 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Per-account lockout (on top of the IP-based pinLoginLimiter), checked
-  // before the PIN is compared. It comes after the device check on purpose:
-  // only a device already bound to this account can see "locked", so the
-  // answer reveals nothing to anyone else.
+  // Per-account lockout (on top of the IP-based pinLoginLimiter): the attempt
+  // is reserved before the PIN is compared, so parallel requests can't all slip
+  // past the limit. It comes after the device check on purpose: only a device
+  // already bound to this account can see "locked", so the answer reveals
+  // nothing to anyone else.
   const lockKey = pinKey(user.id);
-  if (await isLocked(lockKey)) {
+  if ((await reserveAttempt(lockKey)).locked) {
     res.status(429).json(LOCKED_RESPONSE);
     return;
   }
 
   const valid = await bcrypt.compare(pin, user.pinHash);
   if (!valid) {
-    await recordFailure(lockKey);
     res.status(401).json(GENERIC_FAIL);
     return;
   }
@@ -1213,8 +1228,57 @@ export async function deleteSession(req: AuthRequest, res: Response): Promise<vo
   res.json({ success: true })
 }
 
+// POST /api/auth/deactivate
+//   { currentPassword } | { pin } | { googleAccessToken } — the same fresh proof of
+//   identity as deleteAccount (a valid access token alone is not enough). The PIN
+//   works only from a device bound to it and feeds the PIN lockout.
+// The account comes back through a password reset or a fresh Google sign-in.
 export async function deactivateAccount(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId!
+  const body = (req.body ?? {}) as { currentPassword?: unknown; pin?: unknown; googleAccessToken?: unknown }
+
+  const [user] = await db
+    .select({ passwordHash: users.passwordHash, pinHash: users.pinHash, googleId: users.googleId })
+    .from(users).where(eq(users.id, userId)).limit(1)
+  if (!user) { res.status(404).json({ error: "User not found" }); return }
+
+  if (body.currentPassword !== undefined) {
+    if (!user.passwordHash || !(await verifyReauth(user, { currentPassword: body.currentPassword }))) {
+      res.status(401).json({ error: "Nesprávne aktuálne heslo." })
+      return
+    }
+  } else if (body.pin !== undefined) {
+    if (!user.pinHash || typeof body.pin !== "string" || !/^\d{4}$/.test(body.pin)) {
+      res.status(401).json({ error: "Nesprávny PIN." })
+      return
+    }
+    if (!(await verifyAndSlidePinDeviceToken(res, userId, req))) {
+      res.status(401).json({ error: "PIN sa dá použiť len na zariadení, kde bol nastavený.", code: "PIN_DEVICE_NOT_BOUND" })
+      return
+    }
+    const lockKey = pinKey(userId)
+    if ((await reserveAttempt(lockKey)).locked) {
+      res.status(429).json(LOCKED_RESPONSE)
+      return
+    }
+    if (!(await bcrypt.compare(body.pin, user.pinHash))) {
+      res.status(401).json({ error: "Nesprávny PIN." })
+      return
+    }
+    await clearFailures(lockKey)
+  } else if (body.googleAccessToken !== undefined) {
+    const check = checkGoogleReauth(user, await verifyGoogleAccessToken(body.googleAccessToken), FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN)
+    if (!check.ok) {
+      res.status(check.status).json({ error: check.error })
+      return
+    }
+  } else {
+    // Tell the client which proofs this account can give.
+    const methods = [user.passwordHash && "password", user.pinHash && "pin", user.googleId && "google"].filter(Boolean)
+    res.status(400).json({ error: "Pre deaktiváciu účtu potvrď svoju totožnosť.", code: "REAUTH_REQUIRED", methods })
+    return
+  }
+
   await db.update(users).set({ isDeactivated: true, updatedAt: new Date() }).where(eq(users.id, userId))
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId))
   res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS))

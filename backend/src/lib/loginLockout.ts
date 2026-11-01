@@ -25,4 +25,4 @@ export const ADMIN_KEY = "admin";
 
 // The counting itself lives in lockoutStore.ts (Postgres, so locks survive a
 // restart and are shared if the API ever runs more than one process).
-export { isLocked, recordFailure, clearFailures, pruneLockouts } from "./lockoutStore";
+export { isLocked, recordFailure, reserveAttempt, clearFailures, pruneLockouts } from "./lockoutStore";

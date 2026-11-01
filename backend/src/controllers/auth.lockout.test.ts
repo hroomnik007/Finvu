@@ -130,6 +130,26 @@ describe("password login lockout", () => {
     expect((await attempt("correct-horse", { ...user, id: "u2", email: "c@d.sk" }, "c@d.sk")).status).toBe(200);
   });
 
+  it(`parallel wrong passwords: at most ${MAX_FAILURES} are ever evaluated, the rest get the lock answer`, async () => {
+    const spy = vi.spyOn(bcrypt, "compare");
+    state.selects = Array.from({ length: 20 }, () => [user]);
+    const results = await Promise.all(Array.from({ length: 20 }, async () => {
+      const r = fakeRes();
+      await login(req({ email: "a@b.sk", password: "wrong-password" }), r.res);
+      return r.out;
+    }));
+    expect(spy).toHaveBeenCalledTimes(MAX_FAILURES);
+    expect(results.filter(o => o.status === 401)).toHaveLength(MAX_FAILURES);
+    expect(results.filter(o => o.status === 429 && JSON.stringify(o) === JSON.stringify(LOCKED))).toHaveLength(20 - MAX_FAILURES);
+    spy.mockRestore();
+  });
+
+  it("a successful login clears the reserved attempts", async () => {
+    for (let i = 0; i < MAX_FAILURES - 1; i++) await attempt("wrong-password");
+    expect((await attempt("correct-horse")).status).toBe(200);
+    expect(lockouts.rows.size).toBe(0);
+  });
+
   it("stores only a hash of the email", async () => {
     await attempt("wrong-password");
     const keys = [...lockouts.rows.keys()];
@@ -160,6 +180,22 @@ describe("PIN login lockout", () => {
     expect((await attempt("1234")).status).toBe(200);
     for (let i = 0; i < MAX_FAILURES - 1; i++) expect(await attempt("0000")).toEqual(WRONG_PIN);
     expect((await attempt("1234")).status).toBe(200);
+  });
+
+  it(`parallel wrong PINs: at most ${MAX_FAILURES} are ever evaluated`, async () => {
+    const spy = vi.spyOn(bcrypt, "compare");
+    // All 20 requests run up to their first await in order, so the user lookups
+    // come first and the device lookups after them.
+    state.selects = [...Array.from({ length: 20 }, () => [user]), ...Array.from({ length: 20 }, () => [{ id: "d1" }])];
+    const results = await Promise.all(Array.from({ length: 20 }, async () => {
+      const r = fakeRes();
+      await pinLogin(req({ email: "a@b.sk", pin: "0000" }, { pinDevice: "device-token" }), r.res);
+      return r.out;
+    }));
+    expect(spy).toHaveBeenCalledTimes(MAX_FAILURES);
+    spy.mockRestore();
+    expect(results.filter(o => JSON.stringify(o) === JSON.stringify(WRONG_PIN))).toHaveLength(MAX_FAILURES);
+    expect(results.filter(o => JSON.stringify(o) === JSON.stringify(LOCKED))).toHaveLength(20 - MAX_FAILURES);
   });
 
   it("is separate from the password lockout", async () => {
