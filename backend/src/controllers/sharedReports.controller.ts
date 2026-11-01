@@ -6,6 +6,7 @@ import { sharedReports, transactions, users } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
+import { insertSharedReportWithinCap, MAX_ACTIVE_SHARED_REPORTS, SHARED_REPORT_LIMIT_CODE } from "../lib/sharedReportLimit";
 
 export async function createSharedReport(req: AuthRequest, res: Response): Promise<void> {
   const { data, expiresInHours = 24 * 7 } = req.body as { data?: string; expiresInHours?: number };
@@ -21,7 +22,15 @@ export async function createSharedReport(req: AuthRequest, res: Response): Promi
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + Math.min(expiresInHours, 24 * 30) * 3600 * 1000);
 
-  await db.insert(sharedReports).values({ userId: req.userId!, token, data, expiresAt });
+  const created = await insertSharedReportWithinCap({ userId: req.userId!, token, data, expiresAt });
+  if (!created.ok) {
+    res.status(409).json({
+      error: `Dosiahol si limit ${MAX_ACTIVE_SHARED_REPORTS} aktívnych zdieľaných reportov. Počkaj, kým niektorý vyprší.`,
+      code: SHARED_REPORT_LIMIT_CODE,
+      limit: MAX_ACTIVE_SHARED_REPORTS,
+    });
+    return;
+  }
   let newlyUnlockedAchievements: string[] = [];
   try {
     ({ newlyUnlocked: newlyUnlockedAchievements } = await evaluateAchievements(req.userId!));

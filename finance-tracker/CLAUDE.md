@@ -150,7 +150,12 @@ Demo účet bol zrušený (2026-11-01) a z kódu aj databázy odstránený. Lok�
 ### Kód
 - Vždy TypeScript — žiadny `any`, žiadne implicitné typy
 - Komponenty: funkcionálne + hooks, žiadne class components
-- Tailwind triedy — žiadne inline styles ani externé CSS súbory
+- **Štýlovanie (ako to v appke naozaj funguje)**: dominuje inline `style={{…}}` s CSS premennými (v `src/` je ~2000 `style={` v 69 súboroch; Tailwind triedy sú vzácne, väčšinou len layout utility ako `flex`, `grid`, `hidden lg:flex`). Globálne štýly sú v `src/index.css` (Tailwind import, `--aurora-*` tokeny pre dark aj light, ~110 pomenovaných tried, napr. `.dense-card`, `.btn-primary`, `.input`)
+  - **Farby, pozadia, okraje a tiene vždy cez tokeny** (`var(--aurora-glass)`, `--aurora-gline`, `--aurora-hi/lo/faint`, `--aurora-hover`, `--aurora-card-shadow`, akcenty `--aurora-violet/emerald/rose/amber/cyan`) — nikdy hardcoded hex/rgba, inak sa rozbije light mode
+  - **Najprv použi zdieľaný komponent**: `GlassCard` (sklenená karta), `HeroCard`, `CategoryDonutCard`, `DenseList` (`.dense-card`), `BottomSheet`/`CompactModal`, `ConfirmDialog`. Nový vzhľad karty nepíš odznova, rozšír tieto
+  - **Pomenovaná trieda v `index.css`** patrí tam, kde inline štýl nevie: `:hover`/`@media (hover: hover)`, media queries (`.dt-only`, `.mb-only`), pseudo-elementy, animácie, štýly opakované v mnohých súboroch
+  - **Inline štýl** je v poriadku pre hodnoty závislé od props/stavu/dát (farba kategórie, šírka progress baru, `transform`), pre jednorazové rozmery a pre `style` override na zdieľanom komponente (`<GlassCard style={{ padding: 20 }}>`)
+  - **Tailwind utility triedy** na jednoduchý layout a responzivitu (`flex`, `grid`, `gap-*`, `hidden lg:flex`); nemiešať Tailwind a inline štýl pre tú istú vlastnosť
 - Mobile-first — každý komponent najprv pre mobil
 - Všetky UI texty cez i18n — žiadne hardcoded strings v SK ani EN
 
@@ -169,6 +174,7 @@ Demo účet bol zrušený (2026-11-01) a z kódu aj databázy odstránený. Lok�
 - Po každej zmene: `git add -A && git commit -m "<popis>" && git push origin main && git push gitea main`
 - git remotes: `origin` = GitHub (triggers Actions), `gitea` = self-hosted Gitea
 - VŽDY pushuj na oba: `git push origin main && git push gitea main`
+- Ak je `gitea` nedostupná, uveď to v zhrnutí a remote nemeň (ani URL, ani token)
 - GitHub Actions automaticky nasadí na pedani.eu pri každom push na origin/main
 
 ### Štýl práce
