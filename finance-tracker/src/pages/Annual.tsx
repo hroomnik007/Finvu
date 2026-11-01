@@ -10,8 +10,8 @@ import { useTranslation } from '../i18n'
 
 const th: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', padding: '6px 6px', textAlign: 'right' }
 const td: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap' }
-// First column stays put while the table scrolls sideways on narrow screens.
-const stickyCol: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 1, background: 'var(--aurora-panel)', textAlign: 'left' }
+// The card is translucent glass like the other cards, so the first column can't be sticky (it would show the scrolled cells through it).
+const stickyCol: React.CSSProperties = { textAlign: 'left' }
 const statLabel: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--aurora-faint)', marginBottom: 4 }
 const sectionTitle: React.CSSProperties = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: 0 }
 
@@ -130,7 +130,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
               </div>
             </GlassCard>
 
-            <GlassCard className="annual-table-card" radius={18} style={{ padding: '8px 16px', overflowX: 'auto', background: 'var(--aurora-panel)' }}>
+            <GlassCard className="annual-table-card" radius={18} style={{ padding: '8px 16px', overflowX: 'auto' }}>
               <table className="annual-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <caption className="sr-only">{t.annual.title} {year}</caption>
                 <thead>
