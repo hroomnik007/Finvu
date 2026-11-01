@@ -3,6 +3,9 @@ import { useRef, useState, useCallback, type ReactNode } from 'react'
 const PULL_THRESHOLD = 70
 const MAX_PULL = 110
 const DAMPING = 0.5
+/** Page content column cap, centered on wide screens. 1232 = Annual's 1200px
+ * content width + its 16px side padding, so Annual renders exactly as before. */
+const PAGE_MAX_WIDTH = 1232
 
 /** Walks up from the touched element to find the nearest actually-scrollable
  * ancestor (overflow-y: auto/scroll with real overflow) — every page owns its
@@ -119,7 +122,7 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
           </svg>
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: PAGE_MAX_WIDTH, marginLeft: 'auto', marginRight: 'auto' }}>
         {children}
       </div>
     </div>

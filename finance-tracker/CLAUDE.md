@@ -243,7 +243,7 @@ docker compose up --build -d
 ### Grid a šírky
 - Main content wrapper v App.tsx: `className="flex-1 overflow-y-auto w-full min-w-0"`
 - Content div inside main: `className="w-full h-full p-6"`
-- NIKDY nepoužívať `max-w-*` na page-level komponentoch (Dashboard, Income, atď.)
+- Šírku a centrovanie obsahu riadi centrálne `PullToRefresh` (`PAGE_MAX_WIDTH` = 1232, `margin auto`) — NIKDY nepoužívať `max-w-*` na page-level komponentoch (Dashboard, Income, atď.). Sidebar a Topbar zostávajú na celú šírku
 - Dashboard 2-stĺpcový layout: `grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-6 w-full`
   - Ľavý stĺpec: hlavný obsah (rastie)
   - Pravý stĺpec: kontextový panel (fixed 340–380px)
