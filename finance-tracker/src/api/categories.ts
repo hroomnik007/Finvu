@@ -1,5 +1,6 @@
 import { apiClient } from './client'
 import type { ApiCategory } from '../types'
+import { postIdempotent, type IdempotentOptions } from './idempotency'
 
 export interface CategoryPayload {
   name: string
@@ -17,9 +18,10 @@ export async function getCategories(): Promise<{ data: ApiCategory[] }> {
 }
 
 export async function createCategory(
-  payload: CategoryPayload
+  payload: CategoryPayload,
+  opts: IdempotentOptions = {}
 ): Promise<{ data: ApiCategory }> {
-  const { data } = await apiClient.post('/api/categories', payload)
+  const { data } = await postIdempotent<{ data: ApiCategory }>(apiClient.post, '/api/categories', payload, opts)
   return data
 }
 

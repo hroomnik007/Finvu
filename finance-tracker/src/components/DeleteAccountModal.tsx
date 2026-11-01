@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { useGoogleLogin } from '@react-oauth/google'
 import { startAuthentication } from '@simplewebauthn/browser'
 import { useTranslation } from '../i18n'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { useAuth } from '../context/AuthContext'
 import { getPasskeys, getPinDeviceStatus } from '../api/auth'
 import type { DeleteAccountProof } from '../api/auth'
@@ -102,6 +103,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   }
 
   const needsSecret = method === 'password' || method === 'pin'
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open: true, onClose: busy ? undefined : onClose })
   const canDelete = !!method && confirmed && !busy && (!needsSecret || !!secret)
   const methodLabel: Record<Method, string> = {
     password: t.settings.currentPassword,
@@ -112,9 +114,9 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
-      <div role="dialog" aria-modal="true" aria-label={t.settings.deleteAccount} style={{ background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
+      <div ref={panelRef} {...dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
         <div className="flex items-center justify-between mb-4">
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deleteAccount}</h2>
+          <h2 id={titleId} tabIndex={-1} style={{ outline: 'none', fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deleteAccount}</h2>
           <button onClick={onClose} aria-label={t.common.cancel} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}><X size={16} /></button>
         </div>
         <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deleteAccountDesc}</p>

@@ -9,6 +9,7 @@ import { deletePasskey, getPasskeys, renamePasskey, webauthnRegisterVerify } fro
 import type { PasskeyInfo } from '../api/auth'
 import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
 import { currentUa, suggestPasskeyName } from '../lib/passkeyName'
+import { rateLimitedMessage } from '../utils/authError'
 
 const labelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', margin: '0 0 6px' } as const
 const smallButton = (color: string, background: string, border: string) =>
@@ -63,7 +64,7 @@ export function PasskeySection() {
       setSecretOpen(false)
       await load()
     } catch (e: unknown) {
-      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       const kind = serverMsg ? 'other' : ceremonyErrorKind(e)
       setError(kind === 'cancelled' ? t.settings.passkeyCancelled
         : kind === 'exists' ? t.settings.passkeyExists
@@ -81,7 +82,7 @@ export function PasskeySection() {
       setPasskeys(list => list.map(p => (p.id === id ? { ...p, name } : p)))
       setRenaming(null)
     } catch (e: unknown) {
-      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(serverMsg ?? t.auth.registerFailed)
     }
   }
@@ -92,7 +93,7 @@ export function PasskeySection() {
       await deletePasskey(id)
       await load()
     } catch (e: unknown) {
-      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(serverMsg ?? (e as Error)?.message ?? t.auth.registerFailed)
     }
   }
@@ -120,7 +121,7 @@ export function PasskeySection() {
                     value={renaming.name}
                     maxLength={64}
                     onChange={e => setRenaming({ id: p.id, name: e.target.value })}
-                    onKeyDown={e => { if (e.key === 'Escape') setRenaming(null) }}
+                    onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); setRenaming(null) } }}
                     style={{ flex: '1 1 140px', minWidth: 0, height: 34, borderRadius: 8, padding: '0 10px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13 }}
                   />
                   <button type="submit" disabled={!renaming.name.trim()} style={smallButton('var(--aurora-violet-text)', 'rgba(139,92,246,0.12)', 'rgba(139,92,246,0.3)')}>
@@ -159,7 +160,10 @@ export function PasskeySection() {
           value={secret}
           onChange={e => setSecret(e.target.value)}
           inputMode={reauthFactor === 'pin' ? 'numeric' : undefined}
+          pattern={reauthFactor === 'pin' ? '[0-9]*' : undefined}
+          autoComplete={reauthFactor === 'pin' ? 'off' : 'current-password'}
           maxLength={reauthFactor === 'pin' ? 4 : undefined}
+          aria-label={reauthFactor === 'pin' ? t.onboarding.passkeyPinLabel : t.profile.currentPassword}
           placeholder={reauthFactor === 'pin' ? t.onboarding.passkeyPinLabel : t.profile.currentPassword}
           style={{ marginTop: 10, width: '100%', height: 40, borderRadius: 10, padding: '0 12px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 13 }}
         />

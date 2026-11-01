@@ -25,18 +25,15 @@ function toSavingsGoal(g: ApiSavingsGoal): SavingsGoal {
 }
 
 export async function fetchSavingsData(): Promise<SavingsGoal[]> {
-  try {
-    const { data } = await getSavingsGoals()
-    return data.map(toSavingsGoal)
-  } catch {
-    return []
-  }
+  // Errors propagate so the page can show an error + retry instead of "no data".
+  const { data } = await getSavingsGoals()
+  return data.map(toSavingsGoal)
 }
 
 export function useSavings() {
   const qc = useQueryClient()
 
-  const { data: goals = [] } = useQuery({
+  const { data: goals = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['savings'],
     queryFn: fetchSavingsData,
   })
@@ -87,5 +84,5 @@ export function useSavings() {
     await invalidate()
   }, [invalidate])
 
-  return { goals, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal, reload: invalidate }
+  return { goals, isLoading, isError, refetch, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal, reload: invalidate }
 }

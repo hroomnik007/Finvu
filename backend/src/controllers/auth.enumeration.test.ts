@@ -94,7 +94,7 @@ describe("POST /api/auth/login", () => {
     const unknown = await attempt(null);
     const googleOnly = await attempt({ ...baseUser, passwordHash: null, googleId: "g1" });
     const wrong = await attempt({ ...baseUser, passwordHash });
-    expect(unknown).toEqual({ status: 401, body: { error: "Nesprávne prihlasovacie údaje." } });
+    expect(unknown).toEqual({ status: 401, body: { error: "Invalid email or password.", code: "INVALID_CREDENTIALS" } });
     expect(googleOnly).toEqual(unknown);
     expect(wrong).toEqual(unknown);
   });

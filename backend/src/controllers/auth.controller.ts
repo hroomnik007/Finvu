@@ -37,6 +37,7 @@ import { resetDemoAccount, DEMO_EMAIL } from "../lib/resetDemo";
 import { parseImageDataUrl, saveAvatarFile, deleteAvatarFiles } from "../lib/avatarStorage";
 import { releaseOwnedHouseholds } from "../lib/household";
 import { isLocked, recordFailure, clearFailures, passwordKey, pinKey, ADMIN_KEY, LOCKED_RESPONSE } from "../lib/loginLockout";
+import { authError } from "../lib/authErrors";
 import { verifyGoogleAccessToken, FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN } from "../lib/googleToken";
 import { verifyPasskeyReauth } from "../lib/passkeyReauth";
 
@@ -74,11 +75,18 @@ function rejectDemo(req: AuthRequest, res: Response): boolean {
 // Verification links stay valid for a week; "resend" issues a fresh one.
 const VERIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+export const THEMES = ["dark", "light", "system"] as const;
+export type Theme = (typeof THEMES)[number];
+// Theme the visitor picked on the login/register screen; stored on the new
+// account so the DB column default doesn't flip it back after sign-up.
+const themeSchema = z.enum(THEMES);
+
 const registerSchema = z.object({
   email: emailSchema,
   password: z.string().min(8),
   name: z.string().min(2).max(100),
   gdprConsent: z.boolean().refine(v => v === true, { message: "GDPR consent is required" }),
+  theme: themeSchema.optional(),
 });
 
 const loginSchema = z.object({
@@ -273,7 +281,7 @@ export async function issueTokens(res: Response, userId: string, email: string, 
   return { accessToken, sessionId };
 }
 
-const REGISTER_OK_MSG = "Skontrolujte email. Poslali sme vám odkaz na pokračovanie.";
+const REGISTER_OK_MSG = "Skontroluj email. Poslali sme ti odkaz na pokračovanie.";
 
 export async function register(req: Request, res: Response): Promise<void> {
   const body = registerSchema.safeParse(req.body);
@@ -282,7 +290,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const { email, password, name } = body.data;
+  const { email, password, name, theme } = body.data;
 
   // Same answer whether or not the address is taken, so this endpoint can't be
   // used to find out who has an account. The owner gets a heads-up instead.
@@ -301,6 +309,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     .insert(users)
     .values({
       email, passwordHash: passwordHash, name, emailVerified: false,
+      ...(theme ? { theme } : {}),
       verificationToken: await hashToken(verificationToken),
       verificationExpiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
     })
@@ -310,7 +319,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: user.id, isDefault: true }))
   );
 
-  await sendEmail(email, "Finvu — Overte váš email", verificationEmailHtml(verificationToken));
+  await sendEmail(email, "Finvu — Over svoj email", verificationEmailHtml(verificationToken));
 
   res.status(201).json({ message: REGISTER_OK_MSG });
 }
@@ -342,18 +351,18 @@ export async function login(req: Request, res: Response): Promise<void> {
   const valid = await bcrypt.compare(password, user?.passwordHash ?? await dummyPasswordHash());
   if (!user || !user.passwordHash || !valid) {
     await recordFailure(lockKey);
-    res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
+    res.status(401).json(authError("INVALID_CREDENTIALS"));
     return;
   }
   await clearFailures(lockKey);
 
   if (!user.emailVerified) {
-    res.status(403).json({ error: "Prosím overte svoj email pred prihlásením.", code: "EMAIL_NOT_VERIFIED" });
+    res.status(403).json(authError("EMAIL_NOT_VERIFIED"));
     return;
   }
 
   if (user.isDeactivated) {
-    res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 
@@ -405,7 +414,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
   if (!tokenUser || tokenUser.isDeactivated) {
     await db.delete(refreshTokens).where(eq(refreshTokens.userId, payload.userId));
     res.clearCookie(REFRESH_COOKIE, clearCookieOptions(REFRESH_COOKIE_OPTIONS));
-    res.status(403).json({ error: "Účet je deaktivovaný.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 
@@ -609,7 +618,7 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
     .set({ emailVerified: true, verificationToken: null, verificationExpiresAt: null })
     .where(eq(users.id, user.id));
 
-  res.json({ message: "Email bol úspešne overený. Môžete sa prihlásiť." });
+  res.json({ message: "Email bol úspešne overený. Môžeš sa prihlásiť." });
 }
 
 // Lets a user whose verification mail never arrived (or whose registration
@@ -630,7 +639,7 @@ export async function resendVerification(req: Request, res: Response): Promise<v
       await db.update(users)
         .set({ verificationToken: await hashToken(verificationToken), verificationExpiresAt: new Date(Date.now() + VERIFICATION_TTL_MS) })
         .where(eq(users.id, user.id));
-      await sendEmail(email, "Finvu — Overte váš email", verificationEmailHtml(verificationToken));
+      await sendEmail(email, "Finvu — Over svoj email", verificationEmailHtml(verificationToken));
     }
   }
   res.json({ message: OK_MSG });
@@ -735,7 +744,7 @@ export async function adminLogin(req: Request, res: Response): Promise<void> {
 
   if (!userOk || !passOk) {
     await recordFailure(ADMIN_KEY);
-    res.status(401).json({ error: "Nesprávne prihlasovacie údaje." });
+    res.status(401).json(authError("INVALID_CREDENTIALS"));
     return;
   }
   await clearFailures(ADMIN_KEY);
@@ -778,7 +787,7 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
   };
   const VALID_PAGES = ['dashboard', 'income', 'variable-expenses', 'fixed-expenses', 'categories', 'settings'];
   const VALID_FORMATS = ['sk', 'en', 'de'];
-  const VALID_THEMES = ['dark', 'light', 'system'];
+  const VALID_THEMES: readonly string[] = THEMES;
   const VALID_LANGS = ['sk', 'cs', 'pl', 'hu', 'en'];
   const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   const update: Record<string, unknown> = { updatedAt: new Date() };
@@ -822,25 +831,29 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
     return;
   }
   const { sub: googleId, email, name } = verified;
+  // Only used when this sign-in creates the account; an invalid value is
+  // ignored rather than failing the login.
+  const parsedTheme = themeSchema.safeParse((req.body ?? {}).theme);
+  const signupTheme: Theme | undefined = parsedTheme.success ? parsedTheme.data : undefined;
 
   let [user] = await db.select().from(users).where(byEmail(email)).limit(1);
 
   if (user?.isDeactivated) {
-    res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 
   if (!user) {
     const [newUser] = await db
       .insert(users)
-      .values({ email, passwordHash: null, name, emailVerified: true, googleId })
-      .returning({ id: users.id, email: users.email, name: users.name, avatarUrl: users.avatarUrl, role: users.role, weeklyEmailEnabled: users.weeklyEmailEnabled });
+      .values({ email, passwordHash: null, name, emailVerified: true, googleId, ...(signupTheme ? { theme: signupTheme } : {}) })
+      .returning({ id: users.id, email: users.email, name: users.name, avatarUrl: users.avatarUrl, role: users.role, weeklyEmailEnabled: users.weeklyEmailEnabled, theme: users.theme });
 
     await db.insert(categories).values(
       DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: newUser.id, isDefault: true }))
     );
 
-    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false };
+    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: newUser.theme ?? 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false };
   } else if (!user.googleId) {
     // Google just proved control of this mailbox. If the account was registered
     // with a password but never verified, whoever registered it may not be the
@@ -879,7 +892,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
 
   if (user.passwordHash) {
     if (typeof body.currentPassword !== "string" || !body.currentPassword) {
-      res.status(400).json({ error: "Pre zmazanie účtu zadajte aktuálne heslo." });
+      res.status(400).json({ error: "Pre zmazanie účtu zadaj aktuálne heslo." });
       return;
     }
     const valid = await bcrypt.compare(body.currentPassword, user.passwordHash);
@@ -889,7 +902,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
     }
   } else if (body.passkey !== undefined) {
     if (!(await verifyPasskeyReauth(userId, body.passkey))) {
-      res.status(401).json({ error: "Overenie passkey zlyhalo. Skúste to znova." });
+      res.status(401).json({ error: "Overenie passkey zlyhalo. Skús to znova." });
       return;
     }
   } else if (body.pin !== undefined) {
@@ -922,11 +935,11 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
       return;
     }
     if (!user.googleId || google.sub !== user.googleId) {
-      res.status(401).json({ error: "Prihláste sa Google účtom, ktorý patrí k tomuto účtu." });
+      res.status(401).json({ error: "Prihlás sa Google účtom, ktorý patrí k tomuto účtu." });
       return;
     }
     if (google.expiresIn < FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN) {
-      res.status(401).json({ error: "Prihlásenie cez Google je príliš staré. Skúste to znova." });
+      res.status(401).json({ error: "Prihlásenie cez Google je príliš staré. Skús to znova." });
       return;
     }
   } else {
@@ -936,7 +949,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
       .from(webauthnCredentials)
       .where(eq(webauthnCredentials.userId, userId));
     const methods = [n > 0 && "passkey", user.pinHash && "pin", user.googleId && "google"].filter(Boolean);
-    res.status(400).json({ error: "Pre zmazanie účtu potvrďte svoju totožnosť.", code: "REAUTH_REQUIRED", methods });
+    res.status(400).json({ error: "Pre zmazanie účtu potvrď svoju totožnosť.", code: "REAUTH_REQUIRED", methods });
     return;
   }
 
@@ -961,7 +974,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const GENERIC_FAIL = { error: "Nesprávny PIN." };
+  const GENERIC_FAIL = authError("INVALID_PIN");
 
   // Unknown email, no PIN and a foreign device all answer identically so the
   // endpoint cannot be used to find out which accounts exist.
@@ -1002,7 +1015,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
   }
 
   if (user.isDeactivated) {
-    res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 

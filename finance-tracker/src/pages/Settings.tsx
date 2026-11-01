@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { pluralForm as pluralFormOf } from '../utils/plural'
+import { useState, useEffect, useRef, useMemo, useId, createContext, useContext } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   X, Palette, Bell, Shield, Database, User, Monitor, Laptop, Smartphone, Tablet,
@@ -10,6 +11,7 @@ import { CsvImportModal } from '../components/CsvImportModal'
 import { BackupModal } from '../components/BackupModal'
 import { GlassCard } from '../components/GlassCard'
 import { getNotificationsEnabled, setNotificationsEnabled } from '../hooks/useFixedExpenseNotifications'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { updateWeeklyEmail, updateUserSettings, changePassword, getSessions, deleteSessionById, deactivateAccount as apiDeactivateAccount, getPinDevices, deletePinDevice } from '../api/auth'
 import type { PinDevice } from '../api/auth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -36,6 +38,7 @@ import { PinKeypad } from '../components/PinKeypad'
 import { ExportDataModal } from '../components/ExportDataModal'
 import type { ExportFormat, ExportPeriod } from '../components/ExportDataModal'
 import type { ApiTransaction, UserSession } from '../types'
+import { rateLimitedMessage } from '../utils/authError'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -116,14 +119,22 @@ function SectionHeader({ icon: Icon, label }: { icon: LucideIcon; label: string 
   )
 }
 
+// Lets a Toggle inside a SettingRow name itself after the row's label.
+const SettingRowLabel = createContext<{ labelId: string; descId?: string } | null>(null)
+
 function SettingRow({ label, sublabel, children }: { label: string; sublabel?: React.ReactNode; children: React.ReactNode }) {
+  const id = useId()
+  const labelId = `${id}-label`
+  const descId = sublabel ? `${id}-desc` : undefined
   return (
     <div className="settings-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 8, gap: 16, padding: '13px 20px' }}>
       <div style={{ minWidth: 0, flex: 1 }}>
-        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 500, color: 'var(--aurora-hi)', margin: 0 }}>{label}</p>
-        {sublabel && <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{sublabel}</p>}
+        <p id={labelId} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 500, color: 'var(--aurora-hi)', margin: 0 }}>{label}</p>
+        {sublabel && <p id={descId} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{sublabel}</p>}
       </div>
-      <div style={{ flexShrink: 0 }}>{children}</div>
+      <SettingRowLabel.Provider value={{ labelId, descId }}>
+        <div style={{ flexShrink: 0 }}>{children}</div>
+      </SettingRowLabel.Provider>
     </div>
   )
 }
@@ -162,9 +173,14 @@ function ChevronRow({ icon: Icon, iconColor, iconBg, label, sublabel, onClick }:
 }
 
 function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: () => void; disabled?: boolean }) {
+  const row = useContext(SettingRowLabel)
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-labelledby={row?.labelId}
+      aria-describedby={row?.descId}
       onClick={onChange}
       disabled={disabled}
       className={`w-12 h-[26px] rounded-full transition-all duration-200 relative flex-shrink-0 ${
@@ -235,10 +251,7 @@ export function SettingsPage() {
   const { settings, updateSettings } = useSettingsContext()
   const { t, locale } = useTranslation()
   const CURRENCIES = useMemo(() => currencyOptions(locale), [locale])
-  const pluralForm = (n: number, one: string, few: string, many: string) => {
-    const rule = new Intl.PluralRules(locale).select(n)
-    return rule === 'one' ? one : rule === 'few' ? few : many
-  }
+  const pluralForm = (n: number, one: string, few: string, many: string) => pluralFormOf(n, { one, few, many }, locale)
   const { user, updateMonthlyEmail, refreshUser, logout } = useAuth()
   const { setupPin, hasPin, removePin } = usePinLockContext()
 
@@ -466,7 +479,7 @@ export function SettingsPage() {
       setCurrentPw(''); setNewPw(''); setConfirmPw('')
       setTimeout(() => { setChangePwOk(false); setChangePwOpen(false) }, 2000)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const msg = rateLimitedMessage(err, t.auth) ?? (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       setChangePwError(msg ?? t.profile.changePwFailed)
     } finally {
       setChangePwLoading(false)
@@ -784,16 +797,14 @@ export function SettingsPage() {
   const [devicesModalOpen, setDevicesModalOpen] = useState(false)
   const [deactivationModalOpen, setDeactivationModalOpen] = useState(false)
 
-  // Same Escape-to-close pattern every other modal in the app implements
-  // locally (BottomSheet, StreakModal, AchievementDetailModal, SavingsDetailModal,
-  // PinSetupModal, ...) — this modal previously only closed via the X button
-  // or a backdrop click, with no keydown listener at all.
-  useEffect(() => {
-    if (!devicesModalOpen) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setDevicesModalOpen(false) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [devicesModalOpen])
+  // Inline modals: shared focus/Esc/inert/scroll-lock behaviour (Esc is off while busy).
+  const pinRemoveModal = useModalA11y({ open: pinRemoveOpen, onClose: pinRemoveLoading ? undefined : () => setPinRemoveOpen(false) })
+  const dangerModal = useModalA11y({ open: !!dangerAction, onClose: dangerLoading ? undefined : () => setDangerAction(null) })
+  const deactivateModal = useModalA11y({ open: deactivateOpen, onClose: () => setDeactivateOpen(false) })
+  const changePwModal = useModalA11y({ open: changePwOpen, onClose: changePwLoading ? undefined : () => setChangePwOpen(false) })
+  const devicesModal = useModalA11y({ open: devicesModalOpen, onClose: () => setDevicesModalOpen(false) })
+  const deactivationModal = useModalA11y({ open: deactivationModalOpen, onClose: () => setDeactivationModalOpen(false) })
+  const trackingModal = useModalA11y({ open: trackingModalOpen, onClose: trackingSaving ? undefined : () => setTrackingModalOpen(false) })
 
   async function handleSaveTrackingDate() {
     setTrackingSaving(true)
@@ -1310,9 +1321,11 @@ export function SettingsPage() {
                     </div>
                     {hasPin && (
                       <button
+                        type="button"
                         onClick={() => { setPinRemoveOpen(true); setPinRemoveInput(''); setPinRemoveError(null) }}
                         style={{ background: 'transparent', border: 'none', color: 'var(--aurora-faint)', cursor: 'pointer', padding: 8, marginRight: 8, flexShrink: 0 }}
-                        title={t.common.remove}
+                        title={t.profile.removePin}
+                        aria-label={t.profile.removePin}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -1438,12 +1451,13 @@ export function SettingsPage() {
       {pinRemoveOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
           <div
-            style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 }}
+            ref={pinRemoveModal.panelRef} {...pinRemoveModal.dialogProps}
+            style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 }}
             className="modal-in"
           >
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.profile.removePin}</h2>
-              <button onClick={() => setPinRemoveOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}><X size={16} /></button>
+              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setPinRemoveOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}><X size={16} /></button>
             </div>
             <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 20 }}>{t.settings.removePinConfirm}</p>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -1459,12 +1473,12 @@ export function SettingsPage() {
       {/* ── DANGER CONFIRM MODAL ── */}
       {dangerAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
+          <div ref={dangerModal.panelRef} {...dangerModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>
                 {dangerAction === 'transactions' ? t.settings.deleteAllTransactions : t.settings.dangerResetTitle}
               </h2>
-              <button onClick={() => setDangerAction(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}>
+              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setDangerAction(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}>
                 <X size={16} />
               </button>
             </div>
@@ -1507,10 +1521,10 @@ export function SettingsPage() {
       {/* ── DEACTIVATE ACCOUNT MODAL ── */}
       {deactivateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
+          <div ref={deactivateModal.panelRef} {...deactivateModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 384 }} className="modal-in">
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deactivateAccount}</h2>
-              <button onClick={() => setDeactivateOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}><X size={16} /></button>
+              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setDeactivateOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4, display: 'flex' }}><X size={16} /></button>
             </div>
             <p style={{ fontSize: 13, color: 'var(--aurora-faint)', marginBottom: 16 }}>{t.settings.deactivateAccountDesc}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
@@ -1557,10 +1571,10 @@ export function SettingsPage() {
       {/* ── CHANGE PASSWORD MODAL ── */}
       {changePwOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => setChangePwOpen(false)}>
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 }} className="modal-in" onClick={e => e.stopPropagation()}>
+          <div ref={changePwModal.panelRef} {...changePwModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 }} className="modal-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.changePasswordAction}</h2>
-              <button onClick={() => setChangePwOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
+              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setChangePwOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {changePwError && <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-rose)', margin: 0 }}>{changePwError}</p>}
@@ -1570,9 +1584,9 @@ export function SettingsPage() {
                 </div>
               ) : (
                 <>
-                  <input type="password" placeholder={t.settings.currentPassword} value={currentPw} onChange={e => setCurrentPw(e.target.value)} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
-                  <input type="password" placeholder={t.settings.newPasswordPlaceholder} value={newPw} onChange={e => setNewPw(e.target.value)} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
-                  <input type="password" placeholder={t.settings.confirmNewPassword} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChangePassword()} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
+                  <input type="password" name="current-password" autoComplete="current-password" aria-label={t.settings.currentPassword} placeholder={t.settings.currentPassword} value={currentPw} onChange={e => setCurrentPw(e.target.value)} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
+                  <input type="password" name="new-password" autoComplete="new-password" aria-label={t.settings.newPasswordPlaceholder} placeholder={t.settings.newPasswordPlaceholder} value={newPw} onChange={e => setNewPw(e.target.value)} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
+                  <input type="password" name="confirm-new-password" autoComplete="new-password" aria-label={t.settings.confirmNewPassword} placeholder={t.settings.confirmNewPassword} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChangePassword()} style={{ height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' }} />
                   <button
                     onClick={handleChangePassword}
                     disabled={changePwLoading}
@@ -1590,10 +1604,10 @@ export function SettingsPage() {
       {/* ── ZARIADENIA A RELÁCIE MODAL — 2 nezávislé sekcie: Aktívne relácie + PIN rýchly prístup ── */}
       {devicesModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => setDevicesModalOpen(false)}>
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 420, maxHeight: '80vh', overflowY: 'auto' }} className="modal-in" onClick={e => e.stopPropagation()}>
+          <div ref={devicesModal.panelRef} {...devicesModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 420, maxHeight: '80vh', overflowY: 'auto' }} className="modal-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.devicesAndSessionsTitle}</h2>
-              <button onClick={() => setDevicesModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
+              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setDevicesModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
             </div>
 
             {/* Sekcia 1: Aktívne relácie (userSessions / refreshTokens) */}
@@ -1719,10 +1733,10 @@ export function SettingsPage() {
       {/* ── DEACTIVATION MODAL ── */}
       {deactivationModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => setDeactivationModalOpen(false)}>
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 420 }} className="modal-in" onClick={e => e.stopPropagation()}>
+          <div ref={deactivationModal.panelRef} {...deactivationModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 420 }} className="modal-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.deactivationSection.charAt(0) + t.settings.deactivationSection.slice(1).toLowerCase()}</h2>
-              <button onClick={() => setDeactivationModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
+              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setDeactivationModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
             </div>
             {/* Each action closes this sheet first: its dialog is rendered earlier in the
                 tree with the same z-index, so it would otherwise open hidden behind it. */}
@@ -1755,10 +1769,10 @@ export function SettingsPage() {
       {/* ── TRACKING DATE MODAL ── */}
       {trackingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => setTrackingModalOpen(false)}>
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 380 }} className="modal-in" onClick={e => e.stopPropagation()}>
+          <div ref={trackingModal.panelRef} {...trackingModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 380 }} className="modal-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.trackingStartLabel}</h2>
-              <button onClick={() => setTrackingModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
+              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setTrackingModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
             </div>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: '0 0 16px', lineHeight: 1.5 }}>
               {t.settings.trackingStartDesc}

@@ -4,6 +4,7 @@ import { db } from "../db";
 import { users, transactions, categories, savingsGoals } from "../db/schema";
 import { sendEmail } from "../lib/email";
 import { sharingMemberIds } from "../lib/sharedCategories";
+import { loadStartMonths } from "../lib/loadStartMonths";
 import {
   monthRows, totals, topCategories, largestPayment, categoriesOverLimit, upcomingPayments, memberSplit,
   renderSummaryHtml, type RawTx, type SummaryData,
@@ -77,9 +78,11 @@ export async function buildSummary(
     .where(inArray(savingsGoals.userId, scopeIds))
     .orderBy(asc(savingsGoals.createdAt));
 
-  const allRows = monthRows(txs, year, month);
+  // A month before a member's tracking start is empty for that member.
+  const starts = await loadStartMonths(loadIds);
+  const allRows = monthRows(txs, year, month, undefined, starts);
   const rows = allRows.filter((r) => scopeIds.includes(r.userId));
-  const prevRows = monthRows(txs, prev.year, prev.month).filter((r) => scopeIds.includes(r.userId));
+  const prevRows = monthRows(txs, prev.year, prev.month, undefined, starts).filter((r) => scopeIds.includes(r.userId));
   const mine = (t: RawTx) => scopeIds.includes(t.userId);
 
   const { income, expense } = totals(rows);

@@ -1,11 +1,15 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
+import { trackingStartOf } from '../utils/trackingStart'
 import type { FixedExpense, ApiTransaction } from '../types'
 import type { DataScope } from './useIncomes'
 import { todayISO } from '../utils/format'
 import { getAllTransactions } from '../api/allTransactions'
+import { createOrQueue, isQueuedId, removeQueued } from '../lib/offlineQueue'
+import { useOfflineQueue } from './useOfflineQueue'
+import { queuedFixedRows } from '../utils/queuedRows'
 
 export function parseDescription(desc: string | null, fallbackDay: number): { label: string; note: string; dayOfMonth: number } {
   if (!desc) return { label: '', note: '', dayOfMonth: fallbackDay }
@@ -86,88 +90,94 @@ export async function fetchFixedExpenses(
   scope: DataScope = 'personal',
   includeEnded = false,
 ): Promise<FixedExpense[]> {
-  try {
-    const monthStr = month !== undefined && year !== undefined
-      ? `${year}-${String(month).padStart(2, '0')}`
-      : undefined
-    const trackingYM = trackingStart ? trackingStart.substring(0, 7) : null
-    // If tracking_start_date is set and the viewed month is before it, show no fixed expenses
-    if (monthStr && trackingYM && monthStr < trackingYM) return []
+  // Errors propagate so the page can show an error + retry instead of "no data".
+  const monthStr = month !== undefined && year !== undefined
+    ? `${year}-${String(month).padStart(2, '0')}`
+    : undefined
+  const trackingYM = trackingStart ? trackingStart.substring(0, 7) : null
+  // If tracking_start_date is set and the viewed month is before it, show no fixed expenses
+  if (monthStr && trackingYM && monthStr < trackingYM) return []
 
-    if (!monthStr) {
-      // "Now": each series once, at its price for the current month, with its
-      // price history; ended series only when asked for (the management page).
-      const data = await getAllTransactions({ type: 'expense', isFixed: true, scope })
-      const now = new Date()
-      const nowYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-      const bySeries = new Map<string, ApiTransaction[]>()
-      for (const t of data) {
-        const key = `${t.userId}|${t.description ?? ''}`
-        const list = bySeries.get(key)
-        if (list) list.push(t); else bySeries.set(key, [t])
-      }
-      const result: FixedExpense[] = []
-      for (const rows of bySeries.values()) {
-        rows.sort((a, b) => a.date.localeCompare(b.date) || (a.createdAt ?? '').localeCompare(b.createdAt ?? ''))
-        const current = [...rows].reverse().find(r => r.date.substring(0, 7) <= nowYM) ?? rows[0]
-        if (!includeEnded && isEndedInMonth(current.endedOn, nowYM)) continue
-        result.push({ ...toFixedExpense(current), history: rows.map(r => ({ from: r.date.substring(0, 7), amount: r.amount })) })
-      }
-      return result
-    }
-
-    // A fixed expense is entered once and recurs every month after that — the
-    // backend `month` param filters by creation date, not recurrence, so it
-    // would hide a bill created in an earlier month. No month filter is sent;
-    // each distinct bill (keyed by its description) counts once for the viewed
-    // month using its most recent occurrence at or before that month's end,
-    // matching the dedup in the getSummaryCards backend endpoint.
+  if (!monthStr) {
+    // "Now": each series once, at its price for the current month, with its
+    // price history; ended series only when asked for (the management page).
     const data = await getAllTransactions({ type: 'expense', isFixed: true, scope })
-    const latestByIdentity = new Map<string, ApiTransaction>()
+    const now = new Date()
+    const nowYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const bySeries = new Map<string, ApiTransaction[]>()
     for (const t of data) {
-      if (t.date.substring(0, 7) > monthStr) continue
-      if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
-      // Per owner: two members can both have a bill with the same label.
       const key = `${t.userId}|${t.description ?? ''}`
-      const existing = latestByIdentity.get(key)
-      if (!existing || isNewerRow(t, existing)) latestByIdentity.set(key, t)
+      const list = bySeries.get(key)
+      if (list) list.push(t); else bySeries.set(key, [t])
     }
-    return [...latestByIdentity.values()].filter(t => !isEndedInMonth(t.endedOn, monthStr)).map(toFixedExpense)
-  } catch {
-    return []
+    const result: FixedExpense[] = []
+    for (const rows of bySeries.values()) {
+      rows.sort((a, b) => a.date.localeCompare(b.date) || (a.createdAt ?? '').localeCompare(b.createdAt ?? ''))
+      const current = [...rows].reverse().find(r => r.date.substring(0, 7) <= nowYM) ?? rows[0]
+      if (!includeEnded && isEndedInMonth(current.endedOn, nowYM)) continue
+      result.push({ ...toFixedExpense(current), history: rows.map(r => ({ from: r.date.substring(0, 7), amount: r.amount })) })
+    }
+    return result
   }
+
+  // A fixed expense is entered once and recurs every month after that — the
+  // backend `month` param filters by creation date, not recurrence, so it
+  // would hide a bill created in an earlier month. No month filter is sent;
+  // each distinct bill (keyed by its description) counts once for the viewed
+  // month using its most recent occurrence at or before that month's end,
+  // matching the dedup in the getSummaryCards backend endpoint.
+  const data = await getAllTransactions({ type: 'expense', isFixed: true, scope })
+  const latestByIdentity = new Map<string, ApiTransaction>()
+  for (const t of data) {
+    if (t.date.substring(0, 7) > monthStr) continue
+    // A row dated before the tracking start still counts from the start month
+    // on (the month gate above already empties the earlier months).
+    // Per owner: two members can both have a bill with the same label.
+    const key = `${t.userId}|${t.description ?? ''}`
+    const existing = latestByIdentity.get(key)
+    if (!existing || isNewerRow(t, existing)) latestByIdentity.set(key, t)
+  }
+  return [...latestByIdentity.values()].filter(t => !isEndedInMonth(t.endedOn, monthStr)).map(toFixedExpense)
 }
 
 export function useFixedExpenses(month?: number, year?: number, scope: DataScope = 'personal', includeEnded = false) {
   const { isAuthenticated, user } = useAuth()
   const qc = useQueryClient()
-  const qKey = fixedExpenseQueryKey(month, year, user?.tracking_start_date, scope, includeEnded)
+  const qKey = fixedExpenseQueryKey(month, year, trackingStartOf(user), scope, includeEnded)
 
-  const { data: fixedExpenses = [] } = useQuery({
+  const { data: serverFixed, isLoading, isError, refetch } = useQuery({
     queryKey: qKey,
-    queryFn: () => fetchFixedExpenses(month, year, user?.tracking_start_date, scope, includeEnded),
+    queryFn: () => fetchFixedExpenses(month, year, trackingStartOf(user), scope, includeEnded),
     enabled: isAuthenticated,
   })
+  // Offline adds waiting to be sent show up first, marked `pending` (personal view only).
+  const queue = useOfflineQueue()
+  const monthKey = qKey[1]
+  const fixedExpenses = useMemo(
+    () => [...(scope === 'personal' ? queuedFixedRows(queue, monthKey, parseDescription) : []), ...(serverFixed ?? [])],
+    [serverFixed, queue, monthKey, scope],
+  )
 
   const invalidate = useCallback(() => Promise.all([
     qc.invalidateQueries({ queryKey: ['fixedExpenses'] }),
     qc.invalidateQueries({ queryKey: ['summaryCards'] }),
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+    qc.invalidateQueries({ queryKey: ['monthlySeries'] }),
     qc.invalidateQueries({ queryKey: ['subscriptionSuggestions'] }),
   ]), [qc])
 
   // `startDate` (YYYY-MM-DD) is the first month it applies; today when not given
   const addFixedExpense = useCallback(async (expense: Omit<FixedExpense, 'id'>, startDate?: string): Promise<void> => {
     const today = startDate ?? todayISO()
-    await createTransaction({
+    const { queued } = await createOrQueue({
       type: 'expense',
       amount: expense.amount,
       description: encodeDescription(expense.label, expense.note, expense.dayOfMonth),
       date: today,
       isFixed: true,
       categoryId: expense.categoryId ?? null,
-    })
-    await invalidate()
+    }, createTransaction)
+    if (!queued) await invalidate()
   }, [invalidate])
 
   // `priceFrom` (YYYY-MM) makes a changed amount a price change from that month
@@ -195,9 +205,10 @@ export function useFixedExpenses(month?: number, year?: number, scope: DataScope
   }, [invalidate])
 
   const deleteFixedExpense = useCallback(async (id: string): Promise<void> => {
+    if (isQueuedId(id)) { removeQueued(id); return }
     await deleteTransaction(id)
     await invalidate()
   }, [invalidate])
 
-  return { fixedExpenses, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense }
+  return { fixedExpenses, isLoading, isError, refetch, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense }
 }

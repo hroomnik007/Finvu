@@ -1,6 +1,19 @@
 export type ThemePreference = 'dark' | 'light' | 'system'
 export type ResolvedTheme = 'dark' | 'light'
 
+const THEME_PREFERENCES: readonly ThemePreference[] = ['dark', 'light', 'system']
+
+export function parseThemePreference(v: unknown): ThemePreference | undefined {
+  return typeof v === 'string' && (THEME_PREFERENCES as readonly string[]).includes(v) ? v as ThemePreference : undefined
+}
+
+// The theme picked on this device before signing in (login/register toggle).
+// Sent along when an account is created so the server default doesn't
+// replace it on the first profile load.
+export function storedThemePreference(): ThemePreference | undefined {
+  try { return parseThemePreference(localStorage.getItem('theme_preference')) } catch { return undefined }
+}
+
 export function resolveTheme(pref: ThemePreference): ResolvedTheme {
   if (pref !== 'system') return pref
   try {

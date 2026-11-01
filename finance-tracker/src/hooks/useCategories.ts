@@ -46,19 +46,16 @@ function toCategory(c: ApiCategory, limits: Record<string, number>): Category {
 }
 
 export async function fetchCategoriesData(): Promise<Category[]> {
-  try {
-    const { data } = await getCategories()
-    const limits = loadBudgetLimits()
-    return data.map(c => toCategory(c, limits))
-  } catch {
-    return []
-  }
+  // Errors propagate so the page can show an error + retry instead of "no data".
+  const { data } = await getCategories()
+  const limits = loadBudgetLimits()
+  return data.map(c => toCategory(c, limits))
 }
 
 export function useCategories() {
   const qc = useQueryClient()
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategoriesData,
   })
@@ -113,5 +110,5 @@ export function useCategories() {
     await invalidate()
   }, [invalidate])
 
-  return { categories, addCategory, updateCategory: updateCategoryFn, deleteCategory: deleteCategoryFn, reload: invalidate }
+  return { categories, isLoading, isError, refetch, addCategory, updateCategory: updateCategoryFn, deleteCategory: deleteCategoryFn, reload: invalidate }
 }

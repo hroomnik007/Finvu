@@ -20,6 +20,7 @@ import { DEMO_EMAIL } from "../lib/resetDemo";
 import { issueTokens, userPublic } from "./auth.controller";
 import { cleanPasskeyName, newPasskeyName } from "../lib/passkeyNames";
 import { passkeyReauthOptions } from "../lib/passkeyReauth";
+import { authError } from "../lib/authErrors";
 
 const RP_NAME = "Finvu";
 
@@ -150,10 +151,10 @@ export async function webauthnAuthenticateOptions(req: any, res: Response): Prom
 export async function webauthnAuthenticateVerify(req: any, res: Response): Promise<void> {
   const body = req.body as AuthenticationResponseJSON & { _challengeKey?: string };
   const challengeKey = body._challengeKey;
-  if (!challengeKey) { res.status(400).json({ error: "Chýba challengeKey." }); return; }
+  if (!challengeKey) { res.status(400).json(authError("PASSKEY_FAILED")); return; }
 
   const expectedChallenge = consumeChallenge(challengeKey);
-  if (!expectedChallenge) { res.status(400).json({ error: "Challenge vypršal." }); return; }
+  if (!expectedChallenge) { res.status(400).json(authError("PASSKEY_FAILED")); return; }
 
   const [storedCred] = await db
     .select()
@@ -161,7 +162,7 @@ export async function webauthnAuthenticateVerify(req: any, res: Response): Promi
     .where(eq(webauthnCredentials.credentialId, body.id))
     .limit(1);
 
-  if (!storedCred) { res.status(401).json({ error: "Neznáme zariadenie." }); return; }
+  if (!storedCred) { res.status(401).json(authError("PASSKEY_FAILED")); return; }
 
   let verification;
   try {
@@ -177,20 +178,20 @@ export async function webauthnAuthenticateVerify(req: any, res: Response): Promi
       },
       requireUserVerification: true,
     });
-  } catch (e) {
-    res.status(400).json({ error: (e as Error).message }); return;
+  } catch {
+    res.status(400).json(authError("PASSKEY_FAILED")); return;
   }
 
-  if (!verification.verified) { res.status(401).json({ error: "Overenie zlyhalo." }); return; }
+  if (!verification.verified) { res.status(401).json(authError("PASSKEY_FAILED")); return; }
 
   await db.update(webauthnCredentials)
     .set({ counter: verification.authenticationInfo.newCounter })
     .where(eq(webauthnCredentials.id, storedCred.id));
 
   const [user] = await db.select().from(users).where(eq(users.id, storedCred.userId)).limit(1);
-  if (!user) { res.status(404).json({ error: "Používateľ nenájdený." }); return; }
+  if (!user) { res.status(401).json(authError("PASSKEY_FAILED")); return; }
   if (user.isDeactivated) {
-    res.status(403).json({ error: "Váš účet je deaktivovaný. Pre reaktiváciu kontaktujte podporu.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(403).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 
@@ -203,7 +204,7 @@ export async function webauthnAuthenticateVerify(req: any, res: Response): Promi
 // sensitive action (account deletion) with one of the caller's own passkeys.
 export async function webauthnReauthOptions(req: AuthRequest, res: Response): Promise<void> {
   const options = await passkeyReauthOptions(req.userId!);
-  if (!options) { res.status(400).json({ error: "Nemáte žiadny passkey." }); return; }
+  if (!options) { res.status(400).json({ error: "Nemáš žiadny passkey." }); return; }
   res.json(options);
 }
 
@@ -241,7 +242,7 @@ export async function deletePasskey(req: AuthRequest, res: Response): Promise<vo
     .from(webauthnCredentials)
     .where(eq(webauthnCredentials.userId, req.userId!));
   if (n <= 1 && !u?.passwordHash && !u?.pinHash && !u?.googleId) {
-    res.status(400).json({ error: "Toto je váš jediný spôsob prihlásenia. Najprv nastavte heslo, PIN alebo Google." });
+    res.status(400).json({ error: "Toto je tvoj jediný spôsob prihlásenia. Najprv si nastav heslo, PIN alebo Google." });
     return;
   }
   const removed = await db
@@ -258,7 +259,7 @@ export async function renamePasskey(req: AuthRequest, res: Response): Promise<vo
   const id = req.params["id"] as string;
   if (!UUID_RE.test(id)) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
   const name = cleanPasskeyName((req.body ?? {}).name);
-  if (!name) { res.status(400).json({ error: "Zadajte názov passkey." }); return; }
+  if (!name) { res.status(400).json({ error: "Zadaj názov passkey." }); return; }
   const updated = await db
     .update(webauthnCredentials)
     .set({ name })

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { subscribeAddForm } from '../utils/addFormEvents'
 import type { LucideIcon } from 'lucide-react'
 import { Plus, X, ArrowUp, ArrowDown, Lock, Tag, Repeat, PiggyBank } from 'lucide-react'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
@@ -14,7 +15,16 @@ import { useSavings } from '../hooks/useSavings'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
+import { dateForRecurringToggle, defaultEntryDate } from '../utils/entryDefaults'
+import { ValidFromHint } from './ValidFromHint'
 import { todayISO } from '../utils/format'
+import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
+import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
+import { useModalA11y } from '../hooks/useModalA11y'
+import { SuggestedCategoryHint } from './SuggestedCategoryHint'
+import AmountInput from './AmountInput'
+import { parseAmountInput } from '../utils/amountInput'
 
 type ModalType = 'income' | 'variable' | 'fixed' | 'category' | 'savings' | null
 
@@ -54,20 +64,12 @@ const finputStyle: React.CSSProperties = {
   fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box',
 }
 
-const AMOUNT_KEY_ALLOW = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-
 function AmountField({ value, onChange, accent }: { value: string; onChange: (v: string) => void; accent: string }) {
   return (
     <div style={amountFieldStyle}>
-      <input
-        type="text" inputMode="decimal" placeholder="0"
+      <AmountInput placeholder="0"
         value={value}
-        onChange={e => {
-          const raw = e.target.value.replace(/[^0-9,]/g, '')
-          if ((raw.match(/,/g) || []).length > 1) return
-          onChange(raw)
-        }}
-        onKeyDown={e => { if (!AMOUNT_KEY_ALLOW.includes(e.key)) e.preventDefault() }}
+        onValueChange={onChange}
         style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
       />
       <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
@@ -127,6 +129,7 @@ interface GlobalFABProps {
 export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, launch }: GlobalFABProps) {
   const [activeModal, setActiveModal] = useState<ModalType>(null)
   const [showTypeSelector, setShowTypeSelector] = useState(false)
+  const { panelRef: typeSelectorRef, titleId: typeSelectorTitleId, dialogProps: typeSelectorProps } = useModalA11y({ open: showTypeSelector, onClose: () => setShowTypeSelector(false) })
   const [isMobile] = useState(() => window.innerWidth < 1024)
 
   // openTrigger is an incrementing counter prop — react to it during render
@@ -142,29 +145,34 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
     }
   }
 
+  // Checklist / empty-state buttons ask for a specific form.
+  useEffect(() => subscribeAddForm(type => { setShowTypeSelector(false); setActiveModal(type) }), [])
+
   // ── Data hooks ────────────────────────────────────────────────────────────
-  const { addIncome } = useIncomes(month, year)
-  const { addVariableExpense, variableExpenses } = useVariableExpenses(month, year)
+  const { addIncome, deleteIncome } = useIncomes(month, year)
+  const { addVariableExpense, deleteVariableExpense, variableExpenses } = useVariableExpenses(month, year)
   const { addFixedExpense } = useFixedExpenses()
   const { categories, addCategory } = useCategories()
+  const quickCategories = useCategoriesByUsage(categories)
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses })
   const { addGoal } = useSavings()
   const { formatAmount } = useFormatters()
   const { t } = useTranslation()
   const { user } = useAuth()
+  const feedback = useSaveFeedback()
   const savingsEnabled = user?.savings_enabled ?? false
 
   // ── Income form state ─────────────────────────────────────────────────────
   const [incAmt, setIncAmt] = useState('')
   const [incLabel, setIncLabel] = useState('')
-  const [incDate, setIncDate] = useState(todayISO())
+  const [incDate, setIncDate] = useState(() => defaultEntryDate(month, year))
   const [incRecurring, setIncRecurring] = useState(false)
 
   // ── Variable expense form state ───────────────────────────────────────────
   const [varAmt, setVarAmt] = useState('')
   const [varCatId, setVarCatId] = useState('')
   const [varNote, setVarNote] = useState('')
-  const [varDate, setVarDate] = useState(todayISO())
+  const [varDate, setVarDate] = useState(() => defaultEntryDate(month, year))
   const [varNewCatMode, setVarNewCatMode] = useState(false)
   const [varNewCatName, setVarNewCatName] = useState('')
 
@@ -173,6 +181,18 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
   const [fixAmt, setFixAmt] = useState('')
   const [fixDay, setFixDay] = useState('1')
   const [fixCatId, setFixCatId] = useState('')
+
+  // ── Category suggestions from the typed note / label ──────────────────────
+  const quickIds = quickCategories.map(c => c.id ?? '')
+  const varSuggestion = useCategorySuggestion({
+    text: varNote, active: activeModal === 'variable' && !varNewCatMode,
+    currentId: varCatId, validIds: quickIds, select: setVarCatId,
+  })
+  const fixSuggestion = useCategorySuggestion({
+    text: fixLabel, active: activeModal === 'fixed',
+    currentId: fixCatId, validIds: quickIds, select: setFixCatId,
+  })
+  const categoryName = (id: string | null) => (id ? quickCategories.find(c => c.id === id)?.name : undefined)
 
   // ── Category form state ───────────────────────────────────────────────────
   const [catName, setCatName] = useState('')
@@ -190,9 +210,9 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
   function openModal(type: ModalType, prefill?: { amount?: string; note?: string }) {
     setTimeout(() => {
       if (type === 'income') {
-        setIncAmt(prefill?.amount ?? ''); setIncLabel(prefill?.note ?? ''); setIncDate(todayISO()); setIncRecurring(false)
+        setIncAmt(prefill?.amount ?? ''); setIncLabel(prefill?.note ?? ''); setIncDate(defaultEntryDate(month, year)); setIncRecurring(false)
       } else if (type === 'variable') {
-        setVarAmt(prefill?.amount ?? ''); setVarCatId(''); setVarNote(prefill?.note ?? ''); setVarDate(todayISO())
+        setVarAmt(prefill?.amount ?? ''); setVarCatId(''); setVarNote(prefill?.note ?? ''); setVarDate(defaultEntryDate(month, year))
         setVarNewCatMode(false); setVarNewCatName('')
       } else if (type === 'fixed') {
         setFixLabel(''); setFixAmt(''); setFixDay('1'); setFixCatId('')
@@ -211,76 +231,108 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
   useEffect(() => {
     if (!launch) return
     openModal(launch.type, { amount: launch.amount, note: launch.note })
+  // openModal is recreated every render; only a new launch should reopen the form.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [launch])
 
   // ── Save handlers ─────────────────────────────────────────────────────────
+  // CompactModal awaits these: while one is pending its button shows a spinner
+  // and further taps are ignored. On error the modal stays open with the values.
   async function saveIncome() {
-    const amt = parseFloat(incAmt.replace(',', '.'))
+    const amt = (parseAmountInput(incAmt) ?? NaN)
     if (!incLabel.trim() || isNaN(amt) || amt <= 0) return
-    await addIncome({ amount: amt, label: incLabel.trim(), date: incDate, recurring: incRecurring })
-    closeModal()
+    try {
+      const id = await addIncome({ amount: amt, label: incLabel.trim(), date: incDate, recurring: incRecurring })
+      closeModal()
+      // Deleting a recurring income removes its whole series (matched by name),
+      // so undo is offered only for one-off incomes.
+      feedback.saved(incRecurring ? undefined : () => deleteIncome(id))
+    } catch {
+      feedback.failed()
+    }
   }
 
   async function saveVariable() {
-    const amt = parseFloat(varAmt.replace(',', '.'))
+    const amt = (parseAmountInput(varAmt) ?? NaN)
     if (isNaN(amt) || amt <= 0) return
-    let catId: string
-    if (varNewCatMode) {
-      if (!varNewCatName.trim()) return
-      catId = await addCategory({ name: varNewCatName.trim(), color: '#64748b', icon: '📦', type: 'expense' })
-    } else {
-      if (!varCatId) return
-      catId = varCatId
-      const bs = budgetStatuses.find(b => b.categoryId === catId)
-      if (bs) {
-        const newSpent = bs.spent + amt
-        const newPct = (newSpent / bs.limit) * 100
-        if (newPct >= 100 && bs.percentage < 100) showToast(t.expenses.categories.limitExceededToast.replace('{name}', bs.categoryName))
-        else if (newPct >= 90 && bs.percentage < 90) showToast(t.expenses.categories.nearLimitToast.replace('{name}', bs.categoryName))
+    if (varNewCatMode ? !varNewCatName.trim() : !varCatId) return
+    try {
+      let catId: string
+      if (varNewCatMode) {
+        catId = await addCategory({ name: varNewCatName.trim(), color: '#64748b', icon: '📦', type: 'expense' })
+        // If the expense itself fails, a retry must not create the category again.
+        setVarCatId(catId); setVarNewCatMode(false); setVarNewCatName('')
+      } else {
+        catId = varCatId
+        const bs = budgetStatuses.find(b => b.categoryId === catId)
+        if (bs) {
+          const newSpent = bs.spent + amt
+          const newPct = (newSpent / bs.limit) * 100
+          if (newPct >= 100 && bs.percentage < 100) showToast(t.expenses.categories.limitExceededToast.replace('{name}', bs.categoryName))
+          else if (newPct >= 90 && bs.percentage < 90) showToast(t.expenses.categories.nearLimitToast.replace('{name}', bs.categoryName))
+        }
       }
+      const id = await addVariableExpense({ amount: amt, categoryId: catId, note: varNote, date: varDate })
+      closeModal()
+      feedback.saved(() => deleteVariableExpense(id))
+    } catch {
+      feedback.failed()
     }
-    await addVariableExpense({ amount: amt, categoryId: catId, note: varNote, date: varDate })
-    closeModal()
   }
 
   async function saveFixed() {
-    const amt = parseFloat(fixAmt.replace(',', '.'))
+    const amt = (parseAmountInput(fixAmt) ?? NaN)
     const day = parseInt(fixDay)
     if (!fixLabel.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 31) return
-    await addFixedExpense({ label: fixLabel.trim(), amount: amt, dayOfMonth: day, categoryId: fixCatId || null, note: '' })
-    closeModal()
+    try {
+      await addFixedExpense({ label: fixLabel.trim(), amount: amt, dayOfMonth: day, categoryId: fixCatId || null, note: '' })
+      closeModal()
+      feedback.saved()
+    } catch {
+      feedback.failed()
+    }
   }
 
   async function saveCategory() {
     if (!catName.trim()) return
-    const limit = catBudgetLimit ? parseFloat(catBudgetLimit.replace(',', '.')) : undefined
-    await addCategory({
-      name: catName.trim(),
-      color: catColor,
-      icon: catIcon,
-      type: 'expense',
-      budgetLimit: limit && limit > 0 ? limit : undefined,
-    })
-    closeModal()
+    const limit = parseAmountInput(catBudgetLimit) ?? undefined
+    try {
+      await addCategory({
+        name: catName.trim(),
+        color: catColor,
+        icon: catIcon,
+        type: 'expense',
+        budgetLimit: limit && limit > 0 ? limit : undefined,
+      })
+      closeModal()
+      feedback.saved()
+    } catch {
+      feedback.failed()
+    }
   }
 
   async function saveSavingsGoal() {
-    const amt = parseFloat(savTarget.replace(',', '.'))
+    const amt = (parseAmountInput(savTarget) ?? NaN)
     if (!savName.trim() || isNaN(amt) || amt <= 0) return
-    await addGoal({
-      name: savName.trim(),
-      targetAmount: amt,
-      savedAmount: 0,
-      deadline: savDeadline || null,
-      icon: savIcon,
-      color: '#7C3AED',
-    })
-    closeModal()
+    try {
+      await addGoal({
+        name: savName.trim(),
+        targetAmount: amt,
+        savedAmount: 0,
+        deadline: savDeadline || null,
+        icon: savIcon,
+        color: '#7C3AED',
+      })
+      closeModal()
+      feedback.saved()
+    } catch {
+      feedback.failed()
+    }
   }
 
   // ── Live budget preview (variable expense) ────────────────────────────────
   const liveBudget = varCatId ? budgetStatuses.find(b => b.categoryId === varCatId) : null
-  const liveVarAmt = parseFloat(varAmt.replace(',', '.')) || 0
+  const liveVarAmt = parseAmountInput(varAmt) ?? 0
   const liveSpent = liveBudget ? liveBudget.spent + liveVarAmt : 0
   const liveLimit = liveBudget?.limit
   const livePct = liveLimit ? Math.min((liveSpent / liveLimit) * 100, 100) : null
@@ -334,12 +386,13 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           onClick={e => { if (e.target === e.currentTarget) setShowTypeSelector(false) }}
         >
           <div
+            ref={typeSelectorRef} {...typeSelectorProps}
             className="modal-in"
-            style={{ width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
+            style={{ outline: 'none', width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ flex: 1, fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)' }}>{t.fab.title}</div>
+              <h2 id={typeSelectorTitleId} tabIndex={-1} style={{ outline: 'none', margin: 0, flex: 1, fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)' }}>{t.fab.title}</h2>
               <button
                 type="button" onClick={() => setShowTypeSelector(false)} aria-label={t.common.close}
                 style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0 }}
@@ -387,6 +440,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         accent="#34D399" accent2="#22D3EE"
         onSubmit={saveIncome}
         submitDisabled={!incLabel.trim() || !incAmt}
+        autoFocusAmount
       >
         <AmountField value={incAmt} onChange={setIncAmt} accent="#34D399" />
         <input
@@ -397,10 +451,20 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         />
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <DateInput compact value={incDate} onChange={setIncDate} />
-          <button type="button" onClick={() => setIncRecurring(r => !r)} style={pillChipStyle(incRecurring, '#34D399', '#22D3EE')}>
+          <button
+            type="button"
+            aria-pressed={incRecurring}
+            onClick={() => {
+              const next = !incRecurring
+              setIncRecurring(next)
+              setIncDate(d => dateForRecurringToggle(d, next, month, year))
+            }}
+            style={pillChipStyle(incRecurring, '#34D399', '#22D3EE')}
+          >
             <Repeat size={12} /> {t.income.recurringToggle}
           </button>
         </div>
+        {incRecurring && <ValidFromHint date={incDate} />}
       </CompactModal>
 
       {/* ── ADD VARIABLE EXPENSE modal ────────────────────────────────────── */}
@@ -411,6 +475,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         accent="#FB7185" accent2="#f43f5e"
         onSubmit={saveVariable}
         submitDisabled={varNewCatMode ? !varNewCatName.trim() || !varAmt : !varCatId || !varAmt}
+        autoFocusAmount
       >
         <AmountField value={varAmt} onChange={setVarAmt} accent="#FB7185" />
 
@@ -428,14 +493,14 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
 
         {!varNewCatMode ? (
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {categories.map(c => (
+            {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
                 icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
                 label={c.name}
                 selected={varCatId === c.id}
                 accent={c.color} accent2={c.color}
-                onClick={() => setVarCatId(c.id ?? '')}
+                onClick={() => { varSuggestion.pickedManually(); setVarCatId(c.id ?? '') }}
               />
             ))}
             <CategoryCircle
@@ -452,7 +517,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
               onChange={e => setVarNewCatName(e.target.value)}
               style={{ ...finputStyle, flex: 1 }}
             />
-            <button
+            <button className="hit-44" aria-label={t.common.cancel} title={t.common.cancel}
               type="button"
               onClick={() => { setVarNewCatMode(false); setVarNewCatName('') }}
               style={{ width: 38, borderRadius: 12, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -471,6 +536,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
             style={{ ...finputStyle, flex: 1, width: 'auto', padding: '8px 12px', borderRadius: 12, fontSize: 12 }}
           />
         </div>
+        <SuggestedCategoryHint name={categoryName(varSuggestion.suggestedId)} />
       </CompactModal>
 
       {/* ── ADD FIXED EXPENSE modal ───────────────────────────────────────── */}
@@ -481,6 +547,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={saveFixed}
         submitDisabled={!fixLabel.trim() || !fixAmt}
+        autoFocusAmount
       >
         <AmountField value={fixAmt} onChange={setFixAmt} accent="#FBBF24" />
         <input
@@ -491,22 +558,25 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         />
         {categories.length > 0 && (
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {categories.map(c => (
+            {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
                 icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
                 label={c.name}
                 selected={fixCatId === c.id}
                 accent={c.color} accent2={c.color}
-                onClick={() => setFixCatId(prev => prev === c.id ? '' : (c.id ?? ''))}
+                onClick={() => { fixSuggestion.pickedManually(); setFixCatId(prev => prev === c.id ? '' : (c.id ?? '')) }}
               />
             ))}
           </div>
         )}
+        <SuggestedCategoryHint name={categoryName(fixSuggestion.suggestedId)} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
             <button
               type="button"
+              className="hit-44"
+              aria-label={t.common.dayDecrease}
               onClick={() => setFixDay(d => String(Math.max(1, parseInt(d || '1') - 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
@@ -514,6 +584,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{fixDay}</span>
             <button
               type="button"
+              className="hit-44"
+              aria-label={t.common.dayIncrease}
               onClick={() => setFixDay(d => String(Math.min(31, parseInt(d || '1') + 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >+</button>
@@ -522,6 +594,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
             <Repeat size={12} /> {t.expenses.fixed.recurringMonthly}
           </div>
         </div>
+        {/* A new fixed expense is dated today and counts from this month on. */}
+        <ValidFromHint date={todayISO()} />
       </CompactModal>
 
       {/* ── ADD CATEGORY modal ────────────────────────────────────────────── */}
@@ -541,13 +615,15 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         />
 
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '2px 2px 4px' }}>
-          {PRESET_ICONS.map(em => {
+          {PRESET_ICONS.map((em, i) => {
             const Icon = CATEGORY_ICON_MAP[em] ?? Tag
             const selected = catIcon === em
             return (
               <button
                 key={em}
                 type="button"
+                aria-label={t.common.iconOption.replace('{n}', String(i + 1))}
+                aria-pressed={selected}
                 onClick={() => setCatIcon(em)}
                 style={{
                   width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
@@ -580,16 +656,10 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           ))}
         </div>
 
-        <input
-          type="text" inputMode="decimal"
+        <AmountInput
           placeholder={`${t.expenses.categories.limitLabel} · ${t.expenses.categories.limitOptional}`}
           value={catBudgetLimit}
-          onChange={e => {
-            const raw = e.target.value.replace(/[^0-9,]/g, '')
-            if ((raw.match(/,/g) || []).length > 1) return
-            setCatBudgetLimit(raw)
-          }}
-          onKeyDown={e => { if (!AMOUNT_KEY_ALLOW.includes(e.key)) e.preventDefault() }}
+          onValueChange={setCatBudgetLimit}
           style={finputStyle}
         />
       </CompactModal>
@@ -602,6 +672,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         accent="#A855F7" accent2="#8B5CF6"
         onSubmit={saveSavingsGoal}
         submitDisabled={!savName.trim() || !savTarget}
+        autoFocusAmount
       >
         <input
           type="text" placeholder={t.savings.namePlaceholder}
@@ -611,13 +682,15 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         />
 
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '2px 2px 4px' }}>
-          {SAVINGS_PRESET_ICONS.map(em => {
+          {SAVINGS_PRESET_ICONS.map((em, i) => {
             const Icon = SAVINGS_ICON_MAP[em] ?? PiggyBank
             const selected = savIcon === em
             return (
               <button
                 key={em}
                 type="button"
+                aria-label={t.common.iconOption.replace('{n}', String(i + 1))}
+                aria-pressed={selected}
                 onClick={() => setSavIcon(em)}
                 style={{
                   width: 40, height: 40, borderRadius: '50%', flexShrink: 0,

@@ -8,6 +8,7 @@ import { CsvImportModal } from './components/CsvImportModal'
 import { takePendingIntent, takeSharedFile } from './utils/shareIntent'
 import { PullToRefresh } from './components/PullToRefresh'
 import { ToastContainer } from './components/ToastContainer'
+import { OfflineStatus } from './components/OfflineStatus'
 import { LoginPage } from './pages/Login'
 
 // Pages are lazy-loaded so the entry chunk stays small (recharts, xlsx and
@@ -55,6 +56,7 @@ import { PWAUpdateBanner } from './components/PWAUpdateBanner'
 import { TrackingDateOnboarding } from './components/TrackingDateOnboarding'
 import { CommandPalette } from './components/CommandPalette'
 import { updateUserSettings, sessionCheck } from './api/auth'
+import { trackingStartOf } from './utils/trackingStart'
 import {
   resolveTheme, applyAccentColor, applyBackgroundColor, bgColorStorageKey, defaultBgColor,
   DEFAULT_ACCENT_COLOR, type ThemePreference,
@@ -227,7 +229,7 @@ function App() {
         const loginDate = new Date()
         const m = loginDate.getMonth() + 1
         const y = loginDate.getFullYear()
-        const trackingStart = user?.tracking_start_date ?? null
+        const trackingStart = trackingStartOf(user)
         let cancelled = false
 
         const doNavigate = () => {
@@ -549,6 +551,7 @@ function App() {
           onNavigate={setPage}
           onToggleTheme={handleToggleTheme}
         />
+        <OfflineStatus />
         <PullToRefresh onRefresh={() => queryClient.refetchQueries()}>
           <Suspense fallback={null}>
           {page === 'dashboard' && (

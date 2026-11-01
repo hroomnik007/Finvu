@@ -2,6 +2,7 @@ import { apiClient } from './client'
 import type { ApiTransaction, ApiSummary } from '../types'
 import { announceAchievementUnlocks } from '../utils/achievementEvents'
 import { announceNotificationsRefresh } from '../utils/notificationEvents'
+import { postIdempotent, type IdempotentOptions } from './idempotency'
 
 export interface TransactionParams {
   month?: string
@@ -49,9 +50,10 @@ export async function getTransactions(
 }
 
 export async function createTransaction(
-  payload: TransactionPayload
+  payload: TransactionPayload,
+  opts: IdempotentOptions = {}
 ): Promise<{ data: ApiTransaction }> {
-  const { data } = await apiClient.post('/api/transactions', payload)
+  const { data } = await postIdempotent<{ data: ApiTransaction; newlyUnlockedAchievements?: unknown }>(apiClient.post, '/api/transactions', payload, opts)
   announceAchievementUnlocks(data.newlyUnlockedAchievements)
   // A new transaction (income, expense, fixed expense) can generate a budget,
   // fixedDue or income notification — refresh the bell without waiting for
@@ -61,9 +63,10 @@ export async function createTransaction(
 }
 
 export async function createTransactionsBulk(
-  items: Omit<TransactionPayload, 'isFixed'>[]
+  items: Omit<TransactionPayload, 'isFixed'>[],
+  opts: IdempotentOptions = {}
 ): Promise<{ created: number }> {
-  const { data } = await apiClient.post('/api/transactions/bulk', { items })
+  const { data } = await postIdempotent<{ created: number; newlyUnlockedAchievements?: unknown }>(apiClient.post, '/api/transactions/bulk', { items }, opts)
   announceAchievementUnlocks(data.newlyUnlockedAchievements)
   announceNotificationsRefresh()
   return data
@@ -148,4 +151,20 @@ export async function getMonthlySeries(
 ): Promise<{ family: boolean; months: SeriesMonth[] }> {
   const { data } = await apiClient.get('/api/transactions/monthly-series', { params: { from, to, scope, detail } })
   return data
+}
+
+export interface CategorySuggestion {
+  categoryId: string
+  source: 'rule' | 'history'
+  matches?: number
+}
+
+/** Category for a typed description, from the user's rules or history (null = no idea). */
+export async function fetchCategorySuggestion(
+  q: string,
+  type: 'expense' | 'income' = 'expense',
+  signal?: AbortSignal,
+): Promise<CategorySuggestion | null> {
+  const { data } = await apiClient.get('/api/transactions/suggest-category', { params: { q, type }, signal })
+  return (data as { data: CategorySuggestion | null }).data
 }

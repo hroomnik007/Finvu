@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/authenticate";
+import { idempotent } from "../middleware/idempotency";
 import { uuidParam } from "../middleware/validateParams";
 import {
   listCategories,
@@ -17,7 +18,7 @@ router.use(authenticateToken);
 router.param("id", uuidParam);
 
 router.get("/",          listCategories);
-router.post("/",         createCategory);
+router.post("/",         idempotent, createCategory);
 router.patch("/reorder", reorderCategories);
 router.post("/share",    setCategoriesShared);
 router.delete("/",       deleteAllCategories);

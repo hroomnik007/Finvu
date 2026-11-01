@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, CalendarRange, X, Tag, Target, LayoutTemplate } from 'lucide-react'
 import { ExpenseHeatmap } from '../components/ExpenseHeatmap'
@@ -8,6 +9,7 @@ import { StreakBadge } from '../components/StreakBadge'
 import { StreakModal } from '../components/StreakModal'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
+import { HeroAmountPlaceholder, QueryError, Skeleton } from '../components/QueryState'
 import { DailyBudgetCard } from '../components/DailyBudgetCard'
 import { SubscriptionSuggestions } from '../components/SubscriptionSuggestions'
 import { setFixedPrefill } from '../utils/fixedPrefill'
@@ -22,7 +24,8 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useSettingsContext } from '../context/SettingsContext'
 import { useAuth } from '../context/AuthContext'
-import { getSummary, getSummaryCards } from '../api/transactions'
+import { getMonthlySeries, getSummaryCards, type SeriesMonth } from '../api/transactions'
+import { trackingStartOf } from '../utils/trackingStart'
 import { updateUserSettings } from '../api/auth'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
@@ -30,9 +33,9 @@ import { useHousehold } from '../hooks/useHousehold'
 import { MemberAvatar } from '../components/MemberAvatar'
 import { useCountUp } from '../hooks/useCountUp'
 import type { Page } from '../App'
-import type { ApiSummary } from '../types'
 import type { Translations } from '../i18n/sk'
 import { todayISO } from '../utils/format'
+import { FirstRunChecklist } from '../components/FirstRunChecklist'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -89,16 +92,17 @@ interface DashboardProps {
 
 export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOffer }: DashboardProps) {
   const [showTrackingModal, setShowTrackingModal] = useState(false)
+  const trackingModal = useModalA11y({ open: showTrackingModal, onClose: () => setShowTrackingModal(false) })
   const [streakModalOpen, setStreakModalOpen] = useState(false)
   const [trackingDate, setTrackingDate] = useState(() => todayISO())
   const [trackingSaving, setTrackingSaving] = useState(false)
 
   // Family view lists every sharing member's rows; the server falls back to the
   // caller's own rows when they have no household / sharing is off.
-  const { incomes: allIncomes } = useIncomes(month, year, dashView)
-  const { fixedExpenses: allMonthFixedExpenses } = useFixedExpenses(month, year, dashView)
+  const { incomes: allIncomes, isLoading: incLoading, isError: incError, refetch: incRetry } = useIncomes(month, year, dashView)
+  const { fixedExpenses: allMonthFixedExpenses, isLoading: fixLoading, isError: fixError, refetch: fixRetry } = useFixedExpenses(month, year, dashView)
   const { fixedExpenses: allFixedExpenses } = useFixedExpenses(undefined, undefined, dashView)
-  const { variableExpenses: allVariableExpenses } = useVariableExpenses(month, year, dashView)
+  const { variableExpenses: allVariableExpenses, isLoading: varLoading, isError: varError, refetch: varRetry } = useVariableExpenses(month, year, dashView)
   const { categories } = useCategories()
   // A fixed expense only counts once its due day in the viewed month has
   // actually passed — see isFixedExpenseDue.
@@ -172,33 +176,43 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     return [...groups.values()].filter(d => d.value > 0)
   }, [categories, variableExpenses, fixedExpenses])
 
+  const chartStart = trackingStartOf(user)
   const { data: chartData = [] } = useQuery({
-    queryKey: ['dashboardChart', month, year, user?.tracking_start_date ?? null, user?.createdAt ?? null, dashView],
+    queryKey: ['dashboardChart', month, year, chartStart, dashView],
     queryFn: async () => {
-      const src = user?.tracking_start_date ?? user?.createdAt
-      const minYear = src ? new Date(src).getFullYear() : 0
-      const minMonth = src ? new Date(src).getMonth() + 1 : 0
+      const minYear = chartStart ? Number(chartStart.slice(0, 4)) : 0
+      const minMonth = chartStart ? Number(chartStart.slice(5, 7)) : 0
       const months = getLast6Months(t.monthsShort).filter(m =>
         m.year > minYear || (m.year === minYear && m.month >= minMonth)
       )
-      const results = await Promise.all(months.map(m => getSummary(m.key, dashView).catch(() => null)))
-      return months.map((m, i) => {
-        const s: ApiSummary | null = results[i]
-        return {
-          label: m.label,
-          income: s?.totalIncome ?? 0,
-          expenses: s?.totalExpenses ?? 0,
-        }
-      })
+      if (months.length === 0) return []
+      // One request with the same recurring-item and tracking-start rules as the
+      // cards and the annual view (the per-month /summary counted a recurring
+      // item only in the month it was entered).
+      const series = await getMonthlySeries(months[0].key, months[months.length - 1].key, dashView).catch(() => null)
+      const byMonth = new Map<string, SeriesMonth>((series?.months ?? []).map(s => [s.month, s]))
+      return months.map(m => ({
+        label: m.label,
+        income: byMonth.get(m.key)?.income ?? 0,
+        expenses: byMonth.get(m.key)?.expense ?? 0,
+      }))
     },
     enabled: !!user,
   })
 
-  const { data: summaryCards = null } = useQuery({
+  const { data: summaryCards = null, isLoading: sumLoading, isError: sumError, refetch: sumRetry } = useQuery({
     queryKey: ['summaryCards', year, month, dashView],
     queryFn: () => getSummaryCards(year, month, dashView),
     enabled: !!user,
   })
+
+  // Loading / error must not look like "no data" (0,00 €, "Žiadne výdavky").
+  const dashLoading = incLoading || fixLoading || varLoading || (sumLoading && !summaryCards)
+  const dashFailed = !dashLoading && (incError || fixError || varError || (sumError && !summaryCards))
+  const retryDash = () => Promise.all([incRetry(), fixRetry(), varRetry(), sumRetry()])
+  const heroValue = (node: ReactNode) => dashLoading
+    ? <Skeleton width={64} height={14} style={{ marginTop: 2 }} />
+    : dashFailed ? <span style={{ color: 'var(--aurora-faint)' }}>—</span> : node
 
   const todayStr = formatLongDate(new Date())
 
@@ -347,6 +361,7 @@ const upcomingFixed = useMemo(() => {
       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
         {t.dashboard.balance} · {t.months[month - 1]} {year}
       </div>
+      {dashFailed ? <QueryError compact onRetry={retryDash} /> : dashLoading ? <HeroAmountPlaceholder error={false} /> : (
       <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
         {balanceSettled ? (
           <span style={{
@@ -365,6 +380,7 @@ const upcomingFixed = useMemo(() => {
           {balanceParts.rest}
         </span>
       </div>
+      )}
       <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
         <div
           onClick={() => onNavigate('income')}
@@ -373,7 +389,7 @@ const upcomingFixed = useMemo(() => {
           style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         >
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.income}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{formatAmount(animatedIncome)}</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedIncome))}</div>
         </div>
         <div
           onClick={() => onNavigate('variable-expenses')}
@@ -382,11 +398,11 @@ const upcomingFixed = useMemo(() => {
           style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         >
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.expenses}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', lineHeight: 1.15, wordBreak: 'break-word' }}>{formatAmount(animatedExpenses)}</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedExpenses))}</div>
         </div>
         <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.savingsRate}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{savRate}%</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{heroValue(`${savRate}%`)}</div>
         </div>
       </div>
     </HeroCard>
@@ -415,7 +431,18 @@ const upcomingFixed = useMemo(() => {
   )
 
   const pieChartCard = (
-    <CategoryDonutCard data={pieData} title={t.dashboard.expensesByCategory} total={totalExpenses} />
+    dashLoading || dashFailed ? (
+      <GlassCard radius={20} style={{ padding: 20 }}>
+        <div role={dashLoading ? 'status' : undefined} aria-busy={dashLoading || undefined} aria-label={dashLoading ? t.common.loading : undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700 }}>{t.dashboard.expensesByCategory}</div>
+          {dashLoading
+            ? <Skeleton width={180} height={180} radius={90} />
+            : <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: '40px 0' }}>{t.common.loadFailed}</p>}
+        </div>
+      </GlassCard>
+    ) : (
+      <CategoryDonutCard data={pieData} title={t.dashboard.expensesByCategory} total={totalExpenses} />
+    )
   )
 
   const heatmapCard = (
@@ -596,6 +623,8 @@ const upcomingFixed = useMemo(() => {
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
     <div style={{ padding: '20px' }} className="flex flex-col gap-4 lg:gap-0 pb-4 w-full">
 
+      <FirstRunChecklist onNavigate={onNavigate} />
+
       {/* Budget template offer: non-blocking replacement for the old modal */}
       {budgetTemplateOffer && (
         <GlassCard radius={14} style={{
@@ -704,7 +733,7 @@ const upcomingFixed = useMemo(() => {
           style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={e => { if (e.target === e.currentTarget) setShowTrackingModal(false) }}
         >
-          <div style={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div ref={trackingModal.panelRef} {...trackingModal.dialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
               <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>{t.dashboard.trackingFromTitle}</h3>
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.trackingFromNote}</p>

@@ -8,6 +8,7 @@ import { AuthRequest } from "../middleware/authenticate";
 import { sharingMemberIds } from "../lib/sharedCategories";
 import { buildSeries, monthsBetween } from "../lib/monthlySeries";
 import type { RawTx } from "../lib/monthlySummary";
+import { loadStartMonths } from "../lib/loadStartMonths";
 
 const ym = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
@@ -75,5 +76,7 @@ export async function getMonthlySeries(req: AuthRequest, res: Response): Promise
     categoryInfo = new Map(rows.map((r) => [r.id, { name: r.name, color: r.color }]));
   }
 
-  res.json({ family, months: buildSeries(txs, from, to, new Date(), { userNames, categoryInfo }) });
+  // Months before a member's tracking start are empty for that member.
+  const startMonths = await loadStartMonths(ids);
+  res.json({ family, months: buildSeries(txs, from, to, new Date(), { userNames, categoryInfo, startMonths }) });
 }

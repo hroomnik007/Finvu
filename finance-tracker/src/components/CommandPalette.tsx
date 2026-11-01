@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
 import { useFormatters } from '../hooks/useFormatters'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface TxnSearchItem {
   id: string
@@ -41,6 +42,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
   const [query, setQuery] = useState('')
   const [selIdx, setSelIdx] = useState(0)
   const inpRef = useRef<HTMLInputElement>(null)
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open, onClose, initialFocus: inpRef })
 
   useEffect(() => {
     if (open) {
@@ -91,8 +93,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
   useEffect(() => {
     if (!open) return
     const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-      else if (e.key === 'ArrowDown') { e.preventDefault(); setSelIdx(i => Math.min(i + 1, totalItems - 1)) }
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSelIdx(i => Math.min(i + 1, totalItems - 1)) }
       else if (e.key === 'ArrowUp') { e.preventDefault(); setSelIdx(i => Math.max(i - 1, 0)) }
       else if (e.key === 'Enter') {
         e.preventDefault()
@@ -176,14 +177,18 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
       style={{ position: 'fixed', inset: 0, background: 'rgba(8,6,14,0.65)', backdropFilter: 'blur(6px)', zIndex: 500, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '15vh' }}
     >
       <div
+        ref={panelRef}
+        {...dialogProps}
         onClick={e => e.stopPropagation()}
         style={{
+          outline: 'none',
           width: 'min(580px, 92vw)', background: 'var(--bg2)',
           border: '1px solid var(--border2)', borderRadius: 16,
           boxShadow: '0 24px 64px rgba(0,0,0,0.55)', overflow: 'hidden',
           animation: 'paletteIn 0.18s cubic-bezier(0.34,1.1,0.64,1)',
         }}
       >
+        <h2 id={titleId} className="sr-only">{t.palette.placeholder}</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -194,6 +199,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
             value={query}
             onChange={e => { setQuery(e.target.value); setSelIdx(0) }}
             placeholder={t.palette.placeholder}
+            aria-label={t.palette.placeholder}
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontSize: 15, fontFamily: "'DM Sans', sans-serif" }}
           />
           <KbdKey label="esc" />

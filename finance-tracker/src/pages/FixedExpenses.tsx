@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
   Pencil, Trash2, Plus, Lock, Calendar, List as ListIcon, CheckCircle2, Tag, Repeat,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CsvImportModal } from '../components/CsvImportModal'
@@ -11,6 +13,7 @@ import { SubscriptionSuggestions } from '../components/SubscriptionSuggestions'
 import type { SubscriptionSuggestion } from '../api/subscriptions'
 import { peekFixedPrefill, clearFixedPrefill } from '../utils/fixedPrefill'
 import { GlassCard } from '../components/GlassCard'
+import { ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { useFixedExpenses, isEndedInMonth } from '../hooks/useFixedExpenses'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
@@ -19,9 +22,20 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
 import type { FixedExpense, Category } from '../types'
+import { DenseCard, DenseRow } from '../components/DenseList'
+import { useOffline } from '../hooks/useOfflineQueue'
+import { PendingBadge } from '../components/OfflineStatus'
+import { rowActions } from '../utils/queuedRows'
+import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
+import { ValidFromHint } from '../components/ValidFromHint'
+import { todayISO } from '../utils/format'
+import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
+import { SuggestedCategoryHint } from '../components/SuggestedCategoryHint'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -60,18 +74,14 @@ function CategoryCircle({ icon: Icon, label, selected, accent, onClick }: {
   )
 }
 
-// 12.5 -> "12,50": the amount field takes digits and a comma
-function amountText(n: number): string {
-  return n.toFixed(2).replace('.', ',')
-}
-
 interface FixedExpensesPageProps {
   month: number
   year: number
 }
 
 export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
-  const { fixedExpenses: allFixed, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense } = useFixedExpenses(undefined, undefined, 'personal', true)
+  const { fixedExpenses: allFixed, isLoading: listLoading, isError: listError, refetch: listRetry, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense } = useFixedExpenses(undefined, undefined, 'personal', true)
+  const listFailed = listError && allFixed.length === 0
   const nowYM = useMemo(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }, [])
   // Running items drive the totals and lists; ended ones sit in their own section
   const fixedExpenses = useMemo(() => allFixed.filter(e => !isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
@@ -79,7 +89,9 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const { variableExpenses } = useVariableExpenses(month, year)
   const { categories } = useCategories()
   const { formatAmount, formatAmountParts, formatDate } = useFormatters()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
+  const offline = useOffline()
+  const feedback = useSaveFeedback()
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true))
@@ -107,12 +119,21 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null)
 
   const [label, setLabel] = useState(initialPrefill?.name ?? '')
-  const [amount, setAmount] = useState(initialPrefill ? amountText(initialPrefill.amount) : '')
+  const [amount, setAmount] = useState(initialPrefill ? formatAmountInput(initialPrefill.amount, decimalSeparator(locale)) : '')
   const [dayOfMonth, setDayOfMonth] = useState(String(initialPrefill?.dayOfMonth ?? 1))
   const [categoryId, setCategoryId] = useState<string>(initialPrefill?.categoryId ?? '')
   // Adding a detected subscription: its expected next charge, and the month it starts (YYYY-MM)
   const [suggestedStart, setSuggestedStart] = useState<string | null>(initialPrefill?.nextDate ?? null)
   const [startMonth, setStartMonth] = useState(initialPrefill?.nextDate.slice(0, 7) ?? nowYM)
+  const suggestion = useCategorySuggestion({
+    text: label,
+    active: sheetOpen && !editing,
+    currentId: categoryId,
+    validIds: expenseCategories.map(c => c.id ?? ''),
+    select: setCategoryId,
+    // A category handed over by a subscription card is kept, never replaced.
+    defaultId: suggestedStart ? undefined : expenseCategories[0]?.id,
+  })
   const [note, setNote] = useState('')
   // Editing an existing item: a changed amount is a price change from `priceFrom`
   // (YYYY-MM) unless it is ticked as a correction of a typo
@@ -185,7 +206,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
   function openFromSuggestion(s: SubscriptionSuggestion) {
     setEditing(null)
-    setLabel(s.name); setAmount(amountText(s.amount)); setDayOfMonth(String(s.dayOfMonth))
+    setLabel(s.name); setAmount(formatAmountInput(s.amount, decimalSeparator(locale))); setDayOfMonth(String(s.dayOfMonth))
     setCategoryId(s.categoryId && expenseCategories.some(c => c.id === s.categoryId) ? s.categoryId : '')
     setNote('')
     setSuggestedStart(s.nextDate); setStartMonth(s.nextDate.slice(0, 7))
@@ -193,7 +214,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   }
 
   function openEdit(e: FixedExpense) {
-    setEditing(e); setLabel(e.label); setAmount(String(e.amount))
+    if (!rowActions(e, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
+    setEditing(e); setLabel(e.label); setAmount(formatAmountInput(e.amount, decimalSeparator(locale)))
     setDayOfMonth(String(e.dayOfMonth)); setCategoryId(e.categoryId ?? ''); setNote(e.note)
     setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
     setSheetOpen(true)
@@ -209,20 +231,26 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   }
 
   async function handleSave() {
-    const amt = parseFloat(amount.replace(',', '.'))
+    const amt = (parseAmountInput(amount) ?? NaN)
     const day = parseInt(dayOfMonth)
     if (!label.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 28) return
     const catId = categoryId || null
-    if (editing?.id != null) {
-      await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, isCorrection ? undefined : priceFrom)
-    } else {
-      // From a subscription card: start at its next charge, or the first of the month picked instead
-      const start = suggestedStart
-        ? (startMonth === suggestedStart.slice(0, 7) ? suggestedStart : `${startMonth}-01`)
-        : undefined
-      await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, start)
+    try {
+      if (editing?.id != null) {
+        await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, isCorrection ? undefined : priceFrom)
+      } else {
+        // From a subscription card: start at its next charge, or the first of the month picked instead
+        const start = suggestedStart
+          ? (startMonth === suggestedStart.slice(0, 7) ? suggestedStart : `${startMonth}-01`)
+          : undefined
+        // No undo: deleting a fixed expense removes its whole series by name.
+        await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, start)
+      }
+      closeSheet()
+      feedback.saved()
+    } catch {
+      feedback.failed()
     }
-    closeSheet()
   }
 
   async function handleDelete(id: string) {
@@ -250,8 +278,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                 </span>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: 8 }}>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-lo)' }}>{formatAmount(catAmt)}<span style={{ fontSize: 12, color: 'var(--aurora-faint)' }}>/mes.</span></span>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{formatAmount(catAmt * 12)} / rok</span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-lo)' }}>{formatAmount(catAmt)}<span style={{ fontSize: 12, color: 'var(--aurora-faint)' }}>{t.common.perMonthShort}</span></span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{formatAmount(catAmt * 12)}{t.common.perYearShort}</span>
                 </div>
               </div>
             )
@@ -320,6 +348,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
+          aria-label={t.common.addNew}
+          title={t.common.addNew}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
@@ -549,12 +579,13 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
           {/* Expense list — upcoming/past split (mobile: hidden while calendar view is active) */}
           <div className={mobileView === 'list' ? undefined : 'hidden lg:block'}>
-          {fixedExpenses.length === 0 ? (
+          {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : fixedExpenses.length === 0 ? (
             <GlassCard radius={18}>
               <div className="empty-state">
                 <Lock size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.fixed.emptyTitle}</p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.fixed.emptySubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyFixed} onClick={openAdd} />
               </div>
             </GlassCard>
           ) : filtered.length === 0 ? (
@@ -573,14 +604,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               const badge = countdownBadge(daysUntil)
               const monthAbbr = MONTHS_SK[month - 1] ?? ''
               return (
-                <SwipeableRow key={expense.id} onDelete={() => setDeleteId(expense.id!)} isOpen={openSwipeId === expense.id} onOpen={() => setOpenSwipeId(expense.id!)}>
-
-                  <GlassCard
-                    radius={16}
-                    onClick={() => openEdit(expense)}
-                    className="expense-row"
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', opacity: isPast ? 0.65 : 1 }}
-                  >
+                <SwipeableRow key={expense.id} radius={0} disabled={!rowActions(expense, offline).canDelete} onDelete={() => setDeleteId(expense.id!)} isOpen={openSwipeId === expense.id} onOpen={() => setOpenSwipeId(expense.id!)}>
+                  <DenseRow onClick={() => openEdit(expense)} className="expense-row" style={{ opacity: isPast ? 0.65 : 1 }}>
                     {/* Date tile */}
                     <div style={{
                       width: 46, height: 46, borderRadius: 12, flexShrink: 0,
@@ -598,6 +623,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 500, color: isPast ? 'var(--aurora-lo)' : 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{expense.label}</div>
                       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat?.name ?? '—'}</div>
+                      <PendingBadge state={expense.pending} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                       <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: isPast ? 'var(--aurora-faint)' : 'var(--aurora-rose)' }}>{formatAmount(expense.amount)}</span>
@@ -609,10 +635,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       )}
                     </div>
                     <div className="expense-actions hidden lg:flex" style={{ alignItems: 'center', gap: 2, flexShrink: 0 }} onClick={ev => ev.stopPropagation()}>
-                      <button onClick={() => openEdit(expense)} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
-                      <button onClick={() => setDeleteId(expense.id!)} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
+                      <button type="button" className="hit-44" onClick={() => openEdit(expense)} disabled={!rowActions(expense, offline).canEdit} aria-label={t.common.edit} title={t.common.edit} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
+                      <button type="button" className="hit-44" onClick={() => setDeleteId(expense.id!)} disabled={!rowActions(expense, offline).canDelete} aria-label={t.common.delete} title={t.common.delete} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
                     </div>
-                  </GlassCard>
+                  </DenseRow>
                 </SwipeableRow>
               )
             }
@@ -626,7 +652,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                         {t.expenses.fixed.upcoming}
                       </div>
                     )}
-                    {upcomingList.map(e => renderCard(e, false))}
+                    <DenseCard>{upcomingList.map(e => renderCard(e, false))}</DenseCard>
                   </>
                 )}
                 {pastList.length > 0 && (
@@ -634,7 +660,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                     <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', marginBottom: 2, marginTop: 8 }}>
                       {t.expenses.paidThisMonth}
                     </div>
-                    {pastList.map(e => renderCard(e, true))}
+                    <DenseCard>{pastList.map(e => renderCard(e, true))}</DenseCard>
                   </>
                 )}
               </div>
@@ -689,24 +715,16 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         title={editing ? t.expenses.fixed.editTitle : t.expenses.fixed.newTitle}
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={handleSave}
+        autoFocusAmount={!editing}
+        onDelete={editing?.id ? () => { const id = editing.id!; closeSheet(); setDeleteId(id) } : undefined}
         submitDisabled={!label.trim() || !amount}
         onImportCsv={editing ? undefined : () => { closeSheet(); setTimeout(() => setCsvOpen(true), 150) }}
       >
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
-          <input
-            type="text"
-            inputMode="decimal"
+          <AmountInput
             placeholder="0"
             value={amount}
-            onChange={e => {
-              const raw = e.target.value.replace(/[^0-9,]/g, '')
-              if ((raw.match(/,/g) || []).length > 1) return
-              setAmount(raw)
-            }}
-            onKeyDown={e => {
-              const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-              if (!allowed.includes(e.key)) e.preventDefault()
-            }}
+            onValueChange={setAmount}
             style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
           />
           <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
@@ -729,16 +747,19 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                 label={c.name}
                 selected={categoryId === c.id}
                 accent={c.color}
-                onClick={() => setCategoryId(prev => prev === c.id ? '' : (c.id ?? ''))}
+                onClick={() => { suggestion.pickedManually(); setCategoryId(prev => prev === c.id ? '' : (c.id ?? '')) }}
               />
             ))}
           </div>
         )}
+        <SuggestedCategoryHint name={expenseCategories.find(c => c.id === suggestion.suggestedId)?.name} />
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
             <button
               type="button"
+              className="hit-44"
+              aria-label={t.common.dayDecrease}
               onClick={() => setDayOfMonth(d => String(Math.max(1, parseInt(d || '1') - 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
@@ -746,6 +767,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{dayOfMonth}</span>
             <button
               type="button"
+              className="hit-44"
+              aria-label={t.common.dayIncrease}
               onClick={() => setDayOfMonth(d => String(Math.min(28, parseInt(d || '1') + 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >+</button>
@@ -754,6 +777,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
             <Repeat size={12} /> {t.expenses.fixed.recurringMonthly}
           </div>
         </div>
+        {/* A new fixed expense is dated today and counts from this month on. */}
+        {!editing && <ValidFromHint date={todayISO()} />}
 
         <input
           type="text"
@@ -782,7 +807,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         )}
 
         {editing && (() => {
-          const newAmount = parseFloat(amount.replace(',', '.'))
+          const newAmount = (parseAmountInput(amount) ?? NaN)
           const priceChanged = Number.isFinite(newAmount) && newAmount > 0 && newAmount !== editing.amount
           const box: React.CSSProperties = { background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }
           const small: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, lineHeight: 1.5 }

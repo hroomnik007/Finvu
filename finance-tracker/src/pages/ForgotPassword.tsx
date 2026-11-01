@@ -98,9 +98,16 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
           <>
             {/* Email */}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
+              <label htmlFor="forgot-email" style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
               <input
+                id="forgot-email"
+                name="email"
                 type="email"
+                inputMode="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder={t.auth.emailPlaceholder}
                 value={email}
                 onChange={e => setEmail(e.target.value)}

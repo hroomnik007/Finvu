@@ -1,3 +1,4 @@
+import { flushPendingDeletes, resetPendingDeletes } from '../lib/pendingDelete'
 import {
   createContext,
   useContext,
@@ -8,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { setAccessToken, setInitializingAuth } from '../api/client'
-import { resolveTheme, type ThemePreference } from '../utils/theme'
+import { resolveTheme, storedThemePreference, type ThemePreference } from '../utils/theme'
 import {
   login as apiLogin,
   register as apiRegister,
@@ -24,7 +25,10 @@ import {
 import { applyLanguageSetting } from './SettingsContext'
 import type { AuthUser } from '../types'
 import type { DeleteAccountProof } from '../api/auth'
-import { clearUserData, noteSignedInUser } from '../lib/userDataReset'
+import { clearUserData, noteSignedInUser, OFFLINE_USER_KEY } from '../lib/userDataReset'
+import { isOfflineError } from '../lib/offlineQueue'
+import { kvGet, kvSet } from '../lib/kvStore'
+import { setServerReachable } from '../lib/connectivity'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -70,6 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isGuest, setIsGuest] = useState(false)
 
   const doLogout = useCallback(async (callApi = true) => {
+    // Deletes still inside their undo window go out while the session is valid.
+    if (callApi) await flushPendingDeletes().catch(() => {})
+    else resetPendingDeletes()
     try {
       if (callApi && !isGuest) await apiLogout()
     } catch { /* ignore */ }
@@ -94,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    let offlineStart = false
     const initAuth = async () => {
       try {
         let accessToken: string
@@ -119,8 +127,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch { /* ignore */ }
         }
         if (me.language) applyLanguageSetting(me.language)
-      } catch {
-        setUser(null)
+        offlineStart = false
+      } catch (err) {
+        // No connection at all (not a rejected session): open the last
+        // signed-in account with its cached data; the session is checked
+        // again as soon as the device is back online.
+        const cached = isOfflineError(err) ? await kvGet<AuthUser>(OFFLINE_USER_KEY).catch(() => undefined) : undefined
+        if (cached && typeof cached === 'object' && typeof cached.id === 'string') {
+          offlineStart = true
+          setServerReachable(false)
+          noteSignedInUser(cached.id)
+          setUser(cached)
+        } else {
+          offlineStart = false
+          setUser(null)
+        }
       } finally {
         setInitializingAuth(false)
         setIsLoading(false)
@@ -128,7 +149,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     initAuth()
+    const onOnline = () => { if (offlineStart) void initAuth() }
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
   }, [])
+
+  // Remember the signed-in user for an offline start (demo accounts excluded).
+  useEffect(() => {
+    if (user && !user.isDemo) void kvSet(OFFLINE_USER_KEY, user)
+  }, [user])
 
   useEffect(() => {
     const handler = () => doLogout(false)
@@ -175,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginWithGoogle = useCallback(async (googleAccessToken: string) => {
-    const { user: me, accessToken, sessionId } = await apiGoogleLogin(googleAccessToken) as { user: AuthUser; accessToken: string; sessionId?: string }
+    const { user: me, accessToken, sessionId } = await apiGoogleLogin(googleAccessToken, storedThemePreference()) as { user: AuthUser; accessToken: string; sessionId?: string }
     setAccessToken(accessToken)
     noteSignedInUser(me.id)
     setUser(me)
@@ -234,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (email: string, password: string, name: string, gdprConsent: boolean) => {
     // Registration now sends verification email; user is NOT logged in yet
-    await apiRegister(email, password, name, gdprConsent)
+    await apiRegister(email, password, name, gdprConsent, storedThemePreference())
   }, [])
 
   const loginAsGuest = useCallback(() => {

@@ -1,10 +1,15 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
+import { usePendingDeleteIds } from './useUndoableDelete'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createTransaction, updateTransaction, deleteTransaction, changeFixedPrice, endFixedSeries } from '../api/transactions'
 import { useAuth } from '../context/AuthContext'
+import { trackingStartOf } from '../utils/trackingStart'
 import { isEndedInMonth, isNewerRow } from './useFixedExpenses'
 import type { Income, ApiTransaction } from '../types'
 import { getAllTransactions } from '../api/allTransactions'
+import { createOrQueue, isQueuedId, removeQueued } from '../lib/offlineQueue'
+import { useOfflineQueue } from './useOfflineQueue'
+import { queuedIncomeRows } from '../utils/queuedRows'
 
 function adjustDateToMonth(originalDate: string, targetMonth: number, targetYear: number): string {
   const originalDay = parseInt(originalDate.split('-')[2], 10)
@@ -44,74 +49,85 @@ export async function fetchIncomes(
   trackingStart: string | null | undefined,
   scope: DataScope = 'personal',
 ): Promise<Income[]> {
-  try {
-    const monthStr = month !== undefined && year !== undefined
-      ? `${year}-${String(month).padStart(2, '0')}`
-      : undefined
-    const data = await getAllTransactions({ type: 'income', month: monthStr, scope })
+  // Errors propagate so the page can show an error + retry instead of "no data".
+  const monthStr = month !== undefined && year !== undefined
+    ? `${year}-${String(month).padStart(2, '0')}`
+    : undefined
+  const data = await getAllTransactions({ type: 'income', month: monthStr, scope })
 
-    if (monthStr) {
-      const trackingYM = trackingStart ? trackingStart.substring(0, 7) : null
-      if (trackingYM && monthStr < trackingYM) {
-        return data.filter(t => !t.isFixed).map(toIncome)
-      }
-      // No month filter here by design: a recurring income created in any past
-      // month must appear in every subsequent month. The backend month param
-      // filters by creation date, not recurrence — adding it would hide older
-      // recurring incomes. Client-side filter on line below enforces t.date <= monthStr.
-      const recurring = await getAllTransactions({ type: 'income', isFixed: true, scope })
-      // A recurring income is a series (same owner and description): only its
-      // latest price dated up to this month counts, and only while not ended.
-      const latest = new Map<string, ApiTransaction>()
-      for (const t of recurring) {
-        if (t.date.substring(0, 7) > monthStr) continue
-        if (trackingYM && t.date.substring(0, 7) < trackingYM) continue
-        // Same series key and same-date tie-break as the backend cards and
-        // household stats (owner + description, later-created row wins).
-        const key = `${t.userId}|${t.description ?? ''}`
-        const cur = latest.get(key)
-        if (!cur || isNewerRow(t, cur)) latest.set(key, t)
-      }
-      const extra = [...latest.values()]
-        .filter(t => !isEndedInMonth(t.endedOn, monthStr))
-        .map(t => t.date.substring(0, 7) !== monthStr
-          ? { ...t, date: adjustDateToMonth(t.date, month!, year!) }
-          : t
-        )
-      return [...data.filter(t => !t.isFixed), ...extra].map(toIncome)
+  if (monthStr) {
+    const trackingYM = trackingStart ? trackingStart.substring(0, 7) : null
+    if (trackingYM && monthStr < trackingYM) {
+      return data.filter(t => !t.isFixed).map(toIncome)
     }
-    return data.map(toIncome)
-  } catch {
-    return []
+    // No month filter here by design: a recurring income created in any past
+    // month must appear in every subsequent month. The backend month param
+    // filters by creation date, not recurrence — adding it would hide older
+    // recurring incomes. Client-side filter on line below enforces t.date <= monthStr.
+    const recurring = await getAllTransactions({ type: 'income', isFixed: true, scope })
+    // A recurring income is a series (same owner and description): only its
+    // latest price dated up to this month counts, and only while not ended.
+    const latest = new Map<string, ApiTransaction>()
+    for (const t of recurring) {
+      if (t.date.substring(0, 7) > monthStr) continue
+      // A row dated before the tracking start still counts from the start month
+    // on (the month gate above already empties the earlier months).
+      // Same series key and same-date tie-break as the backend cards and
+      // household stats (owner + description, later-created row wins).
+      const key = `${t.userId}|${t.description ?? ''}`
+      const cur = latest.get(key)
+      if (!cur || isNewerRow(t, cur)) latest.set(key, t)
+    }
+    const extra = [...latest.values()]
+      .filter(t => !isEndedInMonth(t.endedOn, monthStr))
+      .map(t => t.date.substring(0, 7) !== monthStr
+        ? { ...t, date: adjustDateToMonth(t.date, month!, year!) }
+        : t
+      )
+    return [...data.filter(t => !t.isFixed), ...extra].map(toIncome)
   }
+  return data.map(toIncome)
 }
 
 export function useIncomes(month?: number, year?: number, scope: DataScope = 'personal') {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const qKey = incomeQueryKey(month, year, user?.tracking_start_date, scope)
+  const qKey = incomeQueryKey(month, year, trackingStartOf(user), scope)
 
-  const { data: incomes = [] } = useQuery({
+  const { data: incomesAll, isLoading, isError, refetch } = useQuery({
     queryKey: qKey,
-    queryFn: () => fetchIncomes(month, year, user?.tracking_start_date, scope),
+    queryFn: () => fetchIncomes(month, year, trackingStartOf(user), scope),
     enabled: !!user,
   })
+  // Rows waiting in the delete-undo window are hidden (lib/pendingDelete).
+  const hidden = usePendingDeleteIds()
+  // Offline adds waiting to be sent show up first, marked `pending` (personal view only).
+  const queue = useOfflineQueue()
+  const monthKey = month !== undefined && year !== undefined ? `${year}-${String(month).padStart(2, '0')}` : null
+  const incomes = useMemo(
+    () => [...(scope === 'personal' ? queuedIncomeRows(queue, monthKey) : []), ...(incomesAll ?? [])]
+      .filter(r => !r.id || !hidden.has(r.id)),
+    [incomesAll, hidden, queue, monthKey, scope],
+  )
+
 
   const invalidate = useCallback(() => Promise.all([
     qc.invalidateQueries({ queryKey: ['incomes'] }),
     qc.invalidateQueries({ queryKey: ['summaryCards'] }),
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+    qc.invalidateQueries({ queryKey: ['monthlySeries'] }),
   ]), [qc])
 
-  const addIncome = useCallback(async (income: Omit<Income, 'id'>): Promise<void> => {
-    await createTransaction({
+  const addIncome = useCallback(async (income: Omit<Income, 'id'>): Promise<string> => {
+    const { id, queued } = await createOrQueue({
       type: 'income',
       amount: income.amount,
       description: income.label,
       date: income.date,
       isFixed: income.recurring,
-    })
-    await invalidate()
+    }, createTransaction)
+    if (!queued) await invalidate()
+    return id
   }, [invalidate])
 
   const updateIncome = useCallback(async (id: string, changes: Partial<Income>): Promise<void> => {
@@ -135,9 +151,10 @@ export function useIncomes(month?: number, year?: number, scope: DataScope = 'pe
   }, [invalidate])
 
   const deleteIncome = useCallback(async (id: string): Promise<void> => {
+    if (isQueuedId(id)) { removeQueued(id); return }
     await deleteTransaction(id)
     await invalidate()
   }, [invalidate])
 
-  return { incomes, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome }
+  return { incomes, isLoading, isError, refetch, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome }
 }

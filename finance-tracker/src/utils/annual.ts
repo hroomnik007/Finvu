@@ -48,3 +48,37 @@ export function annualCsv(
   for (const c of yearCategories(months)) lines.push([safeCell(c.name || labels.noCategory), c.total.toFixed(2)].join(','))
   return lines.join('\n')
 }
+
+export interface AnnualRow {
+  /** YYYY-MM */
+  month: string
+  /** 0-based month index */
+  index: number
+  income: number
+  expense: number
+  balance: number
+  /** No income and no expense in this month. */
+  empty: boolean
+  /** Bar heights as a share (0–100) of the year's largest monthly value. */
+  incomePct: number
+  expensePct: number
+}
+
+// Twelve rows for the chart and table, filling months the series does not return.
+export function annualRows(year: number, months: SeriesMonth[]): AnnualRow[] {
+  const by = new Map(months.map(m => [m.month, m]))
+  const raw = Array.from({ length: 12 }, (_, i) => {
+    const key = `${year}-${String(i + 1).padStart(2, '0')}`
+    const m = by.get(key)
+    return { month: key, index: i, income: m?.income ?? 0, expense: m?.expense ?? 0 }
+  })
+  const max = Math.max(0, ...raw.map(r => Math.max(r.income, r.expense)))
+  const pct = (v: number) => (max > 0 ? Math.round((v / max) * 1000) / 10 : 0)
+  return raw.map(r => ({
+    ...r,
+    balance: Math.round((r.income - r.expense) * 100) / 100,
+    empty: r.income === 0 && r.expense === 0,
+    incomePct: pct(r.income),
+    expensePct: pct(r.expense),
+  }))
+}

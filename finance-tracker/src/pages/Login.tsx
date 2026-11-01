@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { Eye, EyeOff, ArrowRight, X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
@@ -32,6 +33,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
   const [pinModalOpen, setPinModalOpen] = useState(false)
+  const { panelRef: pinModalRef, titleId: pinModalTitleId, dialogProps: pinModalProps } = useModalA11y({ open: pinModalOpen, onClose: () => setPinModalOpen(false) })
   const [pinValue, setPinValue] = useState('')
   const [pinLoading, setPinLoading] = useState(false)
   const [pinError, setPinError] = useState<string | null>(null)
@@ -96,7 +98,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       }
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { error?: string; code?: string } } })?.response?.data
-      setError(authErrorMessage(err, t.auth.loginFailed, t.auth.tooManyAttempts))
+      setError(authErrorMessage(err, t.auth.loginFailed, t.auth))
       setNeedsVerification(data?.code === 'EMAIL_NOT_VERIFIED')
     } finally {
       setIsLoading(false)
@@ -144,8 +146,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         await completePasskeyLogin(options, true)
       } catch (err: unknown) {
         if (unmounted || ceremonyErrorKind(err) === 'cancelled') return // aborted / re-armed / dismissed
-        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-        setError(msg ?? t.auth.passkeyFailed)
+        setError(authErrorMessage(err, t.auth.passkeyFailed, t.auth))
         // That challenge is used up. Re-arm, but back off: a passkey whose
         // account is gone (or a misbehaving authenticator answering on its own)
         // must not spin a request loop. After 3 failures in a row only the
@@ -165,7 +166,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       clearTimeout(timer)
       WebAuthnAbortService.cancelCeremony()
     }
-  }, [completePasskeyLogin, t.auth.passkeyFailed])
+  }, [completePasskeyLogin, t.auth])
 
   // Passkey sign-in is usernameless: every passkey is a discoverable credential
   // (residentKey 'required'), so the browser offers the passkeys it holds for
@@ -186,8 +187,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
     } catch (err: unknown) {
       // The user dismissing the browser prompt is not an error worth showing
       if (ceremonyErrorKind(err) !== 'cancelled') {
-        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-        setError(msg ?? t.auth.passkeyFailed)
+        setError(authErrorMessage(err, t.auth.passkeyFailed, t.auth))
       }
       explicitPasskeyRef.current = false
       armRef.current() // fresh challenge + autofill again
@@ -212,12 +212,12 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
       await loginWithPin(email, pin)
       setPinModalOpen(false)
     } catch (err: unknown) {
-      setPinError(authErrorMessage(err, t.auth.wrongPin, t.auth.tooManyAttempts))
+      setPinError(authErrorMessage(err, t.auth.wrongPin, t.auth))
       setPinValue('')
     } finally {
       setPinLoading(false)
     }
-  }, [email, loginWithPin, t.auth.wrongPin, t.auth.tooManyAttempts])
+  }, [email, loginWithPin, t.auth])
 
   // Trigger verification once 4 digits have actually committed to state —
   // never inside the setPinValue updater itself. React 18 StrictMode
@@ -334,10 +334,15 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
 
         {/* Email */}
         <div style={{ marginBottom: 14 }}>
-          <label style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
+          <label htmlFor="login-email" style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
           <input
+            id="login-email"
             type="email"
             name="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             autoComplete="username webauthn"
             placeholder={t.auth.emailPlaceholder}
             value={email}
@@ -352,7 +357,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         {/* Password */}
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <label style={labelStyle}>{t.auth.password}</label>
+            <label htmlFor="login-password" style={labelStyle}>{t.auth.password}</label>
             <button
               type="button"
               onClick={onNavigateForgotPassword}
@@ -363,7 +368,10 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           </div>
           <div style={{ position: 'relative' }}>
             <input
+              id="login-password"
+              name="password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -376,6 +384,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
               type="button"
               onClick={() => setShowPassword(v => !v)}
               tabIndex={-1}
+              aria-label={showPassword ? t.auth.hidePasswordLabel : t.auth.showPasswordLabel}
               style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-lo)', display: 'flex', alignItems: 'center', padding: 2 }}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -496,13 +505,14 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
           onClick={() => setPinModalOpen(false)}
         >
           <div
+            ref={pinModalRef} {...pinModalProps}
             className="modal-in"
-            style={{ width: '100%', maxWidth: 340, padding: 24, borderRadius: 26, background: 'var(--aurora-bg-image)', border: '1px solid var(--aurora-gline)', boxShadow: '0 30px 70px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            style={{ outline: 'none', width: '100%', maxWidth: 340, padding: 24, borderRadius: 26, background: 'var(--aurora-bg-image)', border: '1px solid var(--aurora-gline)', boxShadow: '0 30px 70px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: 20 }}>
               <div style={{ flex: 1, textAlign: 'center' }}>
-                <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.auth.enterPinTitle}</p>
+                <h2 id={pinModalTitleId} tabIndex={-1} style={{ outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.auth.enterPinTitle}</h2>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', margin: '4px 0 0' }}>{t.auth.pin4Digit}</p>
               </div>
               <button

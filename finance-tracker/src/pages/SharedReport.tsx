@@ -82,7 +82,7 @@ export function SharedReportPage({ token }: SharedReportProps) {
 
       <div style={{ background: '#2A1F4A', border: '0.5px solid #4C3A8A', borderRadius: 16, padding: 20, marginBottom: 12 }}>
         <p style={{ fontSize: 12, color: '#9D84D4', margin: '0 0 4px' }}>{t.nav.expenses}</p>
-        <p style={{ fontSize: 24, fontWeight: 700, color: '#F87171', margin: 0, fontFamily: 'monospace' }}>-{formatAmount(report.totalExpenses ?? 0)}</p>
+        <p style={{ fontSize: 24, fontWeight: 700, color: '#F87171', margin: 0, fontFamily: 'monospace' }}>−{formatAmount(report.totalExpenses ?? 0)}</p>
       </div>
 
       <div style={{ background: '#1E1535', border: '1px solid #4C3A8A', borderRadius: 16, padding: 20, marginBottom: 20 }}>

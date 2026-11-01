@@ -1,4 +1,5 @@
 // Shared rules for recurring (isFixed) transactions.
+import { isTrackedMonth, type StartMonths } from "./trackingStart";
 
 // Day of month a fixed expense falls due: the day stored in its JSON
 // description ({ d }), otherwise the day of the row's own date.
@@ -118,10 +119,13 @@ export function cumulativeBalanceFromRows(
   firstIdx: number,
   targetIdx: number,
   today: Date,
+  // Each user's first tracked month: their recurring rows only count from it on
+  // (one-off rows before it must already be left out of `oneOffByMonth`).
+  starts?: StartMonths,
 ): number {
   // Amount, direction and due day are parsed once per row when it becomes the
   // latest of its series — the month loop below then only does arithmetic.
-  const latest = new Map<string, { isIncome: boolean; amount: number; dueDay: number; endIdx: number }>();
+  const latest = new Map<string, { userId?: string; isIncome: boolean; amount: number; dueDay: number; endIdx: number }>();
   let next = 0;
   let balance = 0;
 
@@ -133,6 +137,7 @@ export function cumulativeBalanceFromRows(
     while (next < fixedRows.length && fixedRows[next].date < monthEnd) {
       const row = fixedRows[next++];
       latest.set(`${row.userId ?? ""}|${row.type}|${row.description ?? ""}`, {
+        userId: row.userId,
         isIncome: row.type === "income",
         amount: parseFloat(row.amount),
         dueDay: fixedDayOfMonth(row.description, row.date),
@@ -140,11 +145,13 @@ export function cumulativeBalanceFromRows(
       });
     }
 
-    const flat = oneOffByMonth.get(`${y}-${String(m).padStart(2, "0")}`);
+    const ym = `${y}-${String(m).padStart(2, "0")}`;
+    const flat = oneOffByMonth.get(ym);
     let income = flat?.income ?? 0;
     let expense = flat?.expense ?? 0;
     for (const row of latest.values()) {
       if (idx >= row.endIdx) continue;
+      if (!isTrackedMonth(starts, row.userId, ym)) continue;
       if (row.isIncome) income += row.amount;
       else if (isFixedDue(row.dueDay, y, m, today)) expense += row.amount;
     }

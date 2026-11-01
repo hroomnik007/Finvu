@@ -25,7 +25,7 @@ export function AdminLoginPage({ onSuccess }: AdminLoginPageProps) {
       await adminLogin(username, password)
       onSuccess()
     } catch (err) {
-      setError(isTooManyAttempts(err) ? 'Príliš veľa pokusov. Skúste neskôr.' : 'Nesprávne prihlasovacie údaje.')
+      setError(isTooManyAttempts(err) ? 'Príliš veľa pokusov. Skús to neskôr.' : 'Nesprávne prihlasovacie údaje.')
     } finally {
       setLoading(false)
     }

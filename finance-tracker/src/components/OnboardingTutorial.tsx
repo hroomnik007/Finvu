@@ -8,6 +8,7 @@ import { webauthnRegisterVerify } from '../api/auth'
 import { ceremonyErrorKind, fetchRegisterOptions } from '../lib/webauthnCeremony'
 import { currentUa, suggestPasskeyName } from '../lib/passkeyName'
 import { useTranslation } from '../i18n'
+import { rateLimitedMessage } from '../utils/authError'
 
 const STEP_EMOJIS = ['🎉', '💰', '📊', '🐷', '🏠', '⚙️', '🔐']
 
@@ -79,7 +80,7 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
       setWebauthnDone(true)
       setWebauthnSecret('')
     } catch (e: unknown) {
-      const serverMsg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      const serverMsg = rateLimitedMessage(e, t.auth) ?? (e as { response?: { data?: { error?: string } } })?.response?.data?.error
       const kind = serverMsg ? 'other' : ceremonyErrorKind(e)
       setWebauthnError(kind === 'cancelled' ? t.settings.passkeyCancelled
         : kind === 'exists' ? t.settings.passkeyExists
@@ -121,7 +122,7 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
           }}
         >
           {/* Close button */}
-          <button
+          <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close}
             onClick={handleComplete}
             style={{
               position: 'absolute',
@@ -282,8 +283,9 @@ export function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
                 <input
                   type="password"
                   autoFocus
-                  autoComplete="current-password"
+                  autoComplete={reauthFactor === 'pin' ? 'off' : 'current-password'}
                   inputMode={reauthFactor === 'pin' ? 'numeric' : undefined}
+                  pattern={reauthFactor === 'pin' ? '[0-9]*' : undefined}
                   maxLength={reauthFactor === 'pin' ? 4 : undefined}
                   value={webauthnSecret}
                   onChange={e => setWebauthnSecret(e.target.value)}

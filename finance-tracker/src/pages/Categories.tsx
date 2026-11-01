@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { Plus, Pencil, Trash2, Tag, GripVertical } from 'lucide-react'
+import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
   DndContext,
   closestCenter,
@@ -17,11 +19,14 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
+import { useSubmitGuard } from '../hooks/useSubmitGuard'
 import { CompactModal } from '../components/CompactModal'
 import { BulkBar } from '../components/BulkBar'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { GlassCard } from '../components/GlassCard'
+import { ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useCategories } from '../hooks/useCategories'
@@ -34,6 +39,8 @@ import { useTranslation } from '../i18n'
 import { reorderCategories as reorderCategoriesApi, shareCategories } from '../api/categories'
 import { useAuth } from '../context/AuthContext'
 import type { Category } from '../types'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 const selectBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
@@ -123,8 +130,8 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
             <GripVertical size={14} />
           </div>
           <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => onEdit(cat)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={13} /></button>
-            <button onClick={() => onDelete(cat.id!)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={13} /></button>
+            <button type="button" className="hit-44" aria-label={t.common.edit} title={t.common.edit} onClick={() => onEdit(cat)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={13} /></button>
+            <button type="button" className="hit-44" aria-label={t.common.delete} title={t.common.delete} onClick={() => onDelete(cat.id!)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={13} /></button>
           </div>
         </div>
       </div>
@@ -192,17 +199,17 @@ function SortableListCard(props: CardProps) {
             <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `-${formatAmount(status.spent)}` : '—'}</span>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : '—'}</span>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
           </div>
         </div>
       )}
       {cat.budgetLimit == null && status && status.spent > 0 && (
-        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', flexShrink: 0 }}>-{formatAmount(status.spent)}</span>
+        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(status.spent)}</span>
       )}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-        <button onClick={() => onEdit(cat)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={12} /></button>
-        <button onClick={() => onDelete(cat.id!)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={12} /></button>
+        <button type="button" className="hit-44" aria-label={t.common.edit} title={t.common.edit} onClick={() => onEdit(cat)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={12} /></button>
+        <button type="button" className="hit-44" aria-label={t.common.delete} title={t.common.delete} onClick={() => onDelete(cat.id!)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={12} /></button>
       </div>
     </div>
   )
@@ -271,13 +278,13 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
                 <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `-${formatAmount(status.spent)}` : '—'}</span>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : '—'}</span>
                 <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
               </div>
             </div>
           )}
           {cat.budgetLimit == null && status && status.spent > 0 && (
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>-{formatAmount(status.spent)}</span>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>−{formatAmount(status.spent)}</span>
           )}
         </div>
       </SwipeableRow>
@@ -286,9 +293,13 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
 }
 
 export function CategoriesPage({ showToast }: { showToast: (msg: string) => void }) {
-  const { categories, addCategory, updateCategory, deleteCategory, reload } = useCategories()
+  const { categories, isLoading: listLoading, isError: listError, refetch: listRetry, addCategory, updateCategory, deleteCategory, reload } = useCategories()
+  const listFailed = listError && categories.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
+  const feedback = useSaveFeedback()
+  // Saves started from the confirm dialogs (not via the modal's own button)
+  const saveGuard = useSubmitGuard()
   const now = new Date()
   const { variableExpenses } = useVariableExpenses(now.getMonth() + 1, now.getFullYear())
   const { fixedExpenses } = useFixedExpenses()
@@ -335,6 +346,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [autoLimitWarning, setAutoLimitWarning] = useState(false)
+  const { panelRef: autoLimitModalRef, titleId: autoLimitModalTitleId, dialogProps: autoLimitModalProps } = useModalA11y({ open: autoLimitWarning, onClose: () => setAutoLimitWarning(false), role: 'alertdialog' })
 
   // Local order for optimistic drag updates — synced during render
   const [localIds, setLocalIds] = useState<string[]>([])
@@ -423,7 +435,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
 
   async function applyBulk() {
     const ids = [...selectedIds]
-    const limit = bulkLimit ? parseFloat(bulkLimit.replace(',', '.')) : NaN
+    const limit = parseAmountInput(bulkLimit) ?? NaN
     setBulkBusy(true)
     let failed = 0
     for (const id of ids) {
@@ -466,9 +478,9 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
 
   function openEdit(cat: Category) {
     setEditing(cat); setName(cat.name); setColor(cat.color); setIcon(cat.icon)
-    setBudgetLimit(cat.budgetLimit != null ? String(cat.budgetLimit) : ''); setCatType(cat.type)
+    setBudgetLimit(cat.budgetLimit != null ? formatAmountInput(cat.budgetLimit, decimalSeparator(locale)) : ''); setCatType(cat.type)
     setAutoLimit(cat.hasFixedExpenses ? (cat.autoLimit ?? true) : false)
-    setLimitReserve(cat.limitReserve ? String(cat.limitReserve).replace('.', ',') : '')
+    setLimitReserve(cat.limitReserve ? formatAmountInput(cat.limitReserve, decimalSeparator(locale)) : '')
     setSharedFlag(cat.shared ?? false)
     setSheetOpen(true)
   }
@@ -498,7 +510,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   }
 
   function parseReserve(raw: string): number {
-    const v = parseFloat(raw.replace(',', '.'))
+    const v = parseAmountInput(raw) ?? NaN
     return Number.isFinite(v) && v > 0 ? v : 0
   }
 
@@ -506,31 +518,36 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     if (!name.trim()) return
     // Shared categories have one common manual limit
     const effectiveAutoLimit = sharedFlag ? false : requestedAutoLimit
-    if (editing?.id != null) {
-      const limit = effectiveAutoLimit ? undefined : (budgetLimit ? parseFloat(budgetLimit.replace(',', '.')) : undefined)
-      await updateCategory(editing.id, {
-        name: name.trim(), color, icon,
-        autoLimit: effectiveAutoLimit,
-        // With auto limit the reserve for variable spending is added on top of the fixed total
-        ...(effectiveAutoLimit ? { limitReserve: parseReserve(limitReserve) } : { budgetLimit: limit && limit > 0 ? limit : undefined }),
-      })
-      if (sharedFlag !== (editing.shared ?? false)) {
-        try {
-          await shareCategories([editing.id], sharedFlag)
-        } catch (err: unknown) {
-          alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t.expenses.categories.deleteError)
+    try {
+      if (editing?.id != null) {
+        const limit = effectiveAutoLimit ? undefined : (parseAmountInput(budgetLimit) ?? undefined)
+        await updateCategory(editing.id, {
+          name: name.trim(), color, icon,
+          autoLimit: effectiveAutoLimit,
+          // With auto limit the reserve for variable spending is added on top of the fixed total
+          ...(effectiveAutoLimit ? { limitReserve: parseReserve(limitReserve) } : { budgetLimit: limit && limit > 0 ? limit : undefined }),
+        })
+        if (sharedFlag !== (editing.shared ?? false)) {
+          try {
+            await shareCategories([editing.id], sharedFlag)
+          } catch (err: unknown) {
+            alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t.expenses.categories.deleteError)
+          }
+          await reload()
         }
-        await reload()
+      } else {
+        const limit = effectiveAutoLimit ? undefined : (parseAmountInput(budgetLimit) ?? undefined)
+        await addCategory({
+          name: name.trim(), color, icon, type: catType,
+          autoLimit: effectiveAutoLimit,
+          ...(effectiveAutoLimit ? {} : { budgetLimit: limit && limit > 0 ? limit : undefined }),
+        })
       }
-    } else {
-      const limit = effectiveAutoLimit ? undefined : (budgetLimit ? parseFloat(budgetLimit.replace(',', '.')) : undefined)
-      await addCategory({
-        name: name.trim(), color, icon, type: catType,
-        autoLimit: effectiveAutoLimit,
-        ...(effectiveAutoLimit ? {} : { budgetLimit: limit && limit > 0 ? limit : undefined }),
-      })
+      closeSheet()
+      feedback.saved()
+    } catch {
+      feedback.failed()
     }
-    closeSheet()
   }
 
   async function handleDelete(id: string) {
@@ -603,12 +620,13 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             </div>
           </HeroCard>
 
-          {categories.length === 0 ? (
+          {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : categories.length === 0 ? (
             <GlassCard radius={18}>
               <div className="empty-state">
                 <Tag size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.categories.noCategories}</p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.categories.noCategoriesSubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyCategory} onClick={openAdd} />
               </div>
             </GlassCard>
           ) : (
@@ -709,6 +727,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
+          aria-label={t.common.addNew}
+          title={t.common.addNew}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
@@ -743,19 +763,14 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         title={t.expenses.categories.bulkEditTitle.replace('{n}', String(selectedIds.size))}
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={requestApplyBulk}
-        submitDisabled={bulkBusy || (!bulkLimit && !bulkColor && bulkShared === 'keep')}
+        submitDisabled={!bulkLimit && !bulkColor && bulkShared === 'keep'}
+        submitting={bulkBusy}
       >
         <p style={{ fontSize: 12, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", margin: 0, lineHeight: 1.4 }}>{t.expenses.categories.bulkHint}</p>
-        <input
-          type="text"
-          inputMode="decimal"
+        <AmountInput
           placeholder={`${t.expenses.categories.limitLabel} · ${t.expenses.categories.bulkLimitHint}`}
           value={bulkLimit}
-          onChange={e => {
-            const raw = e.target.value.replace(/[^0-9,]/g, '')
-            if ((raw.match(/,/g) || []).length > 1) return
-            setBulkLimit(raw)
-          }}
+          onValueChange={setBulkLimit}
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -795,7 +810,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         onConfirm={() => {
           const which = shareConfirm
           setShareConfirm(null)
-          if (which === 'single') void doSave()
+          if (which === 'single') void saveGuard.run(() => doSave())
           else if (which === 'bulk') void applyBulk()
         }}
         onCancel={() => setShareConfirm(null)}
@@ -817,6 +832,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         submitDisabled={!name.trim()}
+        submitting={saveGuard.pending}
       >
         <input
           type="text"
@@ -849,13 +865,15 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         )}
 
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '2px 2px 4px' }}>
-          {PRESET_ICONS.map(em => {
+          {PRESET_ICONS.map((em, i) => {
             const Icon = CATEGORY_ICON_MAP[em] ?? Tag
             const selected = icon === em
             return (
               <button
                 key={em}
                 type="button"
+                aria-label={t.common.iconOption.replace('{n}', String(i + 1))}
+                aria-pressed={selected}
                 onClick={() => setIcon(em)}
                 style={{
                   width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
@@ -923,38 +941,18 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                 ? t.expenses.categories.autoLimitComputed.replace('{amount}', String(editing.budgetLimit))
                 : t.expenses.categories.autoLimitDesc}
             </div>
-            <input
-              type="text"
-              inputMode="decimal"
+            <AmountInput
               placeholder={t.expenses.categories.limitReserveLabel}
               value={limitReserve}
-              onChange={e => {
-                const raw = e.target.value.replace(/[^0-9,]/g, '')
-                if ((raw.match(/,/g) || []).length > 1) return
-                setLimitReserve(raw)
-              }}
-              onKeyDown={e => {
-                const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-                if (!allowed.includes(e.key)) e.preventDefault()
-              }}
+              onValueChange={setLimitReserve}
               style={{ width: '100%', marginTop: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
             />
             </>
           ) : (
-            <input
-              type="text"
-              inputMode="decimal"
+            <AmountInput
               placeholder={`${t.expenses.categories.limitLabel} · ${t.expenses.categories.limitOptional}`}
               value={budgetLimit}
-              onChange={e => {
-                const raw = e.target.value.replace(/[^0-9,]/g, '')
-                if ((raw.match(/,/g) || []).length > 1) return
-                setBudgetLimit(raw)
-              }}
-              onKeyDown={e => {
-                const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-                if (!allowed.includes(e.key)) e.preventDefault()
-              }}
+              onValueChange={setBudgetLimit}
               style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
             />
           )}
@@ -998,11 +996,12 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
           onClick={() => setAutoLimitWarning(false)}
         >
           <div
+            ref={autoLimitModalRef} {...autoLimitModalProps}
             className="modal-in"
-            style={{ width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
+            style={{ outline: 'none', width: '100%', maxWidth: 380, background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 26, padding: 20, boxShadow: '0 30px 70px rgba(0,0,0,0.6)' }}
             onClick={e => e.stopPropagation()}
           >
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 10px' }}>{t.expenses.overrideLimitTitle}</p>
+            <h2 id={autoLimitModalTitleId} tabIndex={-1} style={{ outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 10px' }}>{t.expenses.overrideLimitTitle}</h2>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.5, margin: '0 0 18px' }}>
               {t.expenses.overrideLimitManual} <strong style={{ color: 'var(--aurora-hi)' }}>{formatAmount(Number(editing?.budgetLimit ?? 0))}</strong>.
               {t.expenses.overrideLimitQuestion}
@@ -1010,14 +1009,14 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 type="button"
-                onClick={async () => { setAutoLimitWarning(false); await doSave(false) }}
+                onClick={() => { setAutoLimitWarning(false); void saveGuard.run(() => doSave(false)) }}
                 style={{ flex: 1, height: 44, borderRadius: 14, background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', fontSize: 12.5, fontWeight: 600, border: '1px solid var(--aurora-gline)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
               >
                 {t.expenses.overrideLimitKeep}
               </button>
               <button
                 type="button"
-                onClick={async () => { setAutoLimitWarning(false); await doSave() }}
+                onClick={() => { setAutoLimitWarning(false); void saveGuard.run(() => doSave()) }}
                 style={{ flex: 1, height: 44, borderRadius: 14, background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', fontSize: 12.5, fontWeight: 700, color: 'white', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
               >
                 {t.expenses.overrideLimitReplace}

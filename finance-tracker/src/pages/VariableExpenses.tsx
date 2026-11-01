@@ -1,7 +1,9 @@
 import { useState, useMemo, useCallback } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import { EmptyStateAction } from '../components/EmptyStateAction'
 import { Edit2, Trash2, Plus, Receipt, X, ArrowDown, Tag } from 'lucide-react'
 
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { BulkBar } from '../components/BulkBar'
@@ -10,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { DateInput } from '../components/DateInput'
 import { CsvImportModal } from '../components/CsvImportModal'
 import { GlassCard } from '../components/GlassCard'
+import { HeroAmountPlaceholder, ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useFixedExpenses } from '../hooks/useFixedExpenses'
@@ -17,12 +20,25 @@ import { useCategories } from '../hooks/useCategories'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
-import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
-import { todayISO } from '../utils/format'
+import { useTranslation, getLocalizedMonthNames } from '../i18n'
+import { dayHeaderParts } from '../utils/format'
+import { pluralCount } from '../utils/plural'
+import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
+import { defaultEntryDate } from '../utils/entryDefaults'
+import { useCategoriesByUsage } from '../hooks/useCategoryUsage'
+import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
+import { SuggestedCategoryHint } from '../components/SuggestedCategoryHint'
+import { useUndoableDelete } from '../hooks/useUndoableDelete'
 import type { VariableExpense, BudgetStatus } from '../types'
+import { useOffline } from '../hooks/useOfflineQueue'
+import { PendingBadge } from '../components/OfflineStatus'
+import { rowActions } from '../utils/queuedRows'
+import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 interface VariableExpensesPageProps {
   month: number
@@ -37,7 +53,7 @@ interface VarForm {
   date: string
 }
 
-const emptyForm = (): VarForm => ({ amount: '', categoryId: '', note: '', date: todayISO() })
+const emptyForm = (month: number, year: number): VarForm => ({ amount: '', categoryId: '', note: '', date: defaultEntryDate(month, year) })
 
 const getBudgetBarColor = (pct: number, autoLimit = false) => {
   if (autoLimit) return '#22c55e'
@@ -80,23 +96,33 @@ function CategoryCircle({ icon: Icon, label, selected, accent, onClick }: {
 
 
 export function VariableExpensesPage({ month, year, showToast }: VariableExpensesPageProps) {
-  const { variableExpenses, addVariableExpense, updateVariableExpense, deleteVariableExpense } =
+  const { variableExpenses, isLoading: listLoading, isError: listError, refetch: listRetry, addVariableExpense, updateVariableExpense, deleteVariableExpense } =
     useVariableExpenses(month, year)
+  const listFailed = listError && variableExpenses.length === 0
   const { fixedExpenses } = useFixedExpenses(month, year)
   const { categories, addCategory } = useCategories()
+  const quickCategories = useCategoriesByUsage(categories)
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
-  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
+  const offline = useOffline()
+  const feedback = useSaveFeedback()
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<VariableExpense | null>(null)
-  const [form, setForm] = useState<VarForm>(emptyForm())
-  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [form, setForm] = useState<VarForm>(() => emptyForm(month, year))
   const [newCatMode, setNewCatMode] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [csvOpen, setCsvOpen] = useState(false)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
+  const suggestion = useCategorySuggestion({
+    text: form.note,
+    active: sheetOpen && !editing && !newCatMode,
+    currentId: form.categoryId,
+    validIds: quickCategories.map(c => c.id ?? ''),
+    select: id => setForm(f => ({ ...f, categoryId: id })),
+  })
 
   // Bulk edit: in selection mode a tap on a row toggles it instead of opening the editor
   const qc = useQueryClient()
@@ -109,6 +135,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const exitSelectMode = () => { setSelectMode(false); setSelectedIds(new Set()); setOpenSwipeId(null) }
   const rowClick = (e: VariableExpense) => {
     if (!selectMode) { openEdit(e); return }
+    if (e.pending) return
     setSelectedIds(prev => {
       const next = new Set(prev)
       if (next.has(e.id!)) next.delete(e.id!); else next.add(e.id!)
@@ -119,6 +146,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
     qc.invalidateQueries({ queryKey: ['variableExpenses'] }),
     qc.invalidateQueries({ queryKey: ['summaryCards'] }),
     qc.invalidateQueries({ queryKey: ['dashboardChart'] }),
+    qc.invalidateQueries({ queryKey: ['monthlySeries'] }),
   ])
   const applyBulkCategory = async (categoryId: string) => {
     setBulkBusy(true)
@@ -155,7 +183,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const selectedCatId = form.categoryId || null
   const liveBudget = selectedCatId ? getBudgetForCat(selectedCatId) : null
-  const liveAmount = parseFloat(form.amount) || 0
+  const liveAmount = parseAmountInput(form.amount) ?? 0
   const liveSpent = (liveBudget?.spent ?? 0) + (editing ? 0 : liveAmount)
   const liveLimit = liveBudget?.limit
   const livePct = liveLimit ? Math.min((liveSpent / liveLimit) * 100, 100) : null
@@ -163,46 +191,61 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const openAdd = () => {
     setEditing(null)
-    setForm(emptyForm())
+    setForm(emptyForm(month, year))
     setNewCatMode(false)
     setNewCatName('')
     setSheetOpen(true)
   }
 
   const openEdit = (e: VariableExpense) => {
+    if (!rowActions(e, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(e)
-    setForm({ amount: String(e.amount), categoryId: String(e.categoryId), note: e.note, date: e.date })
+    setForm({ amount: formatAmountInput(e.amount, decimalSeparator(locale)), categoryId: String(e.categoryId), note: e.note, date: e.date })
     setNewCatMode(false)
     setSheetOpen(true)
   }
 
+  // Single delete = delayed delete with a 5 s "Späť" (lib/pendingDelete), no confirm.
+  const undoableDelete = useUndoableDelete()
+  const removeWithUndo = (id: string) => {
+    setOpenSwipeId(null)
+    undoableDelete(id, () => deleteVariableExpense(id))
+  }
+
   const handleSave = async () => {
-    const amount = parseFloat(form.amount.replace(',', '.'))
+    const amount = (parseAmountInput(form.amount) ?? NaN)
     if (isNaN(amount) || amount <= 0) return
+    if (newCatMode ? !newCatName.trim() : !form.categoryId) return
 
-    let catId: string
-
-    if (newCatMode) {
-      if (!newCatName.trim()) return
-      catId = await addCategory({ name: newCatName, color: '#9D84D4', icon: '📦', type: 'expense' })
-    } else {
-      if (!form.categoryId) return
-      catId = form.categoryId
-      const bs = getBudgetForCat(catId)
-      if (bs) {
-        const newSpent = bs.spent + amount
-        const newPct = (newSpent / bs.limit) * 100
-        if (newPct >= 100 && bs.percentage < 100) showToast(t.expenses.variable.toastLimitExceeded.replace('{name}', bs.categoryName))
-        else if (newPct >= 90 && bs.percentage < 90) showToast(t.expenses.variable.toastLimitWarning.replace('{name}', bs.categoryName))
+    try {
+      let catId: string
+      if (newCatMode) {
+        catId = await addCategory({ name: newCatName, color: '#9D84D4', icon: '📦', type: 'expense' })
+        // If the expense itself fails, a retry must not create the category again.
+        setForm(f => ({ ...f, categoryId: catId })); setNewCatMode(false); setNewCatName('')
+      } else {
+        catId = form.categoryId
+        const bs = getBudgetForCat(catId)
+        if (bs) {
+          const newSpent = bs.spent + amount
+          const newPct = (newSpent / bs.limit) * 100
+          if (newPct >= 100 && bs.percentage < 100) showToast(t.expenses.variable.toastLimitExceeded.replace('{name}', bs.categoryName))
+          else if (newPct >= 90 && bs.percentage < 90) showToast(t.expenses.variable.toastLimitWarning.replace('{name}', bs.categoryName))
+        }
       }
-    }
 
-    if (editing?.id) {
-      await updateVariableExpense(editing.id, { amount, categoryId: catId, note: form.note, date: form.date })
-    } else {
-      await addVariableExpense({ amount, categoryId: catId, note: form.note, date: form.date })
+      if (editing?.id) {
+        await updateVariableExpense(editing.id, { amount, categoryId: catId, note: form.note, date: form.date })
+        setSheetOpen(false)
+        feedback.saved()
+      } else {
+        const id = await addVariableExpense({ amount, categoryId: catId, note: form.note, date: form.date })
+        setSheetOpen(false)
+        feedback.saved(() => deleteVariableExpense(id))
+      }
+    } catch {
+      feedback.failed()
     }
-    setSheetOpen(false)
   }
 
   const monthNameRaw = getLocalizedMonthNames(locale)[month - 1] ?? ''
@@ -230,16 +273,13 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   , [variableExpenses, activeCategory])
 
   const dayGroups = useMemo(() => {
-    const dayNames = getLocalizedDayNames(locale)
-    const monthNames = getLocalizedMonthNames(locale)
-    return filteredSorted.reduce<Array<{ date: string; dayNum: number; dayName: string; monthName: string; items: VariableExpense[]; dayTotal: number }>>((acc, e) => {
+    return filteredSorted.reduce<Array<{ date: string; dayNum: number; weekday: string; full: string; items: VariableExpense[]; dayTotal: number }>>((acc, e) => {
       const last = acc[acc.length - 1]
       if (last?.date === e.date) {
         last.items.push(e)
         last.dayTotal += e.amount
       } else {
-        const d = new Date(e.date + 'T00:00:00')
-        acc.push({ date: e.date, dayNum: d.getDate(), dayName: dayNames[d.getDay()], monthName: monthNames[d.getMonth()], items: [e], dayTotal: e.amount })
+        acc.push({ date: e.date, ...dayHeaderParts(e.date, locale), items: [e], dayTotal: e.amount })
       }
       return acc
     }, [])
@@ -268,6 +308,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
               {t.expenses.variable.title} · {MONTH_NAME_VAR} {year}
             </div>
+            {listLoading || listFailed ? <HeroAmountPlaceholder error={listFailed} /> : (
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
               <span style={{
                 fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
@@ -280,8 +321,9 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 {formatAmountParts(animatedFilteredTotal).rest}
               </span>
             </div>
+            )}
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 12 }}>
-              {t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length))}
+              {listLoading || listFailed ? '\u00a0' : t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length))}
             </div>
           </HeroCard>
 
@@ -315,99 +357,86 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
           {/* Mobile: day-grouped GlassCard rows */}
           <div className="lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }} onClick={() => setOpenSwipeId(null)}>
-            {filteredSorted.length === 0 ? (
+            {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : filteredSorted.length === 0 ? (
               <GlassCard radius={18}>
                 <div className="empty-state">
                   <Receipt size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                   <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.variable.noExpenses}</p>
                   <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.variable.noExpensesSubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyExpense} onClick={openAdd} />
                 </div>
               </GlassCard>
             ) : (
-              dayGroups.map(({ date, dayNum, dayName, monthName, items, dayTotal }) => {
-                return (
-                  <div key={date} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{dayName}, {monthName}</span>
-                      </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{items.length} tx · -{formatAmount(dayTotal)}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {items.map(e => {
-                        const cat = getCategoryById(e.categoryId)
-                        const name = e.note || cat?.name || t.expenses.variable.defaultExpense
-                        const subtitle = e.note ? `${cat?.name ?? '—'} · ${formatDate(e.date)}` : formatDate(e.date)
-                        return (
-                          <SwipeableRow key={e.id} onDelete={() => setConfirmId(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
-                            <GlassCard radius={18} onClick={() => rowClick(e)} style={{ cursor: 'pointer', outline: selectedIds.has(e.id!) ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{ width: 38, height: 38, borderRadius: 13, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                  {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
-                                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
-                                </div>
-                                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>-{formatAmount(e.amount)}</span>
-                              </div>
-                            </GlassCard>
-                          </SwipeableRow>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })
+              dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
+                <div key={date} style={{ marginBottom: 16 }}>
+                  <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · −${formatAmount(dayTotal)}`} />
+                  <DenseCard>
+                    {items.map(e => {
+                      const cat = getCategoryById(e.categoryId)
+                      const name = e.note || cat?.name || t.expenses.variable.defaultExpense
+                      // The day header carries the date; the row keeps just the category.
+                      const subtitle = e.note ? (cat?.name ?? '—') : ''
+                      return (
+                        <SwipeableRow key={e.id} radius={0} disabled={!rowActions(e, offline).canDelete} onDelete={() => removeWithUndo(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
+                          <DenseRow onClick={() => rowClick(e)} selected={selectedIds.has(e.id!)}>
+                            <div style={{ width: 38, height: 38, borderRadius: 12, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
+                              {subtitle && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
+                              <PendingBadge state={e.pending} />
+                            </div>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(e.amount)}</span>
+                          </DenseRow>
+                        </SwipeableRow>
+                      )
+                    })}
+                  </DenseCard>
+                </div>
+              ))
             )}
           </div>
 
           {/* Desktop: day-grouped GlassCard rows */}
           <div className="hidden lg:block">
-            {filteredSorted.length === 0 ? (
+            {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : filteredSorted.length === 0 ? (
               <GlassCard radius={20}>
                 <div className="empty-state">
                   <Receipt size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                   <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.variable.noExpenses}</p>
                   <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.variable.noExpensesSubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyExpense} onClick={openAdd} />
                 </div>
               </GlassCard>
             ) : (
-              dayGroups.map(({ date, dayNum, dayName, monthName, items, dayTotal }) => (
+              dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                 <div key={date} style={{ marginBottom: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{dayName}, {monthName}</span>
-                    </div>
-                    <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{items.length} tx · -{formatAmount(dayTotal)}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · −${formatAmount(dayTotal)}`} />
+                  <DenseCard>
                     {items.map(e => {
                       const cat = getCategoryById(e.categoryId)
                       const name = e.note || cat?.name || t.expenses.variable.defaultExpense
-                      const subtitle = e.note ? `${cat?.name ?? '—'} · ${formatDate(e.date)}` : formatDate(e.date)
+                      const subtitle = e.note ? (cat?.name ?? '—') : ''
                       return (
-                        <GlassCard key={e.id} radius={18} onClick={() => rowClick(e)} style={{ cursor: 'pointer', outline: selectedIds.has(e.id!) ? '2px solid var(--aurora-violet)' : 'none', outlineOffset: -1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 38, height: 38, borderRadius: 13, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
-                              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
-                              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>-{formatAmount(e.amount)}</span>
-                              {!selectMode && <button onClick={() => openEdit(e)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
-                              {!selectMode && <button onClick={() => setConfirmId(e.id!)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
-                            </div>
+                        <DenseRow key={e.id} onClick={() => rowClick(e)} selected={selectedIds.has(e.id!)}>
+                          <div style={{ width: 38, height: 38, borderRadius: 12, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
                           </div>
-                        </GlassCard>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{name}</span>
+                            {subtitle && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
+                              <PendingBadge state={e.pending} />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
+                            {!selectMode && <button onClick={() => openEdit(e)} disabled={!rowActions(e, offline).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
+                            {!selectMode && <button onClick={() => removeWithUndo(e.id!)} disabled={!rowActions(e, offline).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
+                          </div>
+                        </DenseRow>
                       )
                     })}
-                  </div>
+                  </DenseCard>
                 </div>
               ))
             )}
@@ -456,10 +485,12 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
       </div>
 
       {/* FAB — mobile only */}
-      {!sheetOpen && confirmId === null && !selectMode && (
+      {!sheetOpen && !selectMode && (
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
+          aria-label={t.common.addNew}
+          title={t.common.addNew}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
@@ -473,24 +504,16 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         title={editing ? t.expenses.variable.editTitle : t.expenses.variable.addTitle}
         accent="#FB7185" accent2="#f43f5e"
         onSubmit={handleSave}
+        autoFocusAmount={!editing}
+        onDelete={editing?.id ? () => { const id = editing.id!; setSheetOpen(false); removeWithUndo(id) } : undefined}
         submitDisabled={newCatMode ? !newCatName.trim() || !form.amount : !form.categoryId || !form.amount}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
-          <input
-            type="text"
-            inputMode="decimal"
+          <AmountInput
             placeholder="0"
             value={form.amount}
-            onChange={e => {
-              const raw = e.target.value.replace(/[^0-9,]/g, '')
-              if ((raw.match(/,/g) || []).length > 1) return
-              setForm(f => ({ ...f, amount: raw }))
-            }}
-            onKeyDown={e => {
-              const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-              if (!allowed.includes(e.key)) e.preventDefault()
-            }}
+            onValueChange={v => setForm(f => ({ ...f, amount: v }))}
             style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
           />
           <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
@@ -510,14 +533,14 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
         {!newCatMode ? (
           <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {categories.map(c => (
+            {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
                 icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
                 label={c.name}
                 selected={form.categoryId === c.id}
                 accent={c.color}
-                onClick={() => setForm(f => ({ ...f, categoryId: c.id ?? '' }))}
+                onClick={() => { suggestion.pickedManually(); setForm(f => ({ ...f, categoryId: c.id ?? '' })) }}
               />
             ))}
             <CategoryCircle
@@ -535,7 +558,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
               onChange={e => setNewCatName(e.target.value)}
               style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none' }}
             />
-            <button
+            <button className="hit-44" aria-label={t.common.cancel} title={t.common.cancel}
               type="button"
               onClick={() => { setNewCatMode(false); setNewCatName('') }}
               style={{ width: 38, borderRadius: 12, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -555,6 +578,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
             style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '8px 12px', color: 'var(--aurora-hi)', fontSize: 12, fontFamily: "'Manrope', sans-serif", outline: 'none', minWidth: 100 }}
           />
         </div>
+        <SuggestedCategoryHint name={quickCategories.find(c => c.id === suggestion.suggestedId)?.name} />
       </CompactModal>
 
       {selectMode && (
@@ -606,12 +630,6 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         onCancel={() => setBulkDeleteOpen(false)}
       />
 
-      <ConfirmDialog
-        open={confirmId !== null}
-        message={t.expenses.variable.deleteConfirm}
-        onConfirm={async () => { if (confirmId !== null) { await deleteVariableExpense(confirmId); setConfirmId(null) } }}
-        onCancel={() => { setConfirmId(null); setOpenSwipeId(null) }}
-      />
     </div>
   )
 }

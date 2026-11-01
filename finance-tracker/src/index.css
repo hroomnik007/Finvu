@@ -939,3 +939,52 @@ html.compact .card { padding: var(--card-padding); }
 @media (min-width: 1024px) {
   .settings-grid { grid-template-columns: 200px 1fr; gap: 24px; align-items: start; }
 }
+
+/* iOS Safari zooms into any focused field whose font-size is below 16px.
+   On phone-sized screens force text fields to 16px (inline styles included);
+   the large amount fields and anything marked data-keep-font stay as they are. */
+@media (max-width: 767px) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not(.amount-input):not([data-keep-font]),
+  select:not([data-keep-font]),
+  textarea:not([data-keep-font]) {
+    font-size: 16px !important;
+  }
+  .amount-input-wrap input { font-size: 36px !important; }
+}
+
+/* Dense day-grouped lists: one card per day, rows separated by hairlines. */
+.dense-card {
+  background: var(--aurora-panel);
+  border: 1px solid var(--aurora-gline);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--aurora-card-shadow);
+}
+.dense-card > * + * { border-top: 1px solid var(--aurora-gline); }
+.dense-row { background: var(--aurora-panel); transition: background 0.12s; }
+@media (hover: hover) { .dense-row:hover { background: var(--aurora-hover); } }
+
+/* Annual overview: stats row, then chart + table side by side on desktop. */
+.annual-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.annual-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@media (min-width: 1024px) {
+  .annual-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .annual-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+}
+
+/* Touch-target expander: grows the clickable area to at least 44x44 with an
+   invisible pseudo-element, so small icon buttons keep their look. Inline
+   position (absolute/fixed) still wins over the relative here. */
+.hit-44,
+.btn-icon { position: relative; }
+.hit-44::before,
+.btn-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+  border-radius: inherit;
+}

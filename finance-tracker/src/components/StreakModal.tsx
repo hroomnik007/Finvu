@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { X } from 'lucide-react'
 import { useTranslation } from '../i18n'
 
@@ -19,11 +19,7 @@ function StatBox({ label, value }: { label: string; value: number }) {
 
 export function StreakModal({ currentStreak, longestStreak, onClose }: StreakModalProps) {
   const { t } = useTranslation()
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open: true, onClose })
 
   return (
     <div
@@ -31,7 +27,9 @@ export function StreakModal({ currentStreak, longestStreak, onClose }: StreakMod
       onClick={onClose}
     >
       <div
-        style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, width: '100%', maxWidth: 360, overflow: 'hidden' }}
+        ref={panelRef}
+        {...dialogProps}
+        style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, width: '100%', maxWidth: 360, overflow: 'hidden', outline: 'none' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Hero */}
@@ -45,8 +43,10 @@ export function StreakModal({ currentStreak, longestStreak, onClose }: StreakMod
             <X size={16} />
           </button>
           <div style={{ fontSize: 52, lineHeight: 1, display: 'inline-block', animation: 'flame 1.4s ease-in-out infinite', transformOrigin: 'bottom center' }}>🔥</div>
-          <div style={{ fontSize: 40, fontWeight: 800, color: 'white', fontFamily: "'DM Mono', monospace", marginTop: 8, letterSpacing: '-1px' }}>{currentStreak}</div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{t.profile.days} {t.streak.inARow}</div>
+          <h2 id={titleId} tabIndex={-1} style={{ margin: 0, outline: 'none', fontWeight: 'inherit' }}>
+            <div style={{ fontSize: 40, fontWeight: 800, color: 'white', fontFamily: "'DM Mono', monospace", marginTop: 8, letterSpacing: '-1px' }}>{currentStreak}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{t.profile.days} {t.streak.inARow}</div>
+          </h2>
         </div>
 
         {/* Body */}

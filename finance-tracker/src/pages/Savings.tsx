@@ -1,9 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Plus, PiggyBank, Target } from 'lucide-react'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { SavingsDetailModal } from '../components/SavingsDetailModal'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { GlassCard } from '../components/GlassCard'
+import { ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { useSavings } from '../hooks/useSavings'
 import { useFormatters } from '../hooks/useFormatters'
@@ -13,6 +16,8 @@ import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { listDeposits, addDeposit, deleteDeposit } from '../api/savings'
 import { getSummaryCards } from '../api/transactions'
 import type { SavingsGoal, Deposit } from '../types'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 const PRESET_COLORS = [
   '#7C3AED', '#A78BFA', '#10B981', '#34D399', '#EF4444', '#F59E0B', '#3B82F6', '#EC4899',
@@ -61,9 +66,11 @@ function goalMonthly(goal: SavingsGoal): number {
 }
 
 export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
-  const { goals, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal } = useSavings()
+  const { goals, isLoading: listLoading, isError: listError, refetch: listRetry, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal, reload: reloadGoals } = useSavings()
+  const listFailed = listError && goals.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
+  const feedback = useSaveFeedback()
 
   const [view, setView] = useState<'list' | 'detail' | 'edit'>('list')
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null)
@@ -134,9 +141,18 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
 
   async function handleDeposit(amount: number) {
     if (!selectedGoal?.id) return
-    const { goal: updated, deposit } = await addDeposit(selectedGoal.id, amount)
+    const goalId = selectedGoal.id
+    const { goal: updated, deposit } = await addDeposit(goalId, amount)
     setDeposits(prev => [deposit, ...prev])
     setSelectedGoal(prev => prev ? { ...prev, savedAmount: updated.savedAmount } : null)
+    void reloadGoals()
+    // A deposit is its own row, so undo simply deletes that row.
+    feedback.saved(async () => {
+      const after = await deleteDeposit(goalId, deposit.id)
+      setDeposits(prev => prev.filter(d => d.id !== deposit.id))
+      setSelectedGoal(prev => prev?.id === goalId ? { ...prev, savedAmount: after.savedAmount } : prev)
+      void reloadGoals()
+    })
   }
 
   async function handleDeleteDeposit(depositId: string) {
@@ -149,8 +165,8 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   function openEdit(goal: SavingsGoal) {
     setSelectedGoal(goal)
     setFormName(goal.name)
-    setFormTarget(String(goal.targetAmount))
-    setFormSaved(String(goal.savedAmount))
+    setFormTarget(formatAmountInput(goal.targetAmount, decimalSeparator(locale)))
+    setFormSaved(formatAmountInput(goal.savedAmount, decimalSeparator(locale)))
     setFormDeadline(goal.deadline ?? '')
     setFormIcon(goal.icon ?? '🎯')
     setFormColor(goal.color ?? '#7C3AED')
@@ -173,9 +189,9 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   }
 
   const handleSave = useCallback(async () => {
-    const targetNum = parseFloat(formTarget.replace(',', '.'))
+    const targetNum = (parseAmountInput(formTarget) ?? NaN)
     if (!formName.trim() || isNaN(targetNum) || targetNum <= 0) return
-    const savedNum = parseFloat(formSaved) || 0
+    const savedNum = parseAmountInput(formSaved) ?? 0
     setSaving(true)
     try {
       const payload: Omit<SavingsGoal, 'id'> = {
@@ -195,16 +211,24 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         await addGoal(payload)
         setView('list')
       }
+      feedback.saved()
+    } catch {
+      feedback.failed()
     } finally {
       setSaving(false)
     }
-  }, [formName, formTarget, formSaved, formDeadline, formIcon, formColor, formNote, selectedGoal, addGoal, updateGoal])
+  }, [formName, formTarget, formSaved, formDeadline, formIcon, formColor, formNote, selectedGoal, addGoal, updateGoal, feedback])
 
-  const handleDelete = useCallback(async (goal: SavingsGoal) => {
-    if (!goal.id) return
-    if (!window.confirm(t.savings.deleteConfirm)) return
+  // Deleting a goal removes its deposits too, so it asks first (Finvu dialog,
+  // not window.confirm). No undo: the server can't restore the deposits.
+  const [goalToDelete, setGoalToDelete] = useState<SavingsGoal | null>(null)
+  const confirmDeleteGoal = useCallback(async () => {
+    const goal = goalToDelete
+    if (!goal?.id) return
     await deleteGoal(goal.id)
-  }, [deleteGoal, t.savings.deleteConfirm])
+    setGoalToDelete(null)
+    if (selectedGoal?.id === goal.id) { setSelectedGoal(null); setView('list'); window.location.hash = 'savings' }
+  }, [goalToDelete, deleteGoal, selectedGoal])
 
   const handlePause = useCallback(async () => {
     if (!selectedGoal?.id) return
@@ -224,12 +248,15 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
       <div>
         <label style={labelStyle}>{t.savings.iconLabel}</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-          {PRESET_ICONS.map(icon => {
+          {PRESET_ICONS.map((icon, i) => {
             const Icon = SAVINGS_ICON_MAP[icon] ?? Target
             const selected = formIcon === icon
             return (
               <button
                 key={icon}
+                type="button"
+                aria-label={t.common.iconOption.replace('{n}', String(i + 1))}
+                aria-pressed={selected}
                 onClick={() => setFormIcon(icon)}
                 style={{
                   width: 38, height: 38, borderRadius: 10,
@@ -261,32 +288,20 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label style={labelStyle}>{t.savings.targetAmount} (€)</label>
-          <input
+          <AmountInput
             style={inputStyle}
-            type="text"
-            inputMode="decimal"
+
             value={formTarget}
-            onChange={e => {
-              const raw = e.target.value.replace(/[^0-9,]/g, '')
-              if ((raw.match(/,/g) || []).length > 1) return
-              setFormTarget(raw)
-            }}
-            onKeyDown={e => {
-              const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-              if (!allowed.includes(e.key)) e.preventDefault()
-            }}
+            onValueChange={setFormTarget}
             placeholder="1000"
           />
         </div>
         <div>
           <label style={labelStyle}>{t.savings.savedAmount} (€)</label>
-          <input
+          <AmountInput
             style={inputStyle}
-            type="number"
-            min="0"
-            step="0.01"
             value={formSaved}
-            onChange={e => setFormSaved(e.target.value)}
+            onValueChange={setFormSaved}
             placeholder="0"
           />
         </div>
@@ -335,7 +350,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
     </div>
   )
 
-  const saveDisabled = saving || !formName.trim() || !formTarget || parseFloat(formTarget) <= 0
+  const saveDisabled = !formName.trim() || !((parseAmountInput(formTarget) ?? 0) > 0)
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -390,7 +405,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         </HeroCard>
 
         {/* Goals grid */}
-        {goals.length === 0 ? (
+        {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : goals.length === 0 ? (
           <GlassCard radius={20} style={{ textAlign: 'center', padding: '48px 24px' }}>
             <PiggyBank size={40} color="var(--aurora-faint)" style={{ marginBottom: 12 }} />
             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>{t.savings.noGoals}</p>
@@ -401,7 +416,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
             {/* Mobile: vertical list with swipe-to-delete */}
             <div className="flex flex-col gap-4 lg:hidden">
               {goals.map(goal => (
-                <SwipeableRow key={goal.id} onDelete={() => deleteGoal(goal.id!)}>
+                <SwipeableRow key={goal.id} onDelete={() => setGoalToDelete(goal)}>
                   <GoalCard
                     goal={goal}
                     formatAmount={formatAmount}
@@ -447,12 +462,20 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         </button>
       )}
 
+      <ConfirmDialog
+        open={goalToDelete !== null}
+        message={t.savings.deleteConfirm}
+        detail={goalToDelete?.name}
+        onConfirm={confirmDeleteGoal}
+        onCancel={() => setGoalToDelete(null)}
+      />
+
       <SavingsDetailModal
         goal={view === 'detail' ? selectedGoal : null}
         deposits={deposits}
         onClose={closeDetail}
         onEdit={() => { if (selectedGoal) openEdit(selectedGoal) }}
-        onDelete={selectedGoal ? async () => { await handleDelete(selectedGoal); closeDetail() } : undefined}
+        onDelete={selectedGoal ? () => setGoalToDelete(selectedGoal) : undefined}
         onDeposit={handleDeposit}
         onDeleteDeposit={handleDeleteDeposit}
         onPause={handlePause}
@@ -470,6 +493,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         submitDisabled={saveDisabled}
+        submitting={saving}
       >
         {form}
       </CompactModal>
@@ -517,6 +541,8 @@ function GoalCard({
   desktop?: boolean
 }) {
   const [active, setActive] = useState(false)
+  const common = useTranslation().t.common
+  const { formatLongDate } = useFormatters()
   const rawPct = goal.targetAmount > 0 ? (goal.savedAmount / goal.targetAmount) * 100 : 0
   const pct = Math.min(100, rawPct)
   const isCompleted = pct >= 100
@@ -537,7 +563,7 @@ function GoalCard({
         </span>
       )
     } else {
-      deadlineEl = <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>do {goal.deadline}</span>
+      deadlineEl = <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{common.dueBy.replace('{date}', formatLongDate(goal.deadline))}</span>
     }
   }
 
@@ -598,7 +624,7 @@ function GoalCard({
         {!isCompleted && (
           <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '2px 0 0' }}>
             {t.remaining} {formatAmount(Math.max(0, goal.targetAmount - goal.savedAmount))}
-            {monthly > 0 && ` · auto +${formatAmount(monthly)}/mes.`}
+            {monthly > 0 && ` · ${common.autoMonthly.replace('{amount}', formatAmount(monthly))}`}
           </p>
         )}
       </div>

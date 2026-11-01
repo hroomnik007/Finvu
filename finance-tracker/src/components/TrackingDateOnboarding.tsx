@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { updateUserSettings } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n'
@@ -30,6 +31,9 @@ export function TrackingDateOnboarding({ onDone }: Props) {
     }
   }
 
+  // Not dismissable with Esc: the user picks a date or skips explicitly.
+  const { panelRef, dialogProps } = useModalA11y({ open: true })
+
   function handleSkip() {
     onDone()
   }
@@ -41,7 +45,7 @@ export function TrackingDateOnboarding({ onDone }: Props) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px 20px',
     }}>
-      <div style={{ width: '100%', maxWidth: 440, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+      <div ref={panelRef} {...dialogProps} style={{ outline: 'none', width: '100%', maxWidth: 440, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
 
         <img src="/logo.svg" alt="Finvu" style={{ width: 72, height: 72, borderRadius: 18 }} />
 

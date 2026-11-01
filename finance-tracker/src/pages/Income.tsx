@@ -1,21 +1,36 @@
 import { useState, useEffect } from 'react'
 import { Repeat, Edit2, Trash2, Calendar, Plus, CalendarDays, PiggyBank, ArrowUp } from 'lucide-react'
+import { EmptyStateAction } from '../components/EmptyStateAction'
 
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
 import { CompactModal } from '../components/CompactModal'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DateInput } from '../components/DateInput'
 import { CsvImportModal } from '../components/CsvImportModal'
 import { GlassCard } from '../components/GlassCard'
+import { HeroAmountPlaceholder, ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
 import { useIncomes } from '../hooks/useIncomes'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
-import { useTranslation, getLocalizedDayNames, getLocalizedMonthNames } from '../i18n'
+import { useTranslation, getLocalizedMonthNames } from '../i18n'
+import { dayHeaderParts } from '../utils/format'
+import { pluralCount } from '../utils/plural'
+import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import type { Translations } from '../i18n'
 import { todayISO } from '../utils/format'
+import { dateForRecurringToggle, defaultEntryDate } from '../utils/entryDefaults'
+import { ValidFromHint } from '../components/ValidFromHint'
+import { useUndoableDelete } from '../hooks/useUndoableDelete'
 import { getAllTransactions } from '../api/allTransactions'
 import type { Income } from '../types'
+import { useOffline } from '../hooks/useOfflineQueue'
+import { PendingBadge } from '../components/OfflineStatus'
+import { rowActions } from '../utils/queuedRows'
+import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
+import AmountInput from '../components/AmountInput'
+import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 
 interface IncomePageProps {
@@ -30,10 +45,10 @@ interface FormState {
   recurring: boolean
 }
 
-const makeEmpty = (): FormState => ({
+const makeEmpty = (month: number, year: number): FormState => ({
   amount: '',
   label: '',
-  date: todayISO(),
+  date: defaultEntryDate(month, year),
   recurring: false,
 })
 
@@ -41,26 +56,18 @@ interface FormBodyProps {
   form: FormState
   setForm: React.Dispatch<React.SetStateAction<FormState>>
   t: Translations
+  /** Adding (not editing): the recurring toggle moves the date and shows "Platí od". */
+  adding?: { month: number; year: number }
 }
 
-function FormBody({ form, setForm, t }: FormBodyProps) {
+function FormBody({ form, setForm, t, adding }: FormBodyProps) {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
-        <input
-          type="text"
-          inputMode="decimal"
+        <AmountInput
           placeholder="0"
           value={form.amount}
-          onChange={e => {
-            const raw = e.target.value.replace(/[^0-9,]/g, '')
-            if ((raw.match(/,/g) || []).length > 1) return
-            setForm(f => ({ ...f, amount: raw }))
-          }}
-          onKeyDown={e => {
-            const allowed = ['0','1','2','3','4','5','6','7','8','9',',','Backspace','Delete','Tab','ArrowLeft','ArrowRight','Enter']
-            if (!allowed.includes(e.key)) e.preventDefault()
-          }}
+          onValueChange={v => setForm(f => ({ ...f, amount: v }))}
           style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
         />
         <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
@@ -76,7 +83,12 @@ function FormBody({ form, setForm, t }: FormBodyProps) {
         <DateInput compact value={form.date} onChange={date => setForm(f => ({ ...f, date }))} />
         <button
           type="button"
-          onClick={() => setForm(f => ({ ...f, recurring: !f.recurring }))}
+          aria-pressed={form.recurring}
+          onClick={() => setForm(f => {
+            const recurring = !f.recurring
+            const date = adding ? dateForRecurringToggle(f.date, recurring, adding.month, adding.year) : f.date
+            return { ...f, recurring, date }
+          })}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: form.recurring ? 'linear-gradient(135deg,#34D399,#22D3EE)' : 'var(--aurora-glass)',
@@ -89,18 +101,22 @@ function FormBody({ form, setForm, t }: FormBodyProps) {
           <Repeat size={12} /> {t.income.recurringToggle}
         </button>
       </div>
+      {adding && form.recurring && <ValidFromHint date={form.date} />}
     </>
   )
 }
 
 
 export function IncomePage({ month, year }: IncomePageProps) {
-  const { incomes, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
-  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
+  const { incomes, isLoading: listLoading, isError: listError, refetch: listRetry, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
+  const listFailed = listError && incomes.length === 0
+  const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
+  const offline = useOffline()
+  const feedback = useSaveFeedback()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<Income | null>(null)
-  const [form, setForm] = useState<FormState>(makeEmpty())
+  const [form, setForm] = useState<FormState>(() => makeEmpty(month, year))
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [csvOpen, setCsvOpen] = useState(false)
   const [yearlyIncome, setYearlyIncome] = useState(0)
@@ -125,25 +141,46 @@ export function IncomePage({ month, year }: IncomePageProps) {
       .catch(() => {})
   }, [year])
 
-  const openAdd = () => { setEditing(null); setIsCorrection(false); setEndOpen(false); setForm(makeEmpty()); setSheetOpen(true) }
+  const openAdd = () => { setEditing(null); setIsCorrection(false); setEndOpen(false); setForm(makeEmpty(month, year)); setSheetOpen(true) }
   const openEdit = (income: Income) => {
+    if (!rowActions(income, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(income)
     setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
-    setForm({ amount: String(income.amount), label: income.label, date: income.date, recurring: income.recurring })
+    setForm({ amount: formatAmountInput(income.amount, decimalSeparator(locale)), label: income.label, date: income.date, recurring: income.recurring })
     setSheetOpen(true)
   }
 
   const handleSave = async () => {
-    const amount = parseFloat(form.amount.replace(',', '.'))
+    const amount = (parseAmountInput(form.amount) ?? NaN)
     if (!form.label.trim() || isNaN(amount) || amount <= 0) return
-    if (editing?.id) {
-      const priceChange = editing.recurring && form.recurring && !isCorrection && amount !== editing.amount
-      await updateIncome(editing.id, { amount: priceChange ? undefined : amount, label: form.label, date: form.date, recurring: form.recurring })
-      if (priceChange) await changeIncomePrice(editing.id, amount, priceFrom)
-    } else {
-      await addIncome({ amount, label: form.label, date: form.date, recurring: form.recurring })
+    try {
+      if (editing?.id) {
+        const priceChange = editing.recurring && form.recurring && !isCorrection && amount !== editing.amount
+        await updateIncome(editing.id, { amount: priceChange ? undefined : amount, label: form.label, date: form.date, recurring: form.recurring })
+        if (priceChange) await changeIncomePrice(editing.id, amount, priceFrom)
+        setSheetOpen(false)
+        feedback.saved()
+      } else {
+        const id = await addIncome({ amount, label: form.label, date: form.date, recurring: form.recurring })
+        setSheetOpen(false)
+        // Deleting a recurring income removes its whole series (matched by
+        // name), so undo is offered only for one-off incomes.
+        feedback.saved(form.recurring ? undefined : () => deleteIncome(id))
+      }
+    } catch {
+      feedback.failed()
     }
-    setSheetOpen(false)
+  }
+
+  // One-time income: delayed delete with "Späť". A recurring one is a whole
+  // series on the server, so it keeps the explicit confirmation instead.
+  const undoableDelete = useUndoableDelete()
+  const requestDelete = (income: Income) => {
+    if (!income.id) return
+    if (income.recurring) { setConfirmId(income.id); return }
+    setOpenSwipeId(null)
+    const id = income.id
+    undoableDelete(id, () => deleteIncome(id))
   }
 
   const handleDelete = async () => {
@@ -159,21 +196,19 @@ export function IncomePage({ month, year }: IncomePageProps) {
 
   const recurringTotal = recurringIncomes.reduce((s, i) => s + i.amount, 0)
   const oneTimeTotal = totalAmount - recurringTotal
-  const dayNames = getLocalizedDayNames(locale)
   const monthNames = getLocalizedMonthNames(locale)
   const rawMonthName = monthNames[month - 1] ?? ''
   const MONTH_NAME = rawMonthName.charAt(0).toLocaleUpperCase(locale) + rawMonthName.slice(1)
 
   const animatedTotal = useCountUp(totalAmount, 800)
 
-  const dayGroups = sorted.reduce<Array<{ date: string; dayNum: number; dayName: string; monthName: string; items: Income[]; dayTotal: number }>>((acc, income) => {
+  const dayGroups = sorted.reduce<Array<{ date: string; dayNum: number; weekday: string; full: string; items: Income[]; dayTotal: number }>>((acc, income) => {
     const last = acc[acc.length - 1]
     if (last?.date === income.date) {
       last.items.push(income)
       last.dayTotal += income.amount
     } else {
-      const d = new Date(income.date + 'T00:00:00')
-      acc.push({ date: income.date, dayNum: d.getDate(), dayName: dayNames[d.getDay()], monthName: monthNames[d.getMonth()], items: [income], dayTotal: income.amount })
+      acc.push({ date: income.date, ...dayHeaderParts(income.date, locale), items: [income], dayTotal: income.amount })
     }
     return acc
   }, [])
@@ -192,6 +227,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
               {t.income.title} · {MONTH_NAME} {year}
             </div>
+            {listLoading || listFailed ? <HeroAmountPlaceholder error={listFailed} /> : (
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
               <span style={{
                 fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
@@ -204,6 +240,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                 {formatAmountParts(animatedTotal).rest}
               </span>
             </div>
+            )}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.income.recurringLabel}</div>
@@ -226,94 +263,75 @@ export function IncomePage({ month, year }: IncomePageProps) {
           </GlassCard>
 
           {/* List / empty state */}
-          {sorted.length === 0 ? (
+          {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : sorted.length === 0 ? (
             <GlassCard radius={18}>
               <div className="empty-state">
                 <PiggyBank size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.income.noIncome}</p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.income.noIncomeSubtitle}</p>
+                <EmptyStateAction label={t.firstRun.emptyIncome} onClick={openAdd} />
               </div>
             </GlassCard>
           ) : (
             <>
               {/* Mobile: day-grouped GlassCard rows */}
               <div className="lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }} onClick={() => setOpenSwipeId(null)}>
-                {dayGroups.map(({ date, dayNum, dayName, monthName, items, dayTotal }) => (
+                {dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                   <div key={date} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{dayName}, {monthName}</span>
-                      </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{items.length} tx · +{formatAmount(dayTotal)}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · +${formatAmount(dayTotal)}`} />
+                    <DenseCard>
                       {items.map(income => (
-                        <SwipeableRow key={income.id} onDelete={() => setConfirmId(income.id!)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
-                          <GlassCard radius={18} onClick={() => openEdit(income)} style={{ cursor: 'pointer' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <div style={{ width: 38, height: 38, borderRadius: 13, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.label}</span>
-                                  {income.recurring && (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                      <Repeat size={8} /> {t.income.recurringBadge}
-                                    </span>
-                                  )}
-                                </div>
-                                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{formatDate(income.date)}</div>
-                              </div>
-                              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', flexShrink: 0 }}>+{formatAmount(income.amount)}</span>
+                        <SwipeableRow key={income.id} radius={0} disabled={!rowActions(income, offline).canDelete} onDelete={() => requestDelete(income)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
+                          <DenseRow onClick={() => openEdit(income)}>
+                            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
                             </div>
-                          </GlassCard>
+                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.label}</span>
+                              {income.recurring && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  <Repeat size={8} /> {t.income.recurringBadge}
+                                </span>
+                              )}
+                              <PendingBadge state={income.pending} />
+                            </div>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', flexShrink: 0 }}>+{formatAmount(income.amount)}</span>
+                          </DenseRow>
                         </SwipeableRow>
                       ))}
-                    </div>
+                    </DenseCard>
                   </div>
                 ))}
               </div>
 
               {/* Desktop: day-grouped GlassCard rows */}
               <div className="hidden lg:block">
-                {dayGroups.map(({ date, dayNum, dayName, monthName, items, dayTotal }) => (
+                {dayGroups.map(({ date, dayNum, weekday, full, items, dayTotal }) => (
                   <div key={date} style={{ marginBottom: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px 8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)' }}>{dayNum}</span>
-                        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{dayName}, {monthName}</span>
-                      </div>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{items.length} tx · +{formatAmount(dayTotal)}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · +${formatAmount(dayTotal)}`} />
+                    <DenseCard>
                       {items.map(income => (
-                        <GlassCard key={income.id} radius={18} onClick={() => openEdit(income)} style={{ cursor: 'pointer' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 38, height: 38, borderRadius: 13, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <DenseRow key={income.id} onClick={() => openEdit(income)}>
+                            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.label}</span>
-                                {income.recurring && (
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    <Repeat size={8} /> {t.income.recurringBadge}
-                                  </span>
-                                )}
-                              </div>
-                              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{formatDate(income.date)}</div>
+                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{income.label}</span>
+                              {income.recurring && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  <Repeat size={8} /> {t.income.recurringBadge}
+                                </span>
+                              )}
+                              <PendingBadge state={income.pending} />
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', marginRight: 8 }}>+{formatAmount(income.amount)}</span>
-                              <button onClick={() => openEdit(income)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
-                              <button onClick={() => setConfirmId(income.id!)} className="btn-icon" style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
-                            </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', marginRight: 8 }}>+{formatAmount(income.amount)}</span>
+                            <button onClick={() => openEdit(income)} disabled={!rowActions(income, offline).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
+                            <button onClick={() => requestDelete(income)} disabled={!rowActions(income, offline).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
                           </div>
-                        </GlassCard>
+                        </DenseRow>
                       ))}
-                    </div>
+                    </DenseCard>
                   </div>
                 ))}
               </div>
@@ -328,6 +346,8 @@ export function IncomePage({ month, year }: IncomePageProps) {
         <button
           onClick={openAdd}
           className="lg:hidden flex items-center justify-center"
+          aria-label={t.common.addNew}
+          title={t.common.addNew}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
@@ -343,12 +363,14 @@ export function IncomePage({ month, year }: IncomePageProps) {
         title={editing ? t.income.editTitle : t.income.addTitle}
         accent="#34D399" accent2="#22D3EE"
         onSubmit={handleSave}
+        autoFocusAmount={!editing}
+        onDelete={editing?.id ? () => { const inc = editing; setSheetOpen(false); requestDelete(inc) } : undefined}
         submitDisabled={!form.label.trim() || !form.amount}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
-        <FormBody form={form} setForm={setForm} t={t} />
+        <FormBody form={form} setForm={setForm} t={t} adding={editing ? undefined : { month, year }} />
         {editing?.recurring && (() => {
-          const newAmount = parseFloat(form.amount.replace(',', '.'))
+          const newAmount = (parseAmountInput(form.amount) ?? NaN)
           const priceChanged = Number.isFinite(newAmount) && newAmount > 0 && newAmount !== editing.amount
           const box: React.CSSProperties = { background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }
           const small: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, lineHeight: 1.5 }

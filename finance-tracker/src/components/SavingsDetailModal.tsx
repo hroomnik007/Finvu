@@ -4,6 +4,11 @@ import type { SavingsGoal, Deposit } from '../types'
 import { useTranslation } from '../i18n'
 import { formatDateLocale } from '../utils/format'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
+import AmountInput from './AmountInput'
+import { parseAmountInput } from '../utils/amountInput'
+import { useSubmitGuard } from '../hooks/useSubmitGuard'
+import { useSaveFeedback } from '../hooks/useSaveFeedback'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface SavingsDetailModalProps {
   goal: SavingsGoal | null
@@ -40,7 +45,9 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
   const { t, locale } = useTranslation()
   const [depositMode, setDepositMode] = useState(false)
   const [depositInput, setDepositInput] = useState('')
-  const [saving, setSaving] = useState(false)
+  const depositGuard = useSubmitGuard()
+  const saving = depositGuard.pending
+  const feedback = useSaveFeedback()
   const [pauseLoading, setPauseLoading] = useState(false)
   const [animated, setAnimated] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -53,11 +60,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     return () => clearTimeout(timer)
   }, [goal?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open: !!goal, onClose })
 
   if (!goal) return null
 
@@ -83,17 +86,20 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     { label: t.savings.monthsLabel.toUpperCase(), value: monthsLeft > 0 ? String(monthsLeft) : '—', green: false },
   ]
 
-  async function handleDeposit() {
-    const amount = parseFloat(depositInput.replace(',', '.'))
+  // Guarded: Enter and the button share one in-flight flag, so a double
+  // Enter / double tap can't add the deposit twice.
+  function handleDeposit() {
+    const amount = parseAmountInput(depositInput)
     if (!amount || amount <= 0) return
-    setSaving(true)
-    try {
-      await onDeposit(amount)
-      setDepositInput('')
-      setDepositMode(false)
-    } finally {
-      setSaving(false)
-    }
+    void depositGuard.run(async () => {
+      try {
+        await onDeposit(amount)
+        setDepositInput('')
+        setDepositMode(false)
+      } catch {
+        feedback.failed()
+      }
+    })
   }
 
   async function handlePause() {
@@ -114,15 +120,15 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
 
   const depositInputEl = (
     <div style={{ display: 'flex', gap: 8 }}>
-      <input
-        type="number" min="0.01" step="0.01" placeholder={t.savings.depositPlaceholder}
-        value={depositInput} onChange={e => setDepositInput(e.target.value)} autoFocus
+      <AmountInput
+        placeholder={t.savings.depositPlaceholder}
+        value={depositInput} onValueChange={setDepositInput} autoFocus
         onKeyDown={e => { if (e.key === 'Enter') handleDeposit() }}
         style={glassInputStyle}
       />
-      <button onClick={handleDeposit} disabled={saving || !depositInput || parseFloat(depositInput) <= 0}
+      <button onClick={handleDeposit} disabled={saving || !((parseAmountInput(depositInput) ?? 0) > 0)} aria-busy={saving}
         style={{ padding: '0 18px', borderRadius: 14, background: 'linear-gradient(135deg,var(--aurora-emerald),var(--aurora-cyan))', color: '#052e21', fontSize: 14, fontWeight: 700, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", opacity: saving ? 0.7 : 1 }}>
-        {saving ? '...' : t.common.save}
+        {saving ? t.common.saving : t.common.save}
       </button>
       <button onClick={() => { setDepositMode(false); setDepositInput('') }}
         aria-label={t.common.close}
@@ -189,7 +195,10 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     >
       <div
         className="modal-in"
+        ref={panelRef}
+        {...dialogProps}
         style={{
+          outline: 'none', overscrollBehavior: 'contain',
           width: '100%', maxWidth: 440,
           background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)',
           borderRadius: 26, padding: 22,
@@ -205,7 +214,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</span>
+              <h2 id={titleId} tabIndex={-1} style={{ margin: 0, outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.name}</h2>
               {goal.paused && <span style={pausedBadge}>{t.savings.pausedBadge}</span>}
             </div>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -1,7 +1,8 @@
 import cron from "node-cron";
 import { and, isNotNull, lt, notExists, eq, gt } from "drizzle-orm";
 import { db } from "../db";
-import { refreshTokens, passwordResetTokens, pinDeviceTokens, sharedReports, userSessions, users } from "../db/schema";
+import { refreshTokens, passwordResetTokens, pinDeviceTokens, sharedReports, userSessions, users, idempotencyKeys } from "../db/schema";
+import { KEY_TTL_MS } from "../middleware/idempotency";
 import { cleanupCutoffs } from "../lib/cleanupCutoffs";
 import { pruneLockouts } from "../lib/loginLockout";
 
@@ -46,6 +47,12 @@ export async function runCleanup(now: Date = new Date()): Promise<Record<string,
   removed.verificationTokens = verification.length;
 
   removed.loginLockouts = await pruneLockouts(now);
+
+  // Idempotency-Key records only protect retries for 24 hours
+  const idem = await db.delete(idempotencyKeys)
+    .where(lt(idempotencyKeys.createdAt, new Date(now.getTime() - KEY_TTL_MS)))
+    .returning({ key: idempotencyKeys.key });
+  removed.idempotencyKeys = idem.length;
 
   return removed;
 }

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useModalA11y } from '../hooks/useModalA11y'
 import { X } from 'lucide-react'
 import { useCategories } from '../hooks/useCategories'
 import { deleteAllCategories } from '../api/categories'
@@ -68,11 +69,7 @@ export function BudgetTemplateModal({ onComplete, onClose }: BudgetTemplateModal
   const [loading, setLoading] = useState(false)
   const { addCategory } = useCategories()
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !loading) onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [loading, onClose])
+  const { panelRef, titleId, dialogProps } = useModalA11y({ open: true, onClose: loading ? undefined : onClose })
 
   async function handleApply() {
     if (!selected) return
@@ -110,10 +107,10 @@ export function BudgetTemplateModal({ onComplete, onClose }: BudgetTemplateModal
       }}
     >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="budget-template-title"
+        ref={panelRef}
+        {...dialogProps}
         style={{
+          outline: 'none',
           position: 'relative',
           width: '100%',
           maxWidth: '460px',
@@ -147,7 +144,7 @@ export function BudgetTemplateModal({ onComplete, onClose }: BudgetTemplateModal
         <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px 0' }}>
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <div style={{ fontSize: '44px', marginBottom: '10px' }}>🏦</div>
-            <h2 id="budget-template-title" style={{ fontSize: '19px', fontWeight: 700, color: '#E2D9F3', marginBottom: '8px' }}>
+            <h2 id={titleId} tabIndex={-1} style={{ outline: 'none', fontSize: '19px', fontWeight: 700, color: '#E2D9F3', marginBottom: '8px' }}>
               {bt.title}
             </h2>
             <p style={{ fontSize: '13px', color: '#9D84D4', lineHeight: 1.5 }}>

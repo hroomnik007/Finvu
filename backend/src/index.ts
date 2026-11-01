@@ -48,6 +48,10 @@ app.use(
       }
     },
     credentials: true,
+    // allowedHeaders is left unset on purpose: cors then reflects the
+    // preflight's Access-Control-Request-Headers, which lets the client send
+    // Idempotency-Key. The replay marker has to be exposed explicitly.
+    exposedHeaders: ["Idempotent-Replayed", "Retry-After"],
   })
 );
 // Only the avatar upload needs a large body (base64 photo); everything else
