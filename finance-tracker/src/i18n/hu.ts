@@ -205,7 +205,7 @@ export const hu: Translations = {
       totalLabel: 'Összes fix kiadás',
       everyMonth: 'havonta',
       everyMonthDay: 'havonta, nap',
-      dayLabel: 'A hónap napja (1 – 28)',
+      dayLabel: 'A hónap napja (1 – 31)',
       dayShort: 'Nap',
       nameLabel: 'Név',
       namePlaceholder: 'pl. Bérleti díj, Internet...',

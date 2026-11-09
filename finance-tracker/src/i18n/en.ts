@@ -205,7 +205,7 @@ export const en: Translations = {
       totalLabel: 'Total fixed expenses',
       everyMonth: 'every month',
       everyMonthDay: 'every month, day',
-      dayLabel: 'Day of month (1 – 28)',
+      dayLabel: 'Day of month (1 – 31)',
       dayShort: 'Day',
       nameLabel: 'Name',
       namePlaceholder: 'e.g. Rent, Internet...',

@@ -223,7 +223,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   async function handleSave() {
     const amt = (parseAmountInput(amount) ?? NaN)
     const day = parseInt(dayOfMonth)
-    if (!label.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 28) return
+    if (!label.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 31) return
     const catId = categoryId || null
     try {
       if (editing?.id != null) {
@@ -743,7 +743,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               type="button"
               className="hit-44"
               aria-label={t.common.dayIncrease}
-              onClick={() => setDayOfMonth(d => String(Math.min(28, parseInt(d || '1') + 1)))}
+              onClick={() => setDayOfMonth(d => String(Math.min(31, parseInt(d || '1') + 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >+</button>
           </div>
@@ -756,7 +756,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
         <input
           type="text"
-          placeholder={`${t.expenses.fixed.noteLabel} · ${t.common.optional}`}
+          placeholder={`${t.expenses.fixed.noteLabel} ${t.common.optional}`}
           value={note}
           onChange={e => setNote(e.target.value)}
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
@@ -845,15 +845,6 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
           )
         })()}
 
-        {editing && (
-          <button
-            type="button"
-            onClick={() => { closeSheet(); setDeleteId(editing.id!) }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start', padding: '8px 12px', borderRadius: 12, background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', border: '1px solid rgba(251,113,133,0.25)', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600 }}
-          >
-            <Trash2 size={12} /> {t.common.delete}
-          </button>
-        )}
       </CompactModal>
 
       <ConfirmDialog

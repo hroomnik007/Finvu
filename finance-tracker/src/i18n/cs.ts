@@ -205,7 +205,7 @@ export const cs: Translations = {
       totalLabel: 'Celkové fixní výdaje',
       everyMonth: 'každý měsíc',
       everyMonthDay: 'každý měsíc, den',
-      dayLabel: 'Den v měsíci (1 – 28)',
+      dayLabel: 'Den v měsíci (1 – 31)',
       dayShort: 'Den',
       nameLabel: 'Název',
       namePlaceholder: 'např. Nájem, Internet...',

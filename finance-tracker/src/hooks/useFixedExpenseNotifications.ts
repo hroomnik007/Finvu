@@ -52,6 +52,7 @@ export function useFixedExpenseNotifications(fixedExpenses: FixedExpense[], isAu
 
     const today = new Date()
     const todayDay = today.getDate()
+    const daysInThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
     const todayStr = toLocalISO(today)
 
     async function checkAndNotify() {
@@ -64,7 +65,8 @@ export function useFixedExpenseNotifications(fixedExpenses: FixedExpense[], isAu
       const notified = getNotifiedDates()
 
       for (const expense of fixedExpenses) {
-        if (expense.dayOfMonth !== todayDay) continue
+        // The 29th–31st fall on the last day of a shorter month
+        if (Math.min(expense.dayOfMonth, daysInThisMonth) !== todayDay) continue
         if (notified[expense.id!] === todayStr) continue
 
         const { t: tr, formatAmount: fmt } = textRef.current

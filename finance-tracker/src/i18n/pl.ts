@@ -205,7 +205,7 @@ export const pl: Translations = {
       totalLabel: 'Łączne stałe wydatki',
       everyMonth: 'co miesiąc',
       everyMonthDay: 'co miesiąc, dzień',
-      dayLabel: 'Dzień miesiąca (1 – 28)',
+      dayLabel: 'Dzień miesiąca (1 – 31)',
       dayShort: 'Dzień',
       nameLabel: 'Nazwa',
       namePlaceholder: 'np. Czynsz, Internet...',

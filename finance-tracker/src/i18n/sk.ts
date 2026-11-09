@@ -203,7 +203,7 @@ export const sk = {
       totalLabel: 'Spolu fixné výdavky',
       everyMonth: 'každý mesiac',
       everyMonthDay: 'každý mesiac, deň',
-      dayLabel: 'Deň v mesiaci (1 – 28)',
+      dayLabel: 'Deň v mesiaci (1 – 31)',
       dayShort: 'Deň',
       nameLabel: 'Názov',
       namePlaceholder: 'napr. Nájom, Internet...',

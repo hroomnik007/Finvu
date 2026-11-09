@@ -39,6 +39,13 @@ describe('isFixedExpenseDue', () => {
     expect(isFixedExpenseDue(15, 10, 2026, TODAY)).toBe(true)
     expect(isFixedExpenseDue(16, 10, 2026, TODAY)).toBe(false)
   })
+
+  it('moves the 29th–31st to the last day of a shorter month', () => {
+    expect(isFixedExpenseDue(31, 2, 2026, new Date(2026, 1, 27))).toBe(false)
+    expect(isFixedExpenseDue(31, 2, 2026, new Date(2026, 1, 28))).toBe(true)
+    expect(isFixedExpenseDue(31, 4, 2026, new Date(2026, 3, 30))).toBe(true)
+    expect(isFixedExpenseDue(31, 5, 2026, new Date(2026, 4, 30))).toBe(false)
+  })
 })
 
 describe('isNewerRow', () => {

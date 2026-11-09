@@ -532,7 +532,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
               type="button"
               className="hit-44"
               aria-label={t.common.dayIncrease}
-              onClick={() => setFixDay(d => String(Math.min(28, parseInt(d || '1') + 1)))}
+              onClick={() => setFixDay(d => String(Math.min(31, parseInt(d || '1') + 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >+</button>
           </div>
