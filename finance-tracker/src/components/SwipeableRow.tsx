@@ -34,13 +34,17 @@ export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = t
   const lastTime = useRef(0)
   const swipeVel = useRef(0)
 
-  useEffect(() => {
+  // Closed from outside (another row opened): snap back, during render
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen)
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen)
     if (isOpen === false && revealed) {
       setOffset(0)
       setRevealed(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen])
+  }
+  // Row width for the render (the full-swipe hint); measured when a touch starts
+  const [rowW, setRowW] = useState(320)
 
   const getW = () => wrapRef.current?.offsetWidth ?? 320
 
@@ -53,6 +57,7 @@ export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = t
     lastTime.current = Date.now()
     isSwiping.current = false
     swipeVel.current = 0
+    setRowW(getW())
     setTracking(true)
   }
 
@@ -120,7 +125,7 @@ export function SwipeableRow({ onDelete, children, disabled, fullSwipeDelete = t
     isSwiping.current = false
   }
 
-  const pastHalf = fullSwipeDelete && offset < -(getW() * FULL_SWIPE_RATIO)
+  const pastHalf = fullSwipeDelete && offset < -(rowW * FULL_SWIPE_RATIO)
 
   return (
     <div

@@ -36,10 +36,13 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
   const [shake, setShake] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Reset to the right starting step whenever the modal is (re)opened.
-  useEffect(() => {
+  // Reset to the right starting step whenever the modal is (re)opened, during render.
+  const startKey = open ? (identityCheck ?? 'none') : null
+  const [lastStartKey, setLastStartKey] = useState(startKey)
+  if (startKey !== lastStartKey) {
+    setLastStartKey(startKey)
     if (open) setStep(identityCheck ? 'identity' : 'enter')
-  }, [open, identityCheck])
+  }
 
   // Keyboard input — must be before any conditional return
   useEffect(() => {
@@ -101,17 +104,18 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
   }
 
   // Identity PIN completion — advance to the new-PIN entry once 4 digits are in
-  useEffect(() => {
-    if (step !== 'identity' || identityCheck !== 'pin' || identityPin.length !== 4 || saving) return
+  // (during render: it only moves this component's own step forward)
+  if (step === 'identity' && identityCheck === 'pin' && identityPin.length === 4 && !saving) {
     setIdentityError(null)
     setStep('enter')
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [identityPin])
+  }
 
-  // Pin completion logic — must be before any conditional return
+  // Pin completion logic — must be before any conditional return.
+  // It drives timers and the async save, so it stays an effect.
   useEffect(() => {
     if (pin.length !== 4 || saving || step === 'success' || step === 'identity') return
     if (step === 'enter') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to the 4th digit, then timers/save
       setFirst(pin)
       setTimeout(() => { setStep('confirm'); setPin('') }, 150)
     } else {

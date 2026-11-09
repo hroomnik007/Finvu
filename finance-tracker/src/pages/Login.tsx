@@ -138,6 +138,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   // transient failure doesn't block the existing, previously-working flow.
   useEffect(() => {
     if (!pinModalOpen) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state of the fetch this effect starts
     setPinDeviceRegistered(null)
     let cancelled = false
     getPinDeviceStatus()

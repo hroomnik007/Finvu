@@ -69,12 +69,18 @@ export function BackupModal({ open, mode, onClose }: BackupModalProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [result, setResult] = useState<RestoreCounts | null>(null)
 
-  useEffect(() => {
-    if (!open) return
-    setPw(''); setPw2(''); setPlain(false); setBusy(false); setDone(false); setError(null)
-    setFileName(null); setFileText(null); setEncrypted(false); setBackup(null); setCounts(null)
-    setRestoreMode('merge'); setConfirmOpen(false); setResult(null)
-  }, [open, mode])
+  // Fresh form on every open (and mode switch), set during render so the
+  // first frame never shows the previous run's state.
+  const resetKey = open ? mode : null
+  const [lastResetKey, setLastResetKey] = useState(resetKey)
+  if (resetKey !== lastResetKey) {
+    setLastResetKey(resetKey)
+    if (open) {
+      setPw(''); setPw2(''); setPlain(false); setBusy(false); setDone(false); setError(null)
+      setFileName(null); setFileText(null); setEncrypted(false); setBackup(null); setCounts(null)
+      setRestoreMode('merge'); setConfirmOpen(false); setResult(null)
+    }
+  }
 
   useEffect(() => {
     if (!open) return

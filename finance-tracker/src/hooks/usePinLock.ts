@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { savePin, deletePin, pinLogin, sessionCheck, pingSession } from '../api/auth'
 
@@ -23,11 +23,16 @@ export function usePinLock() {
     return sessionStorage.getItem(PIN_SESSION_KEY) !== 'true'
   })
   const lockMethodRef = useRef(lockMethod)
-  lockMethodRef.current = lockMethod
+  const lockedRef = useRef(locked)
+  // Mirrors for the effects and listeners below. A layout effect runs before
+  // every useEffect of the same commit, so they read the current values just
+  // as when the refs were assigned during render.
+  useLayoutEffect(() => {
+    lockMethodRef.current = lockMethod
+    lockedRef.current = locked
+  })
 
   const hasPin = lockMethod === 'pin'
-  const lockedRef = useRef(locked)
-  lockedRef.current = locked
 
   const autoLockMs = user?.auto_lock_minutes != null ? user.auto_lock_minutes * 60 * 1000 : null
 

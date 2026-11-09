@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -155,16 +155,19 @@ export function ExportDataModal({ open, onClose, onGenerate, generating }: Expor
   const [toMonth, setToMonth] = useState(currentMonth)
   const [pickerOpen, setPickerOpen] = useState<'from' | 'to' | null>(null)
 
-  useEffect(() => {
-    if (!open) return
-    setFormat('CSV')
-    setFromYear(currentYear)
-    setFromMonth(currentMonth)
-    setToYear(currentYear)
-    setToMonth(currentMonth)
-    setPickerOpen(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  // Fresh form on every open, set during render (no stale first frame)
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      setFormat('CSV')
+      setFromYear(currentYear)
+      setFromMonth(currentMonth)
+      setToYear(currentYear)
+      setToMonth(currentMonth)
+      setPickerOpen(null)
+    }
+  }
 
   const { panelRef, titleId, dialogProps } = useModalA11y({ open, onClose })
 
