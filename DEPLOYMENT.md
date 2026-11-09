@@ -21,7 +21,9 @@ Every push to `main` runs `.github/workflows/deploy.yml`:
 GitHub secrets used: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, `DATABASE_URL`, `VITE_VAPID_PUBLIC_KEY`.
 
 **nginx configuration is not deployed by CI.** After changing `nginx/*.conf`, copy the file to
-`/etc/nginx/sites-enabled/` on the server and run `sudo nginx -t && sudo systemctl reload nginx`.
+`/etc/nginx/sites-enabled/` (and `nginx/snippets/*.conf` to `/etc/nginx/snippets/`) on the server
+and run `sudo nginx -t && sudo systemctl reload nginx`. The frontend's security headers and CSP live
+in `nginx/snippets/finvu-security-headers.conf`, included by every location of `finvu.pedani.eu.conf`.
 
 ## Database migrations
 

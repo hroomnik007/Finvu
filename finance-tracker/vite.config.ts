@@ -104,6 +104,7 @@ export default defineConfig({
           '**/purify.es-*.js',
           '**/pdfFont-*.js',
           '**/papaparse*.js',
+          '**/assets/*.woff2',
         ],
         // index.html loads /theme-init.js?v=N; match it to the precached file offline.
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/],
@@ -119,8 +120,15 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            // Self-hosted fonts (src/fonts.css): only the subsets a page actually
+            // uses are fetched, so they are cached on first use, not precached.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /\/assets\/[^/]+\.woff2$/.test(url.pathname),
             handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [200] },
+            },
           },
         ],
       },
