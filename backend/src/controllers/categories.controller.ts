@@ -6,7 +6,7 @@ import { db } from "../db";
 import { categories, transactions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { activeSeriesTotal } from "../lib/recurring";
-import { NotSharingError, propagateSharedLimit, recalcSharedLimit, shareCategories, unshareCategories } from "../lib/sharedCategories";
+import { NotSharingError, propagateSharedLimit, propagateSharedReserve, recalcSharedLimit, shareCategories, sharedFixedInfo, unshareCategories } from "../lib/sharedCategories";
 
 type CategoryRow = typeof categories.$inferSelect;
 function normalizeCategory(row: CategoryRow) {
@@ -17,6 +17,22 @@ function normalizeCategory(row: CategoryRow) {
     limitReserve: Number(row.limitReserve ?? 0),
     shared: row.shared,
   };
+}
+
+// Shared categories also carry the household's view: the active fixed expenses
+// of every sharing member added up (a total only) and the common reserve. When
+// sharedFixedTotal > 0 the limit is that total plus the reserve, so the client
+// edits the reserve instead of the limit.
+async function withSharedInfo<T extends { shared: boolean | null; type: string; name: string }>(
+  userId: string,
+  rows: T[],
+): Promise<(T & { sharedFixedTotal?: number; sharedReserve?: number })[]> {
+  const sharedNames = rows.filter((r) => r.shared && r.type === "expense").map((r) => r.name);
+  const info = await sharedFixedInfo(userId, sharedNames);
+  return rows.map((r) => {
+    const i = r.shared && r.type === "expense" ? info.get(r.name.trim().toLowerCase()) : undefined;
+    return i ? { ...r, sharedFixedTotal: i.fixedTotal, sharedReserve: i.reserve } : r;
+  });
 }
 
 export async function recalculateCategoryLimit(categoryId: string, userId: string): Promise<void> {
@@ -106,10 +122,10 @@ export async function listCategories(req: AuthRequest, res: Response): Promise<v
   }
 
   res.json({
-    data: rows.map((r) => ({
+    data: await withSharedInfo(req.userId!, rows.map((r) => ({
       ...normalizeCategory(r),
       hasFixedExpenses: fixedCatIds.has(r.id),
-    })),
+    }))),
   });
 }
 
@@ -187,9 +203,11 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
     .returning();
 
   if (existing.shared && (bl !== undefined || limitReserve !== undefined)) {
-    // A manual limit applies to everyone's copy, then the shared rule decides the
-    // final value (fixed expenses of all members win over a typed number)
+    // A manual limit and the reserve apply to everyone's copy, then the shared
+    // rule decides the final value (with fixed expenses of any member: their
+    // total plus the common reserve; a typed limit only counts without them)
     if (bl !== undefined) await propagateSharedLimit(req.userId!, existing.name, bl != null ? String(bl) : null);
+    if (limitReserve !== undefined) await propagateSharedReserve(req.userId!, existing.name, String(limitReserve));
     await recalcSharedLimit(req.userId!, existing.name);
     [updated] = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
   }
@@ -204,7 +222,7 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
       .from(transactions)
       .where(and(eq(transactions.categoryId, id), eq(transactions.isFixed, true), eq(transactions.type, "expense")))
       .limit(1);
-    res.json({ data: { ...normalizeCategory(refreshed), hasFixedExpenses: !!hasFixed } });
+    res.json({ data: (await withSharedInfo(req.userId!, [{ ...normalizeCategory(refreshed), hasFixedExpenses: !!hasFixed }]))[0] });
     return;
   }
 
@@ -213,7 +231,7 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
     .from(transactions)
     .where(and(eq(transactions.categoryId, id), eq(transactions.isFixed, true), eq(transactions.type, "expense")))
     .limit(1);
-  res.json({ data: { ...normalizeCategory(updated), hasFixedExpenses: !!hasFixed } });
+  res.json({ data: (await withSharedInfo(req.userId!, [{ ...normalizeCategory(updated), hasFixedExpenses: !!hasFixed }]))[0] });
 }
 
 export async function deleteAllCategories(req: AuthRequest, res: Response): Promise<void> {

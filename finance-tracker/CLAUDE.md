@@ -117,6 +117,7 @@ docker exec finance-tracker-repo-backend-1 node dist/scripts/migrate.js
 - **auto_limit**: boolean stĺpec na `categories` — keď `true`, budget limit kategórie sa automaticky vypočítava zo sumy fixných výdavkov priradených tej kategórii
 - Prepočítava sa pri každom vytvorení / aktualizácii / zmazaní fixného výdavku
 - Ak používateľ nastaví manuálny limit na kategórii s `auto_limit = true`, dostane varovanie
+- **Spoločná kategória (`shared`)** s fixnými výdavkami ktoréhokoľvek člena: limit = súčet aktívnych fixných výdavkov domácnosti + spoločná rezerva (`limit_reserve`, pri úprave sa prepíše na všetkých zdieľaných kópiách). API vracia pri zdieľaných kategóriách `sharedFixedTotal` (len súčet) a `sharedReserve`; UI vtedy namiesto limitu upravuje rezervu. Bez fixných výdavkov platí ručný limit (najvyšší z limitov členov)
 
 ## Modul Profil
 
