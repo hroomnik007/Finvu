@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Check, X, TrendingUp, Receipt, Target, Users } from 'lucide-react'
+import { Check, X, TrendingUp, Receipt, Target, Users, LayoutTemplate, CalendarClock, KeyRound } from 'lucide-react'
 import { GlassCard } from './GlassCard'
 import { useAuth } from '../context/AuthContext'
 import { useCategories } from '../hooks/useCategories'
@@ -12,13 +12,22 @@ import { requestAddForm } from '../utils/addFormEvents'
 import { dismissFirstRun, firstRunSteps, isFirstRunDismissed, shouldShowFirstRun, type FirstRunStepId } from '../utils/firstRun'
 import type { Page } from '../App'
 
-const ICONS = { income: TrendingUp, expense: Receipt, budget: Target, household: Users } as const
+const ICONS = { template: LayoutTemplate, income: TrendingUp, expense: Receipt, budget: Target, tracking: CalendarClock, pin: KeyRound, household: Users } as const
 
 function ym(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
 
-/** "Prvé kroky": steps tick themselves off from the user's data. */
-export function FirstRunChecklist({ onNavigate }: { onNavigate: (p: Page) => void }) {
-  const { user } = useAuth()
+/**
+ * "Prvé kroky": the whole onboarding of a new account. Steps tick themselves
+ * off from the user's data. Optional steps open the budget-template picker
+ * (onOpenTemplate, only while that offer is open), the tracking-start dialog
+ * and the PIN setup in Settings.
+ */
+export function FirstRunChecklist({ onNavigate, onOpenTemplate, onSetTrackingStart }: {
+  onNavigate: (p: Page) => void
+  onOpenTemplate?: () => void
+  onSetTrackingStart: () => void
+}) {
+  const { user, completeOnboarding } = useAuth()
   const { t } = useTranslation()
   const tr = t.firstRun
   const { categories, isLoading: catsLoading } = useCategories()
@@ -38,25 +47,46 @@ export function FirstRunChecklist({ onNavigate }: { onNavigate: (p: Page) => voi
     enabled: !!user && !dismissed,
   })
 
-  if (!user || dismissed || isLoading || catsLoading || !series) return null
-  const steps = firstRunSteps({
+  const steps = user && series ? firstRunSteps({
     hasIncome: series.months.some(m => m.income > 0),
     hasExpense: series.months.some(m => m.expense > 0),
     hasBudget: categories.some(c => (c.budgetLimit ?? 0) > 0),
     householdEnabled: !!user.household_enabled,
     hasHouseholdMember: members.length > 1,
-  })
-  if (!shouldShowFirstRun(steps, false)) return null
+    offerTemplate: !!onOpenTemplate,
+    trackingSet: !!user.tracking_start_date,
+    trackingDismissed: !!user.onboarding_banner_dismissed,
+    hasPin: !!user.has_pin,
+  }) : null
+  const finished = !!steps && !catsLoading && !shouldShowFirstRun(steps, false)
+
+  // Onboarding is over once the checklist is done or dismissed: record it so
+  // the budget-template offer (and anything else keyed on it) stops.
+  useEffect(() => {
+    if (user && !user.onboardingComplete && (dismissed || finished)) void completeOnboarding().catch(() => {})
+  }, [user, dismissed, finished, completeOnboarding])
+
+  if (!user || dismissed || isLoading || catsLoading || !steps || finished) return null
   const required = steps.filter(s => !s.optional)
   const doneCount = required.filter(s => s.done).length
 
   const act = (id: FirstRunStepId) => {
-    if (id === 'income') requestAddForm('income')
+    if (id === 'template') onOpenTemplate?.()
+    else if (id === 'tracking') onSetTrackingStart()
+    else if (id === 'pin') {
+      // Settings opens its Security section from this hand-off (as from Profile)
+      try { localStorage.setItem('settings_open_section', 'security') } catch { /* ignore */ }
+      onNavigate('settings')
+    }
+    else if (id === 'income') requestAddForm('income')
     else if (id === 'expense') requestAddForm('variable')
     else if (id === 'budget') requestAddForm('category')
     else onNavigate('household')
   }
   const label: Record<FirstRunStepId, [string, string, string]> = {
+    template: [tr.template, tr.templateDesc, tr.action_template],
+    tracking: [tr.tracking, tr.trackingDesc, tr.action_tracking],
+    pin: [tr.pin, tr.pinDesc, tr.action_pin],
     income: [tr.income, tr.incomeDesc, tr.action_income],
     expense: [tr.expense, tr.expenseDesc, tr.action_expense],
     budget: [tr.budget, tr.budgetDesc, tr.action_budget],

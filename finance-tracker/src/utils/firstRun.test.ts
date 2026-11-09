@@ -17,21 +17,29 @@ import { clearUserData } from '../lib/userDataReset'
 const none = { hasIncome: false, hasExpense: false, hasBudget: false, householdEnabled: false, hasHouseholdMember: false }
 
 describe('firstRunSteps', () => {
-  it('lists income, expense and budget; household only when enabled and optional', () => {
-    expect(firstRunSteps(none).map(s => s.id)).toEqual(['income', 'expense', 'budget'])
+  it('lists the required steps and the optional tracking date and PIN; household only when enabled', () => {
+    expect(firstRunSteps(none).map(s => s.id)).toEqual(['income', 'expense', 'budget', 'tracking', 'pin'])
     const withHh = firstRunSteps({ ...none, householdEnabled: true })
-    expect(withHh.map(s => s.id)).toEqual(['income', 'expense', 'budget', 'household'])
-    expect(withHh[3].optional).toBe(true)
+    expect(withHh.map(s => s.id)).toEqual(['income', 'expense', 'budget', 'tracking', 'pin', 'household'])
+    expect(withHh.filter(s => s.optional).map(s => s.id)).toEqual(['tracking', 'pin', 'household'])
+  })
+  it('offers the budget template first while it is open', () => {
+    const s = firstRunSteps({ ...none, offerTemplate: true })
+    expect(s[0]).toEqual({ id: 'template', done: false, optional: true })
+  })
+  it('leaves out a tracking suggestion that was dismissed, unless a date is set', () => {
+    expect(firstRunSteps({ ...none, trackingDismissed: true }).map(s => s.id)).not.toContain('tracking')
+    expect(firstRunSteps({ ...none, trackingDismissed: true, trackingSet: true }).find(s => s.id === 'tracking')?.done).toBe(true)
   })
   it('ticks steps from data', () => {
-    const s = firstRunSteps({ ...none, hasIncome: true, hasBudget: true })
-    expect(s.filter(x => x.done).map(x => x.id)).toEqual(['income', 'budget'])
+    const s = firstRunSteps({ ...none, hasIncome: true, hasBudget: true, trackingSet: true, hasPin: true })
+    expect(s.filter(x => x.done).map(x => x.id)).toEqual(['income', 'budget', 'tracking', 'pin'])
   })
 })
 
 describe('shouldShowFirstRun', () => {
-  it('hides once all required steps are done, even if the optional one is not', () => {
-    const steps = firstRunSteps({ ...none, hasIncome: true, hasExpense: true, hasBudget: true, householdEnabled: true })
+  it('hides once all required steps are done, even if optional ones are not', () => {
+    const steps = firstRunSteps({ ...none, hasIncome: true, hasExpense: true, hasBudget: true, householdEnabled: true, offerTemplate: true })
     expect(shouldShowFirstRun(steps, false)).toBe(false)
   })
   it('hides when dismissed', () => {

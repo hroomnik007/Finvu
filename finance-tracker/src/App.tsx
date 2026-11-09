@@ -29,8 +29,6 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword').then(m =>
 const ResetPasswordPage = lazy(() => import('./pages/ResetPassword').then(m => ({ default: m.ResetPasswordPage })))
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmail').then(m => ({ default: m.VerifyEmailPage })))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicyPage })))
-import { OnboardingTutorial } from './components/OnboardingTutorial'
-import { useOnboarding } from './hooks/useOnboarding'
 import { BudgetTemplateModal } from './components/BudgetTemplateModal'
 import { useBudgetTemplate, isBudgetTemplateDismissed, dismissBudgetTemplate } from './hooks/useBudgetTemplate'
 import { PinLock } from './components/PinLock'
@@ -53,7 +51,6 @@ import { fetchHouseholdData, householdQueryKey } from './hooks/useHousehold'
 const HouseholdPage = lazy(() => import('./pages/Household').then(m => ({ default: m.HouseholdPage })))
 const SavingsPage = lazy(() => import('./pages/Savings').then(m => ({ default: m.SavingsPage })))
 import { PWAUpdateBanner } from './components/PWAUpdateBanner'
-import { TrackingDateOnboarding } from './components/TrackingDateOnboarding'
 import { CommandPalette } from './components/CommandPalette'
 import { updateUserSettings, sessionCheck } from './api/auth'
 import { trackingStartOf } from './utils/trackingStart'
@@ -161,22 +158,18 @@ function App() {
   }, [isAuthenticated, t, showToast])
 
   const { locked, lockMethod, verifyPin } = usePinLockContext()
-  const { showOnboarding, completeOnboarding } = useOnboarding()
   const needsBudgetTemplate = useBudgetTemplate()
   const [showBudgetTemplate, setShowBudgetTemplate] = useState(false)
-  // The template is offered as a dismissible dashboard banner (not a blocking
-  // modal) for the session in which the account still needs onboarding.
-  // Keyed by user id so it never carries over to another account; it stays up
-  // after the tutorial flips onboardingComplete, until dismissed or applied.
-  const [budgetTemplateOfferedFor, setBudgetTemplateOfferedFor] = useState<string | null>(null)
-  const budgetTemplateOffered = !!user && budgetTemplateOfferedFor === user.id
+  // The budget template is an optional step of the "Prvé kroky" checklist while
+  // the account is still onboarding and the offer was neither applied nor
+  // dismissed on this device (keyed by user id, never carried to another account).
+  const [templateDismissedFor, setTemplateDismissedFor] = useState<string | null>(null)
+  const budgetTemplateOffered = !!user && needsBudgetTemplate &&
+    templateDismissedFor !== user.id && !isBudgetTemplateDismissed(user.id)
   const handleDismissBudgetTemplate = () => {
-    if (user) dismissBudgetTemplate(user.id)
-    setBudgetTemplateOfferedFor(null)
+    if (user) { dismissBudgetTemplate(user.id); setTemplateDismissedFor(user.id) }
     setShowBudgetTemplate(false)
   }
-  const [showTutorial, setShowTutorial] = useState(false)
-  const [showTrackingOnboarding, setShowTrackingOnboarding] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024)
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false)
@@ -315,25 +308,6 @@ function App() {
       void takeSharedFile().then(file => { if (file) setSharedFile(file) })
     }
   }, [isAuthenticated, isLoading, postLoginReady])
-
-  useEffect(() => {
-    if (isAuthenticated && !isLoading && user) {
-      const needsTracking = !user.tracking_start_date && !user.onboarding_banner_dismissed
-      if (needsTracking && !localStorage.getItem('finvu_tracking_onboarding_shown')) {
-        localStorage.setItem('finvu_tracking_onboarding_shown', 'true')
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time onboarding, recorded in localStorage
-        setShowTrackingOnboarding(true)
-        return
-      }
-      if (needsBudgetTemplate && !isBudgetTemplateDismissed(user.id)) {
-        setBudgetTemplateOfferedFor(user.id)
-      }
-      if (showOnboarding) {
-        setShowTutorial(true)
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, isLoading, user])
 
   useEffect(() => {
     const handler = () => {
@@ -633,17 +607,11 @@ function App() {
           onClose={() => setShowBudgetTemplate(false)}
         />
       )}
-      {showTutorial && !showBudgetTemplate && (
-        <OnboardingTutorial onComplete={() => { completeOnboarding(); setShowTutorial(false) }} />
-      )}
 
       {isProfileOpen && (
         <Suspense fallback={null}>
           <ProfileModal onClose={() => setIsProfileOpen(false)} onLogout={handleLogout} />
         </Suspense>
-      )}
-      {showTrackingOnboarding && (
-        <TrackingDateOnboarding onDone={() => setShowTrackingOnboarding(false)} />
       )}
 
     </div>

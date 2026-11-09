@@ -146,7 +146,7 @@ const MODALS = [
   'components/CommandPalette.tsx', 'components/CompactModal.tsx', 'components/ConfirmDialog.tsx',
   'components/CsvImportModal.tsx', 'components/DeleteAccountModal.tsx', 'components/ExportDataModal.tsx',
   'components/GlobalFAB.tsx', 'components/PinLock.tsx', 'components/PinSetupModal.tsx',
-  'components/SavingsDetailModal.tsx', 'components/StreakModal.tsx', 'components/TrackingDateOnboarding.tsx',
+  'components/SavingsDetailModal.tsx', 'components/StreakModal.tsx',
   'pages/Categories.tsx', 'pages/Dashboard.tsx', 'pages/Login.tsx', 'pages/Profile.tsx', 'pages/Settings.tsx',
 ]
 
@@ -180,7 +180,6 @@ describe('modal wiring', () => {
     expect(src('components/DeleteAccountModal.tsx')).toMatch(/onClose: busy \? undefined : onClose/)
     expect(src('components/CsvImportModal.tsx')).toMatch(/onClose: importing \? undefined : onClose/)
     expect(src('components/PinLock.tsx')).toMatch(/useModalA11y\(\{ open: true \}\)/)
-    expect(src('components/TrackingDateOnboarding.tsx')).toMatch(/useModalA11y\(\{ open: true \}\)/)
   })
 
   it('the hook sets the dialog roles and restores focus to the opener', () => {
