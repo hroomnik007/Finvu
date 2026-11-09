@@ -285,6 +285,7 @@ function App() {
     const intent = takePendingIntent()
     if (!intent) return
     if (intent.kind === 'annual') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes a one-shot launch intent from sessionStorage
       setPage('annual')
     } else if (intent.kind === 'add-income') {
       setPage('income')
@@ -302,6 +303,7 @@ function App() {
       const needsTracking = !user.tracking_start_date && !user.onboarding_banner_dismissed
       if (needsTracking && !localStorage.getItem('finvu_tracking_onboarding_shown')) {
         localStorage.setItem('finvu_tracking_onboarding_shown', 'true')
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time onboarding, recorded in localStorage
         setShowTrackingOnboarding(true)
         return
       }
@@ -379,6 +381,7 @@ function App() {
 
   useEffect(() => {
     if (!isLoading && user && !householdEnabled && dashView === 'family') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- keeps the persisted view (localStorage) in sync
       setDashView('personal')
       localStorage.removeItem('finvu_dashboard_view')
     }
@@ -387,6 +390,7 @@ function App() {
 
   useEffect(() => {
     if (!isLoading && user && householdEnabled && !localStorage.getItem('finvu_dashboard_view')) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- default view depends on the persisted preference
       setDashView('family')
     }
   }, [householdEnabled, isLoading, user])

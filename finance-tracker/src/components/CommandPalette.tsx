@@ -44,12 +44,14 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
   const inpRef = useRef<HTMLInputElement>(null)
   const { panelRef, titleId, dialogProps } = useModalA11y({ open, onClose, initialFocus: inpRef })
 
+  // Empty search on every open, set during render (no stale first frame)
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) { setQuery(''); setSelIdx(0) }
+  }
   useEffect(() => {
-    if (open) {
-      setQuery('')
-      setSelIdx(0)
-      setTimeout(() => inpRef.current?.focus(), 50)
-    }
+    if (open) setTimeout(() => inpRef.current?.focus(), 50)
   }, [open])
 
   const actions: PaletteAction[] = [

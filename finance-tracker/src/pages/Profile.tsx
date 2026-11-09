@@ -164,8 +164,8 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
     }).catch(() => {})
   }, [])
 
-  const profileModal = useModalA11y({ open: true, onClose })
-  const logoutModal = useModalA11y({ open: logoutConfirm, onClose: () => setLogoutConfirm(false), role: 'alertdialog' })
+  const { dialogProps: profileModalDialogProps, panelRef: profileModalPanelRef } = useModalA11y({ open: true, onClose })
+  const { dialogProps: logoutModalDialogProps, panelRef: logoutModalPanelRef } = useModalA11y({ open: logoutConfirm, onClose: () => setLogoutConfirm(false), role: 'alertdialog' })
 
   async function handleSaveProfile() {
     setProfile(profileNameDraft, profileAvatarDraft)
@@ -208,8 +208,9 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
     input.click()
   }
 
+  const [now] = useState(() => Date.now())
   const trackingDays = user?.tracking_start_date
-    ? Math.floor((Date.now() - new Date(user.tracking_start_date).getTime()) / 86400000)
+    ? Math.floor((now - new Date(user.tracking_start_date).getTime()) / 86400000)
     : null
 
   const initial = (user?.name || ctxName)?.[0]?.toUpperCase() ?? '?'
@@ -224,7 +225,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
       onClick={onClose}
     >
       <div
-        ref={profileModal.panelRef} {...profileModal.dialogProps}
+        ref={profileModalPanelRef} {...profileModalDialogProps}
         style={{
           outline: 'none',
           borderRadius: 22,
@@ -573,7 +574,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
           onClick={() => setLogoutConfirm(false)}
         >
           <div
-            ref={logoutModal.panelRef} {...logoutModal.dialogProps}
+            ref={logoutModalPanelRef} {...logoutModalDialogProps}
             style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 340 }}
             onClick={e => e.stopPropagation()}
           >

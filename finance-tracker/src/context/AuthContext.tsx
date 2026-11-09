@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.getItem('auth_guest') === 'true'
 
     if (guestFlag) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- session bootstrap from storage
       setIsGuest(true)
       setInitializingAuth(false)
       setIsLoading(false)

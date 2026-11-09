@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from '../i18n'
 import { PinKeypad } from './PinKeypad'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -16,7 +16,8 @@ export function PinLock({ onVerify, onFallbackToLogin }: PinLockProps) {
   const [shake, setShake] = useState(false)
   const [checking, setChecking] = useState(false)
   const checkingRef = useRef(checking)
-  checkingRef.current = checking
+  // Mirror for the key handler; a layout effect runs before any event can reach it
+  useLayoutEffect(() => { checkingRef.current = checking })
   const lastTapRef = useRef(0)
 
   function submitPin(candidate: string) {

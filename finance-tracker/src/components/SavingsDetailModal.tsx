@@ -53,12 +53,18 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => {
-    if (!goal) { setAnimated(false); return }
+  // Replay the progress animation for each goal: reset during render, start it in an effect
+  const goalId = goal?.id ?? null
+  const [animatedFor, setAnimatedFor] = useState(goalId)
+  if (goalId !== animatedFor) {
+    setAnimatedFor(goalId)
     setAnimated(false)
+  }
+  useEffect(() => {
+    if (!goalId) return
     const timer = setTimeout(() => setAnimated(true), 60)
     return () => clearTimeout(timer)
-  }, [goal?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [goalId])
 
   const { panelRef, titleId, dialogProps } = useModalA11y({ open: !!goal, onClose })
 
