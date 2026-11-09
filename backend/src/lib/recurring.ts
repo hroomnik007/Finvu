@@ -20,7 +20,8 @@ export function isFixedDue(dayOfMonth: number, year: number, month: number, toda
   const curYear = today.getFullYear();
   if (year !== curYear) return year < curYear;
   if (month !== curMonth) return month < curMonth;
-  return dayOfMonth <= today.getDate();
+  // Due on the 29th–31st in a shorter month = due on its last day
+  return Math.min(dayOfMonth, new Date(year, month, 0).getDate()) <= today.getDate();
 }
 
 export interface FixedRow {

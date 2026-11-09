@@ -5,7 +5,8 @@ import { useTranslation } from '../i18n'
 export function SuggestedCategoryHint({ name }: { name: string | null | undefined }) {
   const { t } = useTranslation()
   return (
-    <div role="status" aria-live="polite" style={{ minHeight: name ? undefined : 0 }}>
+    // Empty, the negative margin cancels the form's row gap so the hint takes no space
+    <div role="status" aria-live="polite" style={{ marginTop: name ? undefined : -12 }}>
       {name && (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif" }}>
           <Sparkles size={12} aria-hidden="true" />

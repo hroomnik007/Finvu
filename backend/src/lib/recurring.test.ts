@@ -47,6 +47,12 @@ describe("isFixedDue", () => {
     expect(isFixedDue(15, 2026, 10, TODAY)).toBe(true);
     expect(isFixedDue(16, 2026, 10, TODAY)).toBe(false);
   });
+  it("moves the 29th–31st to the last day of a shorter month", () => {
+    expect(isFixedDue(31, 2026, 2, new Date(2026, 1, 27))).toBe(false);
+    expect(isFixedDue(31, 2026, 2, new Date(2026, 1, 28))).toBe(true);
+    expect(isFixedDue(31, 2026, 4, new Date(2026, 3, 30))).toBe(true);
+    expect(isFixedDue(31, 2026, 5, new Date(2026, 4, 30))).toBe(false);
+  });
 });
 
 describe("recurringTotalsForMonth", () => {

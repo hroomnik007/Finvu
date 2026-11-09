@@ -236,10 +236,11 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
 const upcomingFixed = useMemo(() => {
     const n = new Date()
     const today = n.getDate()
+    const monthDays = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate()
     // Whole viewed month is before the real current month → everything in it is already paid
     const isPastMonth = year < n.getFullYear() || (year === n.getFullYear() && month < n.getMonth() + 1)
     return [...allFixedExpenses]
-      .map(e => ({ ...e, daysUntil: ((e.dayOfMonth - today + 31) % 31), paid: isPastMonth }))
+      .map(e => ({ ...e, daysUntil: ((Math.min(e.dayOfMonth, monthDays) - today + 31) % 31), paid: isPastMonth }))
       .sort((a, b) => isPastMonth ? a.dayOfMonth - b.dayOfMonth : a.daysUntil - b.daysUntil)
       .slice(0, 4)
   }, [allFixedExpenses, year, month])

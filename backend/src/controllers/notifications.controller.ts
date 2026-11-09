@@ -99,7 +99,8 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
           label = String(obj.l ?? label);
         }
       } catch { /* plain text description */ }
-      const daysUntil = dayOfMonth >= d ? dayOfMonth - d : daysInMonth - d + dayOfMonth;
+      const dueDay = Math.min(dayOfMonth, daysInMonth); // the 31st falls on the last day of a shorter month
+      const daysUntil = dueDay >= d ? dueDay - d : daysInMonth - d + dayOfMonth;
       return { tx, dayOfMonth, label, daysUntil };
     })
     .filter((f) => f.daysUntil <= 7)
