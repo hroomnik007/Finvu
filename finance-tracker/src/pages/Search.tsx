@@ -13,6 +13,9 @@ import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import { groupByDay, signedAmount } from '../utils/groupByDay'
 import { dayHeaderParts } from '../utils/format'
 import { pluralCount } from '../utils/plural'
+import { MemberAvatar } from '../components/MemberAvatar'
+import { useHousehold } from '../hooks/useHousehold'
+import { effectiveMemberFilter, memberFilterOptions, type MemberFilter } from '../utils/householdMembers'
 
 const PAGE = 50
 
@@ -51,7 +54,15 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
   const [maxAmount, setMaxAmount] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [memberSel, setMemberSel] = useState<MemberFilter>('all')
   const [paging, setPaging] = useState({ key: '', limit: PAGE })
+  const { members } = useHousehold()
+
+  // Member filter and avatars only make sense when the results mix several
+  // sharing members' rows (family scope in a household).
+  const memberOptions = scope === 'family' && user?.household_enabled ? memberFilterOptions(members, user.id) : []
+  const membersById = new Map(members.map(m => [m.id, m]))
+  const member = effectiveMemberFilter(memberSel, memberOptions)
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(text.trim()), 300)
@@ -60,20 +71,21 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
 
   const min = parseAmount(minAmount)
   const max = parseAmount(maxAmount)
-  const hasFilter = !!(debounced || type !== 'all' || min !== undefined || max !== undefined || from || to)
+  const hasFilter = !!(debounced || type !== 'all' || min !== undefined || max !== undefined || from || to || member !== 'all')
 
   // A changed search starts again from the first page
-  const filterKey = JSON.stringify([debounced, type, min, max, from, to, scope])
+  const filterKey = JSON.stringify([debounced, type, min, max, from, to, scope, member])
   const limit = paging.key === filterKey ? paging.limit : PAGE
 
   const { data, isFetching } = useQuery({
-    queryKey: ['search', debounced, type, min ?? null, max ?? null, from, to, scope, limit],
+    queryKey: ['search', debounced, type, min ?? null, max ?? null, from, to, scope, member, limit],
     queryFn: () => getTransactions({
       q: debounced || undefined,
       type: type === 'all' ? undefined : type,
       minAmount: min, maxAmount: max,
       from: from || undefined, to: to || undefined,
       limit, scope,
+      member: member === 'all' ? undefined : member,
     }),
     enabled: !!user && hasFilter,
     placeholderData: prev => prev,
@@ -83,7 +95,7 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
   const total = hasFilter ? data?.total ?? 0 : 0
 
   function reset() {
-    setText(''); setDebounced(''); setType('all'); setMinAmount(''); setMaxAmount(''); setFrom(''); setTo('')
+    setText(''); setDebounced(''); setType('all'); setMinAmount(''); setMaxAmount(''); setFrom(''); setTo(''); setMemberSel('all')
   }
 
   return (
@@ -122,6 +134,26 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
               <input type="date" value={to} min={from || undefined} onChange={e => setTo(e.target.value)} style={fieldStyle} />
             </label>
           </div>
+          {memberOptions.length > 0 && (
+            <div role="group" aria-label={t.search.member} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ ...labelStyle, flex: 'none' }}>{t.search.member}</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" aria-pressed={member === 'all'} onClick={() => setMemberSel('all')} style={chipStyle(member === 'all')}>{t.search.everyone}</button>
+                {memberOptions.map(o => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    aria-pressed={member === o.id}
+                    onClick={() => setMemberSel(o.id)}
+                    style={{ ...chipStyle(member === o.id), display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%' }}
+                  >
+                    <MemberAvatar userId={o.id} userName={o.name} size={18} avatarUrl={membersById.get(o.id)?.avatar_url ?? null} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.me ? t.search.me : o.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {hasFilter && (
             <button type="button" onClick={reset} style={{ ...chipStyle(false), alignSelf: 'flex-start' }}>{t.search.reset}</button>
           )}
@@ -146,8 +178,14 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
                       {group.items.map(r => {
                         const label = r.isFixed ? parseDescription(r.description, 1).label : r.description ?? ''
                         const income = r.type === 'income'
+                        const owner = memberOptions.length > 0 ? membersById.get(r.userId) : undefined
                         return (
                           <DenseRow key={r.id} style={{ padding: '10px 14px' }}>
+                            {owner && (
+                              <span role="img" aria-label={owner.name} title={owner.name} style={{ display: 'inline-flex', flexShrink: 0 }}>
+                                <MemberAvatar userId={owner.id} userName={owner.name} size={24} avatarUrl={owner.avatar_url} />
+                              </span>
+                            )}
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)' }}>
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label || '—'}</span>

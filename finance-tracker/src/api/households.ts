@@ -41,6 +41,8 @@ export interface ActivityItem {
   created_by: string | null
   created_by_name: string | null
   created_at: string
+  /** Name of the transaction's category; null when uncategorized. */
+  category_name?: string | null
 }
 
 export async function createHousehold(name: string): Promise<HouseholdData> {

@@ -18,6 +18,8 @@ export interface TransactionParams {
   maxAmount?: number
   from?: string
   to?: string
+  /** Family scope only: one household member's rows (user id). */
+  member?: string
 }
 
 export interface TransactionPayload {
@@ -44,6 +46,7 @@ export async function getTransactions(
   if (params.maxAmount !== undefined) query.maxAmount = String(params.maxAmount)
   if (params.from) query.from = params.from
   if (params.to) query.to = params.to
+  if (params.member) query.member = params.member
 
   const { data } = await apiClient.get('/api/transactions', { params: query })
   return data
