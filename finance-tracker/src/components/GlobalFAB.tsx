@@ -95,7 +95,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
   return (
     <button
       type="button" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 52 }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 64 }}
     >
       <div style={{
         width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -104,7 +104,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
       }}>
         <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
       </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{label}</span>
+      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', textAlign: 'center', lineHeight: 1.2, maxWidth: 64, overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{label}</span>
     </button>
   )
 }
@@ -492,7 +492,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         )}
 
         {!varNewCatMode ? (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 6px', padding: '2px 2px 4px' }}>
             {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
@@ -557,7 +557,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           style={finputStyle}
         />
         {categories.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 6px', padding: '2px 2px 4px' }}>
             {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}

@@ -131,13 +131,16 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          // wrap-reverse: when the card is too narrow for both side by side
+          // (phones), the donut goes on top and the legend gets the full width
+          // instead of truncating the category names.
+          <div style={{ display: 'flex', flexWrap: 'wrap-reverse', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
             {/* Legend */}
             {/* alignContent must stay 'start': with 'center' an overflowing list
                 (many categories) is centred inside the 190px box, pushing the
                 first rows above the scroll origin where they can't be reached —
                 on desktop too, not just the mobile "show more" case. */}
-            <div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(148px, 100%), 1fr))', rowGap: 6, columnGap: 12, alignContent: 'start', maxHeight: showAllPie ? 'none' : 190, overflowY: showAllPie ? 'visible' : 'auto' }}>
+            <div style={{ flex: '1 1 200px', minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(148px, 100%), 1fr))', rowGap: 6, columnGap: 12, alignContent: 'start', maxHeight: showAllPie ? 'none' : 190, overflowY: showAllPie ? 'visible' : 'auto' }}>
               {sortedPieData.map((item, i) => {
                 const itemPieIdx = pieData.findIndex(d => d.name === item.name)
                 const isSelected = clickedIndex !== null && clickedIndex === itemPieIdx
