@@ -14,7 +14,7 @@ import { useIncomes } from '../hooks/useIncomes'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedMonthNames } from '../i18n'
-import { dayHeaderParts } from '../utils/format'
+import { dayHeaderParts, signFor } from '../utils/format'
 import { pluralCount } from '../utils/plural'
 import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import type { Translations } from '../i18n'
@@ -234,7 +234,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-emerald))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                +{formatAmountParts(animatedTotal).main}
+                {signFor(animatedTotal, '+')}{formatAmountParts(animatedTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
                 {formatAmountParts(animatedTotal).rest}

@@ -36,6 +36,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { signFor } from '../utils/format'
 import { showErrorToast } from '../lib/toastStore'
 import { apiErrorMessage } from '../utils/apiError'
 import { pluralText } from '../utils/plural'
@@ -148,7 +149,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
       {cat.budgetLimit != null && (
         <>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-rose)', marginBottom: 8 }}>
-            -{formatAmount(status?.spent ?? 0)}
+            {signFor(status?.spent ?? 0, '−')}{formatAmount(status?.spent ?? 0)}
           </div>
           <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', marginBottom: 6 }}>
             <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />

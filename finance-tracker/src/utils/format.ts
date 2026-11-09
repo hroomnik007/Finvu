@@ -118,3 +118,11 @@ export function dayHeaderParts(value: string | Date, locale: string = DEFAULT_LO
     full: new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(d),
   }
 }
+
+/**
+ * The +/− shown in front of a money total: none for zero (no "−0,00 €" on an
+ * empty month). Anything that rounds to 0,00 counts as zero.
+ */
+export function signFor(amount: number, sign: '+' | '−'): string {
+  return Math.abs(amount) < 0.005 ? '' : sign
+}

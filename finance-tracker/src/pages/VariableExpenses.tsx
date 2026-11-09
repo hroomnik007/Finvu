@@ -21,7 +21,7 @@ import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedMonthNames } from '../i18n'
-import { dayHeaderParts } from '../utils/format'
+import { dayHeaderParts, signFor } from '../utils/format'
 import { pluralCount, pluralText } from '../utils/plural'
 import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import { defaultEntryDate } from '../utils/entryDefaults'
@@ -315,7 +315,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-rose))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                −{formatAmountParts(animatedFilteredTotal).main}
+                {signFor(animatedFilteredTotal, '−')}{formatAmountParts(animatedFilteredTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
                 {formatAmountParts(animatedFilteredTotal).rest}

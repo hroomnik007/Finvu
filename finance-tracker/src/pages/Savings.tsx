@@ -12,6 +12,7 @@ import { useSavings } from '../hooks/useSavings'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { signFor } from '../utils/format'
 import { pluralText } from '../utils/plural'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { listDeposits, addDeposit, deleteDeposit } from '../api/savings'
@@ -390,7 +391,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.savings.monthlyLabel}</div>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)' }}>+{formatAmount(monthlyAmount)}</div>
+              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)' }}>{signFor(monthlyAmount, '+')}{formatAmount(monthlyAmount)}</div>
             </div>
             <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.savings.remainingTotal}</div>
