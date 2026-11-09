@@ -12,6 +12,15 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # typescript-eslint does not support TypeScript 7 yet (ESLint fails to start);
+      # drop this once it does
+      - dependency-name: typescript
+        versions: [">=7.0.0"]
+      # 7.1 turns on the stricter refs / set-state-in-effect / purity rules (44 errors);
+      # drop this together with the PR that fixes them
+      - dependency-name: eslint-plugin-react-hooks
+        versions: [">=7.1.0"]
   - package-ecosystem: npm
     directory: /backend
     schedule:
