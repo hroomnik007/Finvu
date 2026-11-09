@@ -38,17 +38,27 @@ export function AmountEntry({ value, onValueChange, accent }: {
   // still to come would land on whatever moved under the finger (or on the
   // backdrop). Capture phase because the modal panel stops click propagation;
   // the fold waits a frame so the tapped element handles its click first.
+  // The tap has to have started outside too: opening the pad (or the system
+  // keyboard closing after the note) can scroll the form under the finger, and
+  // the click that ends the opening tap must not count as a tap elsewhere.
   useEffect(() => {
     if (!touch || !padOpen) return
     let frame = 0
+    let downOutside = false // no pointerdown seen yet = the tap that opened the pad
+    const outside = (t: EventTarget | null) =>
+      t instanceof Node && !boxRef.current?.contains(t) && !padRef.current?.contains(t)
+    const onDown = (e: PointerEvent) => { downOutside = outside(e.target) }
     const onClick = (e: MouseEvent) => {
-      const t = e.target
-      if (t instanceof Node && !boxRef.current?.contains(t) && !padRef.current?.contains(t)) {
-        frame = requestAnimationFrame(() => setPadOpen(false))
-      }
+      if (downOutside && outside(e.target)) frame = requestAnimationFrame(() => setPadOpen(false))
+      downOutside = false
     }
+    document.addEventListener('pointerdown', onDown, true)
     document.addEventListener('click', onClick, true)
-    return () => { document.removeEventListener('click', onClick, true); cancelAnimationFrame(frame) }
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('click', onClick, true)
+      cancelAnimationFrame(frame)
+    }
   }, [touch, padOpen])
 
   const pad = touch && padOpen ? (
