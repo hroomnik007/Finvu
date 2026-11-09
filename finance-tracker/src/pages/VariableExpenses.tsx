@@ -37,7 +37,7 @@ import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
-import AmountInput from '../components/AmountInput'
+import { AmountEntry } from '../components/AmountEntry'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 
 interface VariableExpensesPageProps {
@@ -509,15 +509,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         submitDisabled={newCatMode ? !newCatName.trim() || !form.amount : !form.categoryId || !form.amount}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
-          <AmountInput
-            placeholder="0"
-            value={form.amount}
-            onValueChange={v => setForm(f => ({ ...f, amount: v }))}
-            style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
-          />
-          <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
-        </div>
+        <AmountEntry value={form.amount} onValueChange={v => setForm(f => ({ ...f, amount: v }))} />
 
         {livePct !== null && liveLimit && (
           <div style={{ borderRadius: 12, padding: '10px 12px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)' }}>
