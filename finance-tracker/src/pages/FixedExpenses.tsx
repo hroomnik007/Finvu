@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from 'react'
-import type { LucideIcon } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
   Pencil, Trash2, Plus, Calendar, List as ListIcon, CheckCircle2, Tag, Repeat,
@@ -30,6 +29,7 @@ import { rowActions } from '../utils/queuedRows'
 import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
+import { CategoryPicker } from '../components/CategoryPicker'
 import React from 'react'
 import { AmountEntry } from '../components/AmountEntry'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
@@ -55,26 +55,6 @@ const pillStyle = (active: boolean): React.CSSProperties => ({
   fontFamily: "'Manrope', sans-serif", transition: 'all 0.15s', whiteSpace: 'nowrap',
   flexShrink: 0,
 })
-
-function CategoryCircle({ icon: Icon, label, selected, accent, onClick }: {
-  icon: LucideIcon; label: string; selected: boolean; accent: string; onClick: () => void
-}) {
-  return (
-    <button
-      type="button" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 60 }}
-    >
-      <div style={{
-        width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: selected ? accent : 'var(--aurora-glass)',
-        border: selected ? '1px solid transparent' : '1px solid var(--aurora-gline)',
-      }}>
-        <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
-      </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>{label}</span>
-    </button>
-  )
-}
 
 interface FixedExpensesPageProps {
   month: number
@@ -741,23 +721,15 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         />
 
         {pickerCats.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {pickerCats.map(c => (
-              <CategoryCircle
-                key={c.id}
-                icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
-                label={c.name}
-                selected={categoryId === c.id}
-                accent={c.color}
-                onClick={() => { suggestion.pickedManually(); setCategoryId(prev => prev === c.id ? '' : (c.id ?? '')) }}
-              />
-            ))}
-          </div>
+          <CategoryPicker
+            categories={pickerCats} selectedId={categoryId}
+            onPick={id => { suggestion.pickedManually(); setCategoryId(prev => prev === id ? '' : id) }}
+          />
         )}
         <SuggestedCategoryHint name={expenseCategories.find(c => c.id === suggestion.suggestedId)?.name} />
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div role="group" aria-label={t.expenses.fixed.dueDay} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
             <button
               type="button"
               className="hit-44"
@@ -765,7 +737,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               onClick={() => setDayOfMonth(d => String(Math.max(1, parseInt(d || '1') - 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
-            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dueDay}</span>
+            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dayShort}</span>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{dayOfMonth}</span>
             <button
               type="button"
@@ -776,7 +748,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
             >+</button>
           </div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,#FBBF24,#f59e0b)', border: '1px solid transparent', borderRadius: 12, padding: '8px 11px', fontSize: 12, color: '#fff', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
-            <Repeat size={12} /> {t.expenses.fixed.recurringMonthly}
+            <Repeat size={12} aria-hidden="true" /> {t.expenses.fixed.recurringShort}
           </div>
         </div>
         {/* A new fixed expense is dated today and counts from this month on. */}

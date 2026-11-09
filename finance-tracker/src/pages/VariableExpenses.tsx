@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from 'react'
-import type { LucideIcon } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
 import { Edit2, Trash2, Plus, Receipt, X, ArrowDown, Tag } from 'lucide-react'
 
@@ -36,6 +35,7 @@ import { rowActions } from '../utils/queuedRows'
 import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
+import { CategoryCircle, CategoryPicker } from '../components/CategoryPicker'
 import React from 'react'
 import { AmountEntry } from '../components/AmountEntry'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
@@ -72,27 +72,6 @@ const pillStyle = (active: boolean): React.CSSProperties => ({
   fontFamily: "'Manrope', sans-serif", transition: 'all 0.15s', whiteSpace: 'nowrap',
   flexShrink: 0,
 })
-
-
-function CategoryCircle({ icon: Icon, label, selected, accent, onClick }: {
-  icon: LucideIcon; label: string; selected: boolean; accent: string; onClick: () => void
-}) {
-  return (
-    <button
-      type="button" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 52 }}
-    >
-      <div style={{
-        width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: selected ? accent : 'var(--aurora-glass)',
-        border: selected ? '1px solid transparent' : '1px solid var(--aurora-gline)',
-      }}>
-        <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
-      </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{label}</span>
-    </button>
-  )
-}
 
 
 export function VariableExpensesPage({ month, year, showToast }: VariableExpensesPageProps) {
@@ -524,23 +503,11 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         )}
 
         {!newCatMode ? (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
-            {quickCategories.map(c => (
-              <CategoryCircle
-                key={c.id}
-                icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
-                label={c.name}
-                selected={form.categoryId === c.id}
-                accent={c.color}
-                onClick={() => { suggestion.pickedManually(); setForm(f => ({ ...f, categoryId: c.id ?? '' })) }}
-              />
-            ))}
-            <CategoryCircle
-              icon={Plus} label={t.expenses.variable.newCategory}
-              selected={false} accent="#FB7185"
-              onClick={() => setNewCatMode(true)}
-            />
-          </div>
+          <CategoryPicker
+            categories={quickCategories} selectedId={form.categoryId}
+            onPick={id => { suggestion.pickedManually(); setForm(f => ({ ...f, categoryId: id })) }}
+            extra={<CategoryCircle icon={Plus} label={t.expenses.variable.newCategory} selected={false} accent="#FB7185" onClick={() => setNewCatMode(true)} />}
+          />
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -560,14 +527,14 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           <DateInput compact value={form.date} onChange={date => setForm(f => ({ ...f, date }))} />
           <input
             type="text"
             placeholder={t.expenses.variable.notePlaceholder}
             value={form.note}
             onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-            style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '8px 12px', color: 'var(--aurora-hi)', fontSize: 12, fontFamily: "'Manrope', sans-serif", outline: 'none', minWidth: 100 }}
+            style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '8px 12px', color: 'var(--aurora-hi)', fontSize: 12, fontFamily: "'Manrope', sans-serif", outline: 'none', minWidth: 0 }}
           />
         </div>
         <SuggestedCategoryHint name={quickCategories.find(c => c.id === suggestion.suggestedId)?.name} />

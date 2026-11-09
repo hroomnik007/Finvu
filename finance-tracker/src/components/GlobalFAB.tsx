@@ -25,6 +25,7 @@ import { useModalA11y } from '../hooks/useModalA11y'
 import { SuggestedCategoryHint } from './SuggestedCategoryHint'
 import AmountInput from './AmountInput'
 import { AmountEntry } from './AmountEntry'
+import { CategoryCircle, CategoryPicker } from './CategoryPicker'
 import { parseAmountInput } from '../utils/amountInput'
 
 type ModalType = 'income' | 'variable' | 'fixed' | 'category' | 'savings' | null
@@ -72,26 +73,6 @@ function pillChipStyle(active: boolean, accent: string, accent2: string): React.
     fontSize: 12, color: active ? '#fff' : 'var(--aurora-hi)', fontWeight: 600,
     fontFamily: "'Manrope', sans-serif", cursor: 'pointer', flexShrink: 0,
   }
-}
-
-function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick }: {
-  icon: LucideIcon; label: string; selected: boolean; accent: string; accent2: string; onClick: () => void
-}) {
-  return (
-    <button
-      type="button" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 76 }}
-    >
-      <div style={{
-        width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: selected ? `linear-gradient(135deg,${accent},${accent2})` : 'var(--aurora-glass)',
-        border: selected ? '1px solid transparent' : '1px solid var(--aurora-gline)',
-      }}>
-        <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
-      </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', textAlign: 'center', lineHeight: 1.2, maxWidth: 76, overflowWrap: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{label}</span>
-    </button>
-  )
 }
 
 /** Opens an add modal from outside (home-screen shortcut, share sheet). `id` changes per request. */
@@ -477,23 +458,11 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         )}
 
         {!varNewCatMode ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 4px', padding: '2px 2px 4px' }}>
-            {quickCategories.map(c => (
-              <CategoryCircle
-                key={c.id}
-                icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
-                label={c.name}
-                selected={varCatId === c.id}
-                accent={c.color} accent2={c.color}
-                onClick={() => { varSuggestion.pickedManually(); setVarCatId(c.id ?? '') }}
-              />
-            ))}
-            <CategoryCircle
-              icon={Plus} label={t.expenses.variable.newCategory}
-              selected={false} accent="#FB7185" accent2="#f43f5e"
-              onClick={() => setVarNewCatMode(true)}
-            />
-          </div>
+          <CategoryPicker
+            categories={quickCategories} selectedId={varCatId} gradient
+            onPick={id => { varSuggestion.pickedManually(); setVarCatId(id) }}
+            extra={<CategoryCircle icon={Plus} label={t.expenses.variable.newCategory} selected={false} accent="#FB7185" accent2="#f43f5e" onClick={() => setVarNewCatMode(true)} />}
+          />
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -512,13 +481,13 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           <DateInput compact value={varDate} onChange={setVarDate} />
           <input
             type="text" placeholder={t.expenses.variable.notePlaceholder}
             value={varNote}
             onChange={e => setVarNote(e.target.value)}
-            style={{ ...finputStyle, flex: 1, width: 'auto', padding: '8px 12px', borderRadius: 12, fontSize: 12 }}
+            style={{ ...finputStyle, flex: 1, width: 'auto', minWidth: 0, padding: '8px 12px', borderRadius: 12, fontSize: 12 }}
           />
         </div>
         <SuggestedCategoryHint name={categoryName(varSuggestion.suggestedId)} />
@@ -542,22 +511,14 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           style={finputStyle}
         />
         {categories.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 4px', padding: '2px 2px 4px' }}>
-            {quickCategories.map(c => (
-              <CategoryCircle
-                key={c.id}
-                icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
-                label={c.name}
-                selected={fixCatId === c.id}
-                accent={c.color} accent2={c.color}
-                onClick={() => { fixSuggestion.pickedManually(); setFixCatId(prev => prev === c.id ? '' : (c.id ?? '')) }}
-              />
-            ))}
-          </div>
+          <CategoryPicker
+            categories={quickCategories} selectedId={fixCatId} gradient
+            onPick={id => { fixSuggestion.pickedManually(); setFixCatId(prev => prev === id ? '' : id) }}
+          />
         )}
         <SuggestedCategoryHint name={categoryName(fixSuggestion.suggestedId)} />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div role="group" aria-label={t.expenses.fixed.dayLabel} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
             <button
               type="button"
               className="hit-44"
@@ -565,18 +526,18 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
               onClick={() => setFixDay(d => String(Math.max(1, parseInt(d || '1') - 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
-            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dayLabel}</span>
+            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dayShort}</span>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{fixDay}</span>
             <button
               type="button"
               className="hit-44"
               aria-label={t.common.dayIncrease}
-              onClick={() => setFixDay(d => String(Math.min(31, parseInt(d || '1') + 1)))}
+              onClick={() => setFixDay(d => String(Math.min(28, parseInt(d || '1') + 1)))}
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >+</button>
           </div>
-          <div style={pillChipStyle(true, '#FBBF24', '#f59e0b')}>
-            <Repeat size={12} /> {t.expenses.fixed.recurringMonthly}
+          <div style={pillChipStyle(true, '#FBBF24', '#f59e0b')} title={t.expenses.fixed.recurringMonthly}>
+            <Repeat size={12} aria-hidden="true" /> {t.expenses.fixed.recurringShort}
           </div>
         </div>
         {/* A new fixed expense is dated today and counts from this month on. */}
