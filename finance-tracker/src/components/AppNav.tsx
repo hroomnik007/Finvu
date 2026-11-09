@@ -1,8 +1,7 @@
 import { useState, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import {
-  LayoutDashboard, TrendingUp, CreditCard, Settings,
-  Receipt, Lock, Tag, Search, ChevronLeft, ChevronRight, ChevronDown, PiggyBank, CalendarRange,
+  LayoutDashboard, TrendingUp, CreditCard, Settings, Receipt, Tag, Search, ChevronLeft, ChevronRight, ChevronDown, PiggyBank, CalendarRange, Repeat,
 } from 'lucide-react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
@@ -208,7 +207,7 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
                   <SubNavItem
                     active={current === 'fixed-expenses'}
                     onClick={() => handleChange('fixed-expenses')}
-                    icon={<Lock size={15} strokeWidth={1.5} />}
+                    icon={<Repeat size={15} strokeWidth={1.5} />}
                     label={t.nav.fixed}
                   />
                   <SubNavItem
@@ -251,7 +250,7 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
               </div>
               {([
                 { page: 'variable-expenses' as Page, icon: <Receipt size={13} strokeWidth={1.5} />, label: t.nav.variable },
-                { page: 'fixed-expenses' as Page, icon: <Lock size={13} strokeWidth={1.5} />, label: t.nav.fixed },
+                { page: 'fixed-expenses' as Page, icon: <Repeat size={13} strokeWidth={1.5} />, label: t.nav.fixed },
                 { page: 'categories' as Page, icon: <Tag size={13} strokeWidth={1.5} />, label: t.nav.categories },
                 { page: 'search' as Page, icon: <Search size={13} strokeWidth={1.5} />, label: t.nav.search },
               ]).map(item => (

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Home, TrendingUp, Settings, Receipt, Lock, Tag, Search, PiggyBank, MoreHorizontal, CalendarRange } from 'lucide-react'
+import { Home, TrendingUp, Settings, Receipt, Tag, Search, PiggyBank, MoreHorizontal, CalendarRange, Repeat } from 'lucide-react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
@@ -55,7 +55,7 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
 
   const pageItem: Record<string, { icon: React.ReactNode; label: string }> = {
     'variable-expenses': { icon: <Receipt size={16} aria-hidden />, label: t.nav.variable },
-    'fixed-expenses': { icon: <Lock size={16} aria-hidden />, label: t.nav.fixed },
+    'fixed-expenses': { icon: <Repeat size={16} aria-hidden />, label: t.nav.fixed },
     categories: { icon: <Tag size={16} aria-hidden />, label: t.nav.categories },
     search: { icon: <Search size={16} aria-hidden />, label: t.nav.search },
     savings: { icon: <PiggyBank size={16} aria-hidden />, label: t.nav.savings },

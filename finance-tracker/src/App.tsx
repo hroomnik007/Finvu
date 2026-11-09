@@ -36,7 +36,7 @@ import { useBudgetTemplate, isBudgetTemplateDismissed, dismissBudgetTemplate } f
 import { PinLock } from './components/PinLock'
 import { PinLockProvider, usePinLockContext } from './context/PinLockContext'
 import { useToast } from './hooks/useToast'
-import { useTranslation } from './i18n'
+import { useTranslation, type Translations } from './i18n'
 import { subscribeAchievementUnlocks } from './utils/achievementEvents'
 import { getAchievementMeta } from './data/achievements'
 import { useAuth } from './context/AuthContext'
@@ -93,6 +93,17 @@ export type Page =
   | 'savings'
   | 'search'
   | 'annual'
+
+// Pages without a visible <h1> of their own get a visually hidden one (App renders it)
+const SR_ONLY_TITLE: Partial<Record<Page, (t: Translations) => string>> = {
+  dashboard: t => t.nav.overview,
+  income: t => t.nav.income,
+  'variable-expenses': t => t.nav.variable,
+  'fixed-expenses': t => t.nav.fixed,
+  categories: t => t.nav.categories,
+  savings: t => t.nav.savings,
+  household: t => t.nav.household,
+}
 
 const VALID_PAGES: Page[] = ['dashboard', 'income', 'variable-expenses', 'fixed-expenses', 'categories', 'settings', 'household', 'savings', 'search', 'annual']
 
@@ -549,6 +560,8 @@ function App() {
         overflow: 'hidden',
         background: 'transparent',
       }}>
+        {/* Pages that show no visible title still need one for screen readers */}
+        {SR_ONLY_TITLE[page] && <h1 className="sr-only">{SR_ONLY_TITLE[page](t)}</h1>}
         <Topbar
           page={page}
           month={month}

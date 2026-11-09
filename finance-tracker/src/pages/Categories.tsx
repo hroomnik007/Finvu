@@ -746,8 +746,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         <button
           onClick={openAdd}
           className="lg:hidden fab-auto-hide flex items-center justify-center"
-          aria-label={t.common.addNew}
-          title={t.common.addNew}
+          aria-label={t.expenses.categories.newTitle}
+          title={t.expenses.categories.newTitle}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />

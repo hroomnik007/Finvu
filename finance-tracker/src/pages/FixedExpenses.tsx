@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
-  Pencil, Trash2, Plus, Lock, Calendar, List as ListIcon, CheckCircle2, Tag, Repeat,
+  Pencil, Trash2, Plus, Calendar, List as ListIcon, CheckCircle2, Tag, Repeat,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
@@ -358,8 +358,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         <button
           onClick={openAdd}
           className="lg:hidden fab-auto-hide flex items-center justify-center"
-          aria-label={t.common.addNew}
-          title={t.common.addNew}
+          aria-label={t.expenses.fixed.newTitle}
+          title={t.expenses.fixed.newTitle}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />
@@ -592,7 +592,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
           {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : fixedExpenses.length === 0 ? (
             <GlassCard radius={18}>
               <div className="empty-state">
-                <Lock size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
+                <Repeat size={40} color="var(--aurora-faint)" style={{ marginBottom: 4 }} />
                 <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.expenses.fixed.emptyTitle}</p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.fixed.emptySubtitle}</p>
                 <EmptyStateAction label={t.firstRun.emptyFixed} onClick={openAdd} />
@@ -721,7 +721,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
       <CompactModal
         open={sheetOpen}
         onClose={closeSheet}
-        icon={Lock} iconColor="#FBBF24" iconBg="rgba(251,191,36,.16)"
+        icon={Repeat} iconColor="#FBBF24" iconBg="rgba(251,191,36,.16)"
         title={editing ? t.expenses.fixed.editTitle : t.expenses.fixed.newTitle}
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={handleSave}
