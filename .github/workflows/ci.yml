@@ -1,0 +1,85 @@
+name: CI
+# Checks every pull request, and is reused by deploy.yml as the gate before a deploy.
+on:
+  pull_request:
+    paths:
+      - 'finance-tracker/**'
+      - 'backend/**'
+      - '.github/workflows/**'
+  workflow_call:
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: finance-tracker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: finance-tracker/package-lock.json
+      - name: Install
+        run: npm ci --legacy-peer-deps
+      - name: ESLint
+        run: npx eslint . --max-warnings 20
+      - name: Typecheck
+        run: npx tsc -b --noEmit
+      - name: Tests
+        run: npm test
+      - name: Build
+        run: npx vite build
+      # Known vulnerabilities in what actually ships (production dependencies only)
+      - name: npm audit
+        run: npm audit --omit=dev --audit-level=high
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # Throw-away database: the migrations must build the schema the code expects,
+    # and the integration tests run against it
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: finvu_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/finvu_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Database from scratch matches the code
+        run: |
+          npm run db:setup
+          npm run db:setup
+          npm run db:check-schema
+      - name: Integration tests
+        run: npm run test:integration
+      - name: npm audit
+        run: npm audit --omit=dev --audit-level=high

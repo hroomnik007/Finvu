@@ -9,9 +9,11 @@ Domains:
 
 Every push to `main` runs `.github/workflows/deploy.yml`:
 
-1. **lint** — ESLint, typecheck and tests for frontend and backend, `npm audit` of production
-   dependencies, and a throw-away Postgres on which `npm run db:setup` builds the schema from
-   scratch and `npm run db:check-schema` proves it matches `backend/src/db/schema.ts`.
+1. **lint** — runs `.github/workflows/ci.yml` (the same workflow checks every pull request):
+   ESLint, typecheck, tests and a production build of the frontend; typecheck and unit tests of the
+   backend; a throw-away Postgres on which `npm run db:setup` builds the schema from scratch,
+   `npm run db:check-schema` proves it matches `backend/src/db/schema.ts` and the integration tests
+   run; `npm audit` of production dependencies.
 2. **deploy-frontend** (when `finance-tracker/**` changed) — SSH to the server, `git reset --hard origin/main`,
    `npm ci`, `npm run build`, copy `dist/` to `/var/www/finance-tracker/finance-tracker/dist`, reload nginx.
 3. **deploy-backend** (when `backend/**` changed) — SSH to the server, `git reset --hard origin/main`,
