@@ -86,15 +86,16 @@ export function CategoryPicker({ categories, selectedId, onPick, gradient = fals
     : moreLeft ? 'linear-gradient(90deg,transparent,#000 28px)'
     : undefined
 
-  return (
-    <div
-      ref={rowRef}
-      onScroll={updateEdges}
-      data-testid="category-picker"
-      style={expanded
-        ? { display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${CHIP_WIDTH}px, 1fr))`, justifyItems: 'center', gap: '10px 4px', padding: '2px 2px 4px' }
-        : { display: 'flex', flexWrap: 'nowrap', gap: 4, overflowX: 'auto', scrollbarWidth: 'none', scrollSnapType: 'x proximity', padding: '2px 2px 4px', maskImage: mask, WebkitMaskImage: mask }}
-    >
+  const toggle = (
+    <CategoryCircle
+      icon={expanded ? ChevronUp : LayoutGrid}
+      label={expanded ? t.common.fewerCategories : t.common.allCategories}
+      selected={false} accent="var(--aurora-violet)"
+      onClick={() => setExpanded(e => !e)}
+    />
+  )
+  const chips = (
+    <>
       {categories.map(c => (
         <CategoryCircle
           key={c.id}
@@ -106,12 +107,31 @@ export function CategoryPicker({ categories, selectedId, onPick, gradient = fals
         />
       ))}
       {extra}
-      <CategoryCircle
-        icon={expanded ? ChevronUp : LayoutGrid}
-        label={expanded ? t.common.fewerCategories : t.common.allCategories}
-        selected={false} accent="var(--aurora-violet)"
-        onClick={() => setExpanded(e => !e)}
-      />
+    </>
+  )
+
+  if (expanded) {
+    return (
+      <div data-testid="category-picker" style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${CHIP_WIDTH}px, 1fr))`, justifyItems: 'center', gap: '10px 4px', padding: '2px 2px 4px' }}>
+        {chips}
+        {toggle}
+      </div>
+    )
+  }
+
+  // "All" stays pinned at the right edge, so it is visible even when the
+  // categories fit the row exactly and nothing hints that more exist.
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, padding: '2px 2px 4px' }}>
+      <div
+        ref={rowRef}
+        onScroll={updateEdges}
+        data-testid="category-picker"
+        style={{ display: 'flex', flex: 1, minWidth: 0, flexWrap: 'nowrap', gap: 4, overflowX: 'auto', scrollbarWidth: 'none', scrollSnapType: 'x proximity', maskImage: mask, WebkitMaskImage: mask }}
+      >
+        {chips}
+      </div>
+      {toggle}
     </div>
   )
 }
