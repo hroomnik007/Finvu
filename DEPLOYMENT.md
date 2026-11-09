@@ -49,11 +49,38 @@ docker compose restart backend
 sudo tail -f /var/log/nginx/access.log
 ```
 
-Database backup:
+## Backups
+
+`scripts/backup.sh` dumps the database (`pg_dump -Fc`, checked with `pg_restore --list`) and archives
+the uploaded avatars, keeps 7 daily / 4 weekly / 6 monthly copies in `/var/backups/finvu`, and with
+`BACKUP_RCLONE_REMOTE` set also copies them off the server. A failed run leaves no partial file and,
+with `BACKUP_PING_URL` set (e.g. healthchecks.io), reports the failure.
+
+Settings go to `/etc/finvu-backup.env` (read by both scripts, mode 600), for example:
 
 ```bash
-docker exec finance-tracker-postgres-1 pg_dump -U user finance_tracker | gzip > backup-$(date +%F).sql.gz
+PG_USER=user
+PG_DB=finance_tracker
+BACKUP_RCLONE_REMOTE=storagebox:finvu
+BACKUP_PING_URL=https://hc-ping.com/<uuid>
 ```
+
+Nightly run (root crontab, `sudo crontab -e`), after the 03:30 cleanup job:
+
+```
+15 4 * * * /var/www/finance-tracker-repo/scripts/backup.sh >> /var/log/finvu-backup.log 2>&1
+```
+
+Check that a backup really restores (loads the newest dump into a throw-away database next to the
+live one, compares row counts, drops it; the live database is only read):
+
+```bash
+sudo /var/www/finance-tracker-repo/scripts/restore-test.sh
+```
+
+Full restore after a disaster: stop the backend (`docker compose stop backend`), recreate the database,
+`docker exec -i finance-tracker-postgres-1 pg_restore -U user -d finance_tracker --no-owner < db-….dump`,
+extract `uploads-….tar.gz` into the `uploads_data` volume, start the backend.
 
 The backend runs a nightly cleanup (03:30) of expired tokens and idle sessions, and
 the monthly summary e-mail job (last day of the month, at each user's chosen hour).
