@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AppNav } from './components/AppNav'
 import { BottomNav } from './components/BottomNav'
+import { useScrollCollapse } from './hooks/useScrollCollapse'
 import { Topbar } from './components/Topbar'
 import { GlobalFAB, type FabLaunch } from './components/GlobalFAB'
 import { CsvImportModal } from './components/CsvImportModal'
@@ -112,6 +113,12 @@ function App() {
   const { fixedExpenses: allFixedExpensesForNotif } = useFixedExpenses()
   useFixedExpenseNotifications(allFixedExpensesForNotif, isAuthenticated)
   const [page, setPage] = useState<Page>(getPageFromHash)
+  // Mobile add buttons step aside while scrolling down and stay away until a
+  // scroll up, so they never cover the amounts under them (see .fab-auto-hide)
+  const fabHidden = useScrollCollapse({ expandOnIdle: false, respectReducedMotion: false, resetKey: page })
+  useEffect(() => {
+    document.documentElement.classList.toggle('fab-hidden', fabHidden)
+  }, [fabHidden])
   type AuthPage = 'login' | 'register' | 'forgot-password' | 'reset-password' | 'verify-email' | 'privacy-policy'
 
   function getAuthPageFromHash(): AuthPage {

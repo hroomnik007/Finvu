@@ -17,13 +17,33 @@ const SCROLL_THRESHOLD = 4
  * immediately on scroll-up or after a short idle period once scrolling
  * stops. Always `false` (never collapses) under prefers-reduced-motion.
  */
-export function useScrollCollapse(): boolean {
+export interface ScrollCollapseOptions {
+  /** Expand again after a short idle period (default). Off: stays collapsed until a scroll up. */
+  expandOnIdle?: boolean
+  /**
+   * Never collapse under prefers-reduced-motion (default). Off: collapse
+   * anyway, for elements whose hiding is functional rather than decorative
+   * (the caller then drops the animation).
+   */
+  respectReducedMotion?: boolean
+  /** Changing it (e.g. the current page) expands again. */
+  resetKey?: unknown
+}
+
+export function useScrollCollapse({ expandOnIdle = true, respectReducedMotion = true, resetKey }: ScrollCollapseOptions = {}): boolean {
   const [collapsed, setCollapsed] = useState(false)
   const lastScrollTops = useRef(new WeakMap<EventTarget, number>())
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // A new page starts expanded (adjusted during render, not in an effect)
+  const [lastResetKey, setLastResetKey] = useState(resetKey)
+  if (resetKey !== lastResetKey) {
+    setLastResetKey(resetKey)
+    setCollapsed(false)
+  }
+
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (respectReducedMotion && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
     function handleScroll(e: Event) {
       const target = e.target
@@ -43,7 +63,7 @@ export function useScrollCollapse(): boolean {
       }
       // Any scroll activity (even below the threshold) postpones the
       // idle-expand so the bar doesn't snap open mid-gesture.
-      idleTimer.current = setTimeout(() => setCollapsed(false), IDLE_EXPAND_MS)
+      if (expandOnIdle) idleTimer.current = setTimeout(() => setCollapsed(false), IDLE_EXPAND_MS)
     }
 
     window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
@@ -51,7 +71,7 @@ export function useScrollCollapse(): boolean {
       window.removeEventListener('scroll', handleScroll, true)
       if (idleTimer.current) clearTimeout(idleTimer.current)
     }
-  }, [])
+  }, [expandOnIdle, respectReducedMotion])
 
   return collapsed
 }
