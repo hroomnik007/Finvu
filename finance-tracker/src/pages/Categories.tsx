@@ -36,6 +36,8 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { signFor } from '../utils/format'
+import { showErrorToast } from '../lib/toastStore'
 import { apiErrorMessage } from '../utils/apiError'
 import { pluralText } from '../utils/plural'
 import { reorderCategories as reorderCategoriesApi, shareCategories } from '../api/categories'
@@ -147,7 +149,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
       {cat.budgetLimit != null && (
         <>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-rose)', marginBottom: 8 }}>
-            -{formatAmount(status?.spent ?? 0)}
+            {signFor(status?.spent ?? 0, '−')}{formatAmount(status?.spent ?? 0)}
           </div>
           <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', marginBottom: 6 }}>
             <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
@@ -461,7 +463,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     await reload()
     setBulkBusy(false)
     setBulkOpen(false)
-    if (failed > 0) alert(t.expenses.categories.bulkPartialError.replace('{n}', String(failed)))
+    if (failed > 0) showErrorToast(t.expenses.categories.bulkPartialError.replace('{n}', String(failed)))
     else showToast(t.expenses.categories.bulkDone.replace('{n}', String(ids.length)))
     exitSelectMode()
   }
@@ -475,7 +477,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     await reload()
     setBulkBusy(false)
     setBulkDeleteOpen(false)
-    if (blocked > 0) alert(pluralText(blocked, t.expenses.categories.bulkDeleteBlocked, locale))
+    if (blocked > 0) showErrorToast(pluralText(blocked, t.expenses.categories.bulkDeleteBlocked, locale))
     if (selectedIds.size - blocked > 0) showToast(t.expenses.categories.bulkDeleted.replace('{n}', String(selectedIds.size - blocked)))
     exitSelectMode()
   }
@@ -549,7 +551,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
           try {
             await shareCategories([editing.id], sharedFlag)
           } catch (err: unknown) {
-            alert(apiErrorMessage(err, t.expenses.categories.deleteError, t))
+            showErrorToast(apiErrorMessage(err, t.expenses.categories.deleteError, t))
           }
           await reload()
         }
@@ -572,7 +574,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     try {
       await deleteCategory(id)
     } catch (err: unknown) {
-      alert(apiErrorMessage(err, t.expenses.categories.deleteError, t))
+      showErrorToast(apiErrorMessage(err, t.expenses.categories.deleteError, t))
     }
     setDeleteId(null)
   }
@@ -744,8 +746,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         <button
           onClick={openAdd}
           className="lg:hidden fab-auto-hide flex items-center justify-center"
-          aria-label={t.common.addNew}
-          title={t.common.addNew}
+          aria-label={t.expenses.categories.newTitle}
+          title={t.expenses.categories.newTitle}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />

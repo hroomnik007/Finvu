@@ -5,6 +5,7 @@ import {
   Target, Flame, PiggyBank, BarChart3, Trophy, Zap, Users, Gem,
 } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { showErrorToast } from '../lib/toastStore'
 import { pluralCount } from '../utils/plural'
 import { formatDateLocale } from '../utils/format'
 import { useFormatters } from '../hooks/useFormatters'
@@ -185,7 +186,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
       if (file.size > 10 * 1024 * 1024) {
-        alert(t.profile.photoTooBig)
+        showErrorToast(t.profile.photoTooBig)
         return
       }
       setPhotoUploading(true)
@@ -198,7 +199,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
           setProfileAvatarDraft('')
           await refreshUser()
         } catch {
-          alert(t.profile.photoUploadFailed)
+          showErrorToast(t.profile.photoUploadFailed)
         } finally {
           setPhotoUploading(false)
         }

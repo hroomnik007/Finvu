@@ -14,7 +14,7 @@ import { useIncomes } from '../hooks/useIncomes'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedMonthNames } from '../i18n'
-import { dayHeaderParts } from '../utils/format'
+import { dayHeaderParts, signFor } from '../utils/format'
 import { pluralCount } from '../utils/plural'
 import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import type { Translations } from '../i18n'
@@ -234,7 +234,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-emerald))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                +{formatAmountParts(animatedTotal).main}
+                {signFor(animatedTotal, '+')}{formatAmountParts(animatedTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
                 {formatAmountParts(animatedTotal).rest}
@@ -346,8 +346,8 @@ export function IncomePage({ month, year }: IncomePageProps) {
         <button
           onClick={openAdd}
           className="lg:hidden fab-auto-hide flex items-center justify-center"
-          aria-label={t.common.addNew}
-          title={t.common.addNew}
+          aria-label={t.income.addTitle}
+          title={t.income.addTitle}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />

@@ -21,7 +21,7 @@ import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedMonthNames } from '../i18n'
-import { dayHeaderParts } from '../utils/format'
+import { dayHeaderParts, signFor } from '../utils/format'
 import { pluralCount, pluralText } from '../utils/plural'
 import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import { defaultEntryDate } from '../utils/entryDefaults'
@@ -315,7 +315,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                 background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-rose))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                −{formatAmountParts(animatedFilteredTotal).main}
+                {signFor(animatedFilteredTotal, '−')}{formatAmountParts(animatedFilteredTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
                 {formatAmountParts(animatedFilteredTotal).rest}
@@ -489,8 +489,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         <button
           onClick={openAdd}
           className="lg:hidden fab-auto-hide flex items-center justify-center"
-          aria-label={t.common.addNew}
-          title={t.common.addNew}
+          aria-label={t.expenses.variable.addTitle}
+          title={t.expenses.variable.addTitle}
           style={{ position: 'fixed', right: 'var(--fab-right)', bottom: 'var(--fab-bottom)', width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', border: 'none', cursor: 'pointer', color: 'white', boxShadow: '0 10px 30px rgba(139,92,246,.5)', zIndex: 40 }}
         >
           <Plus size={26} />

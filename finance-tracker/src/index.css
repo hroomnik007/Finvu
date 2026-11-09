@@ -816,8 +816,8 @@ html.compact .card { padding: var(--card-padding); }
   bottom: var(--fab-bottom);
 }
 
-/* The add button steps aside while scrolling down so it never covers amounts at
-   the end of a row, and comes back on scroll up (html.fab-hidden, set in App.tsx).
+/* The add button steps aside while scrolling down and comes back on scroll up
+   or once scrolling stops (html.fab-hidden, set in App.tsx).
    visibility drops it from the tab order once the slide-out has finished. */
 .fab-auto-hide {
   transition: transform 0.2s ease, opacity 0.2s ease, visibility 0s linear 0s;

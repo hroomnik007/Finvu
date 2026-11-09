@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { subscribeAddForm } from '../utils/addFormEvents'
 import type { LucideIcon } from 'lucide-react'
-import { Plus, X, ArrowUp, ArrowDown, Lock, Tag, Repeat, PiggyBank } from 'lucide-react'
+import { Plus, X, ArrowUp, ArrowDown, Tag, Repeat, PiggyBank } from 'lucide-react'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { CompactModal } from './CompactModal'
@@ -95,7 +95,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
   return (
     <button
       type="button" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 52 }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 64 }}
     >
       <div style={{
         width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -104,7 +104,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
       }}>
         <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
       </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{label}</span>
+      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', textAlign: 'center', lineHeight: 1.2, maxWidth: 64, overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{label}</span>
     </button>
   )
 }
@@ -355,7 +355,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
   const LAUNCH_TILES: { type: ModalType; label: string; icon: LucideIcon; color: string; bg: string }[] = [
     { type: 'income', label: t.fab.incomeLabel, icon: ArrowUp, color: '#34D399', bg: 'rgba(52,211,153,.16)' },
     { type: 'variable', label: t.fab.expenseLabel, icon: ArrowDown, color: '#FB7185', bg: 'rgba(251,113,133,.16)' },
-    { type: 'fixed', label: t.fab.fixedLabel, icon: Lock, color: '#FBBF24', bg: 'rgba(251,191,36,.16)' },
+    { type: 'fixed', label: t.fab.fixedLabel, icon: Repeat, color: '#FBBF24', bg: 'rgba(251,191,36,.16)' },
     { type: 'category', label: t.fab.categoryLabel, icon: Tag, color: '#8B5CF6', bg: 'rgba(139,92,246,.16)' },
     ...(savingsEnabled ? [{ type: 'savings' as ModalType, label: t.fab.savingsLabel, icon: PiggyBank, color: '#A855F7', bg: 'rgba(168,85,247,.16)' }] : []),
   ]
@@ -492,7 +492,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         )}
 
         {!varNewCatMode ? (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 6px', padding: '2px 2px 4px' }}>
             {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
@@ -542,7 +542,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       {/* ── ADD FIXED EXPENSE modal ───────────────────────────────────────── */}
       <CompactModal
         open={activeModal === 'fixed'} onClose={closeModal}
-        icon={Lock} iconColor="#FBBF24" iconBg="rgba(251,191,36,.16)"
+        icon={Repeat} iconColor="#FBBF24" iconBg="rgba(251,191,36,.16)"
         title={t.expenses.fixed.newTitle}
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={saveFixed}
@@ -557,7 +557,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           style={finputStyle}
         />
         {categories.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '2px 2px 4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 6px', padding: '2px 2px 4px' }}>
             {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}

@@ -84,3 +84,14 @@ describe('dayHeaderParts', () => {
     expect(dayHeaderParts('2026-10-31', 'en-GB')).toEqual({ dayNum: 31, weekday: 'Saturday', full: '31 October 2026' })
   })
 })
+
+describe('signFor', () => {
+  it('drops the sign for zero and anything that rounds to it', async () => {
+    const { signFor } = await import('./format')
+    expect(signFor(0, '−')).toBe('')
+    expect(signFor(0.004, '+')).toBe('')
+    expect(signFor(-0.001, '−')).toBe('')
+    expect(signFor(0.01, '−')).toBe('−')
+    expect(signFor(12.5, '+')).toBe('+')
+  })
+})
