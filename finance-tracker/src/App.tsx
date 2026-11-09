@@ -113,9 +113,9 @@ function App() {
   const { fixedExpenses: allFixedExpensesForNotif } = useFixedExpenses()
   useFixedExpenseNotifications(allFixedExpensesForNotif, isAuthenticated)
   const [page, setPage] = useState<Page>(getPageFromHash)
-  // Mobile add buttons step aside while scrolling down and stay away until a
-  // scroll up, so they never cover the amounts under them (see .fab-auto-hide)
-  const fabHidden = useScrollCollapse({ expandOnIdle: false, respectReducedMotion: false, resetKey: page })
+  // Mobile add buttons step aside while scrolling down and come back on a
+  // scroll up or once scrolling stops (see .fab-auto-hide)
+  const fabHidden = useScrollCollapse({ respectReducedMotion: false, resetKey: page })
   useEffect(() => {
     document.documentElement.classList.toggle('fab-hidden', fabHidden)
   }, [fabHidden])
