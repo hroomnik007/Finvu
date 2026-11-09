@@ -24,14 +24,14 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "^0.45.2",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.5.2",
-    "helmet": "^8.0.0",
+    "drizzle-orm": "^0.45.4",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.3",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
-    "node-cron": "^4.2.1",
-    "nodemailer": "^10.2.1",
-    "pg": "^8.13.1",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.3.1",
+    "pg": "^8.23.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -43,12 +43,12 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.9.0",
     "@types/node-cron": "^3.0.11",
-    "@types/nodemailer": "^8.0.0",
-    "@types/pg": "^8.11.10",
-    "drizzle-kit": "^0.31.10",
-    "tsx": "^4.19.2",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "esbuild": "^0.25.4"
