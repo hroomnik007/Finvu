@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import { env } from "../config/env";
 import * as schema from "./schema";
 
-const pool = new Pool({ connectionString: env.DATABASE_URL });
+export const pool = new Pool({ connectionString: env.DATABASE_URL });
 
 // An idle client erroring (e.g. Postgres restarting) is emitted on the pool;
 // without a listener Node treats it as uncaught and the process exits.
