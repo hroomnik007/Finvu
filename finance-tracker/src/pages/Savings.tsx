@@ -451,7 +451,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         <button
           onClick={openAdd}
           aria-label={t.savings.addTitle}
-          className="lg:hidden fab-pos w-14 h-14 rounded-full flex items-center justify-center text-white cursor-pointer"
+          className="lg:hidden fab-pos fab-auto-hide w-14 h-14 rounded-full flex items-center justify-center text-white cursor-pointer"
           style={{
             zIndex: 40,
             background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',

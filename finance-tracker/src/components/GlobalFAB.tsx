@@ -367,7 +367,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         <button
           onClick={handleFABClick}
           aria-label={t.fab.title}
-          className="fab-pos w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl cursor-pointer"
+          className="fab-pos fab-auto-hide w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl cursor-pointer"
           style={{
             zIndex: 40,
             background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
