@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from '../i18n'
+import { apiErrorMessage } from '../utils/apiError'
 import { resetPassword } from '../api/auth'
-import { rateLimitedMessage } from '../utils/authError'
 
 interface ResetPasswordPageProps {
   token: string
@@ -48,8 +48,7 @@ export function ResetPasswordPage({ token, onNavigateLogin }: ResetPasswordPageP
       await resetPassword(token, newPassword)
       setSuccess(true)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setError(rateLimitedMessage(err, t.auth) ?? msg ?? t.auth.linkExpired)
+      setError(apiErrorMessage(err, t.auth.linkExpired, t))
     } finally {
       setIsLoading(false)
     }

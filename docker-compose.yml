@@ -4,6 +4,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    # The backend drains requests on SIGTERM (src/lib/shutdown.ts, 20 s cap);
+    # give it that long before Docker falls back to SIGKILL (default 10 s).
+    stop_grace_period: 30s
     env_file:
       - ./backend/.env
     ports:
@@ -22,5 +25,4 @@ networks:
     external: true
 
 volumes:
-  postgres_data:
   uploads_data:

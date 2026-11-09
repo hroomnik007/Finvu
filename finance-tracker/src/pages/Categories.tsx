@@ -36,6 +36,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { apiErrorMessage } from '../utils/apiError'
 import { pluralText } from '../utils/plural'
 import { reorderCategories as reorderCategoriesApi, shareCategories } from '../api/categories'
 import { useAuth } from '../context/AuthContext'
@@ -548,7 +549,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
           try {
             await shareCategories([editing.id], sharedFlag)
           } catch (err: unknown) {
-            alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t.expenses.categories.deleteError)
+            alert(apiErrorMessage(err, t.expenses.categories.deleteError, t))
           }
           await reload()
         }
@@ -571,8 +572,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     try {
       await deleteCategory(id)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      alert(msg ?? t.expenses.categories.deleteError)
+      alert(apiErrorMessage(err, t.expenses.categories.deleteError, t))
     }
     setDeleteId(null)
   }

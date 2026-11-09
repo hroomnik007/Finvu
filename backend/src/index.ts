@@ -4,6 +4,8 @@ import helmet from "helmet";
 import compression from "compression";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import cron from "node-cron";
+import { sql } from "drizzle-orm";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/errorHandler";
 import { startWeeklyReportJob } from "./jobs/weeklyReport";
@@ -21,6 +23,9 @@ import notificationsRouter from "./routes/notifications";
 import achievementsRouter from "./routes/achievements";
 import backupRouter from "./routes/backup";
 import { authenticateToken, AuthRequest } from "./middleware/authenticate";
+import { db, pool } from "./db";
+import { checkDatabase } from "./lib/health";
+import { createShutdown } from "./lib/shutdown";
 
 const app = express();
 
@@ -32,7 +37,7 @@ const allowedOrigins =
     : ["http://localhost:5173", "http://localhost:3000"];
 
 // crossOriginResourcePolicy must allow cross-origin so the frontend origin
-// (financie.pedani.eu) can embed avatars served from api.pedani.eu/uploads.
+// (finvu.pedani.eu) can embed avatars served from api.pedani.eu/uploads.
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(compression());
 app.use(
@@ -77,8 +82,13 @@ app.use(
   express.static(path.resolve(env.UPLOAD_DIR), { maxAge: "365d", immutable: true, fallthrough: false })
 );
 
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.get("/api/health", async (_req, res) => {
+  const dbOk = await checkDatabase(() => db.execute(sql`select 1`));
+  res.status(dbOk ? 200 : 503).json({
+    status: dbOk ? "ok" : "degraded",
+    db: dbOk ? "ok" : "unreachable",
+    timestamp: new Date().toISOString(),
+  });
 });
 
 app.use("/api/auth", authRouter);
@@ -99,11 +109,25 @@ process.on("unhandledRejection", (reason) => {
   console.error("[process] unhandledRejection:", reason);
 });
 
-app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, () => {
   console.log(`Server running on port ${env.PORT} [${env.NODE_ENV}]`);
   startWeeklyReportJob();
   startMonthlyReportJob();
   startCleanupJob();
 });
+
+const shutdown = createShutdown({
+  stopJobs: () => cron.getTasks().forEach((task) => task.stop()),
+  closeServer: () =>
+    new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+      // Idle keep-alive sockets would otherwise hold close() open until they time out
+      server.closeIdleConnections();
+    }),
+  closeDb: () => pool.end(),
+  exit: (code) => process.exit(code),
+});
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
 
 export default app;

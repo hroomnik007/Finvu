@@ -9,9 +9,11 @@ Domains:
 
 Every push to `main` runs `.github/workflows/deploy.yml`:
 
-1. **lint** — ESLint, typecheck and tests for frontend and backend, `npm audit` of production
-   dependencies, and a throw-away Postgres on which `npm run db:setup` builds the schema from
-   scratch and `npm run db:check-schema` proves it matches `backend/src/db/schema.ts`.
+1. **lint** — runs `.github/workflows/ci.yml` (the same workflow checks every pull request):
+   ESLint, typecheck, tests and a production build of the frontend; typecheck and unit tests of the
+   backend; a throw-away Postgres on which `npm run db:setup` builds the schema from scratch,
+   `npm run db:check-schema` proves it matches `backend/src/db/schema.ts` and the integration tests
+   run; `npm audit` of production dependencies.
 2. **deploy-frontend** (when `finance-tracker/**` changed) — SSH to the server, `git reset --hard origin/main`,
    `npm ci`, `npm run build`, copy `dist/` to `/var/www/finance-tracker/finance-tracker/dist`, reload nginx.
 3. **deploy-backend** (when `backend/**` changed) — SSH to the server, `git reset --hard origin/main`,
@@ -21,7 +23,9 @@ Every push to `main` runs `.github/workflows/deploy.yml`:
 GitHub secrets used: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, `DATABASE_URL`, `VITE_VAPID_PUBLIC_KEY`.
 
 **nginx configuration is not deployed by CI.** After changing `nginx/*.conf`, copy the file to
-`/etc/nginx/sites-enabled/` on the server and run `sudo nginx -t && sudo systemctl reload nginx`.
+`/etc/nginx/sites-enabled/` (and `nginx/snippets/*.conf` to `/etc/nginx/snippets/`) on the server
+and run `sudo nginx -t && sudo systemctl reload nginx`. The frontend's security headers and CSP live
+in `nginx/snippets/finvu-security-headers.conf`, included by every location of `finvu.pedani.eu.conf`.
 
 ## Database migrations
 
@@ -45,11 +49,42 @@ docker compose restart backend
 sudo tail -f /var/log/nginx/access.log
 ```
 
-Database backup:
+`GET /api/health` answers 200 `{"status":"ok","db":"ok"}`, or 503 when Postgres is unreachable; the
+container healthcheck and the deploy's `--wait` use it. On `docker compose stop/up` the backend stops
+its cron jobs, finishes in-flight requests and closes the database pool (20 s cap, compose allows 30 s).
+
+## Backups
+
+`scripts/backup.sh` dumps the database (`pg_dump -Fc`, checked with `pg_restore --list`) and archives
+the uploaded avatars, keeps 7 daily / 4 weekly / 6 monthly copies in `/var/backups/finvu`, and with
+`BACKUP_RCLONE_REMOTE` set also copies them off the server. A failed run leaves no partial file and,
+with `BACKUP_PING_URL` set (e.g. healthchecks.io), reports the failure.
+
+Settings go to `/etc/finvu-backup.env` (read by both scripts, mode 600), for example:
 
 ```bash
-docker exec finance-tracker-postgres-1 pg_dump -U user finance_tracker | gzip > backup-$(date +%F).sql.gz
+PG_USER=user
+PG_DB=finance_tracker
+BACKUP_RCLONE_REMOTE=storagebox:finvu
+BACKUP_PING_URL=https://hc-ping.com/<uuid>
 ```
+
+Nightly run (root crontab, `sudo crontab -e`), after the 03:30 cleanup job:
+
+```
+15 4 * * * /var/www/finance-tracker-repo/scripts/backup.sh >> /var/log/finvu-backup.log 2>&1
+```
+
+Check that a backup really restores (loads the newest dump into a throw-away database next to the
+live one, compares row counts, drops it; the live database is only read):
+
+```bash
+sudo /var/www/finance-tracker-repo/scripts/restore-test.sh
+```
+
+Full restore after a disaster: stop the backend (`docker compose stop backend`), recreate the database,
+`docker exec -i finance-tracker-postgres-1 pg_restore -U user -d finance_tracker --no-owner < db-….dump`,
+extract `uploads-….tar.gz` into the `uploads_data` volume, start the backend.
 
 The backend runs a nightly cleanup (03:30) of expired tokens and idle sessions, and
 the monthly summary e-mail job (last day of the month, at each user's chosen hour).

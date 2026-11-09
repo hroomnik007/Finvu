@@ -17,4 +17,4 @@ npm run db:setup          # empty database: legacy schema + all migrations
 npm run test:integration  # src/**/*.int.test.ts
 ```
 
-They are not in CI yet. To add them, put a step running `npm run test:integration` after the `db:setup` step in `.github/workflows/deploy.yml`, with the same `DATABASE_URL`.
+CI (`.github/workflows/ci.yml`) runs them on every pull request and before every deploy, against a throw-away Postgres 17.

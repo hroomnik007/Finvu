@@ -35,18 +35,18 @@
 ## Tech stack
 
 ### Frontend
-- **React 19** + **TypeScript 5.8** + **Vite 8**
+- **React 19** + **TypeScript 5.9** + **Vite 8**
 - **Tailwind CSS 4**
-- **i18n** — custom typed system (5 languages, 413 keys)
+- **i18n** — custom typed system (5 languages, ~1100 keys); server errors are translated by code
 - **Recharts** — charts
 - **PWA** — Vite PWA Plugin + Workbox (Service Worker)
 - **Export** — jsPDF, xlsx, papaparse
 
 ### Backend
-- **Node.js** + **Express 5** + **TypeScript 5.8**
+- **Node.js** + **Express 5** + **TypeScript 5.9**
 - **PostgreSQL 17** + **Drizzle ORM**
 - **JWT** (access token in memory) + **httpOnly cookie** (refresh token)
-- **WebAuthn** Google OAuth, PIN login
+- E-mail + password, **Google OAuth**, **PIN** (passkeys/WebAuthn are implemented but off by default, `PASSKEYS_ENABLED`)
 
 ### Infrastructure
 - **Docker** + **Docker Compose** (backend; PostgreSQL runs in its own container)

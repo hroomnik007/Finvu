@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { apiError } from "../lib/apiErrors";
 import rateLimit from "express-rate-limit";
 import {
   createHousehold,
@@ -24,7 +25,7 @@ const joinLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Príliš veľa pokusov. Skús to neskôr." },
+  message: apiError("RATE_LIMITED"),
 });
 
 router.post("/", createHousehold);

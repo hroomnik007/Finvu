@@ -13,6 +13,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useCategories } from '../hooks/useCategories'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { apiErrorMessage } from '../utils/apiError'
 import { pluralText, type PluralForms } from '../utils/plural'
 import { getMyHousehold, getMonthlyStats, getActivity, leaveHousehold, regenerateInviteCode, removeHouseholdMember } from '../api/households'
 import { getSummaryCards } from '../api/transactions'
@@ -91,8 +92,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
       await refreshUser()
       setLeavePending(false)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      alert(msg ?? ht.leaveError)
+      alert(apiErrorMessage(err, ht.leaveError, t))
     } finally {
       setLeaveLoading(false)
     }
@@ -108,8 +108,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
       setRemovePendingId(null)
       await load()
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      alert(msg ?? ht.removeMemberError)
+      alert(apiErrorMessage(err, ht.removeMemberError, t))
     }
   }
 
@@ -120,8 +119,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
       setHouseholdData(prev => prev ? { ...prev, invite_code } : prev)
       setRegeneratePending(false)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      alert(msg ?? ht.regenerateCodeError)
+      alert(apiErrorMessage(err, ht.regenerateCodeError, t))
     }
   }
 
