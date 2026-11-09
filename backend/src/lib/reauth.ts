@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import { apiError, type ApiErrorCode } from "./apiErrors";
 
 // Re-authentication before planting a durable login credential (passkey, PIN):
 // a valid access token alone is not enough. Mirrors the rule used by updatePin —
@@ -26,15 +27,15 @@ export async function verifyReauth(
 // applies (account match + freshness). `google` is the verifyGoogleAccessToken result.
 export function checkGoogleReauth(
   user: { googleId: string | null },
-  google: { ok: true; sub: string; expiresIn: number } | { ok: false; status: number; error: string },
+  google: { ok: true; sub: string; expiresIn: number } | { ok: false; status: number; error: string; code?: ApiErrorCode },
   minExpiresIn: number,
-): { ok: true } | { ok: false; status: number; error: string } {
+): { ok: true } | { ok: false; status: number; error: string; code?: ApiErrorCode } {
   if (!google.ok) return google;
   if (!user.googleId || google.sub !== user.googleId) {
-    return { ok: false, status: 401, error: "Prihlás sa Google účtom, ktorý patrí k tomuto účtu." };
+    return { ok: false, status: 401, ...apiError("GOOGLE_ACCOUNT_MISMATCH") };
   }
   if (google.expiresIn < minExpiresIn) {
-    return { ok: false, status: 401, error: "Prihlásenie cez Google je príliš staré. Skús to znova." };
+    return { ok: false, status: 401, ...apiError("GOOGLE_REAUTH_STALE") };
   }
   return { ok: true };
 }

@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { verifyAccessToken } from "../lib/tokens";
 import { db } from "../db";
 import { users } from "../db/schema";
+import { authError } from "../lib/authErrors";
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -40,7 +41,7 @@ export async function authenticateToken(
     return;
   }
   if (account.isDeactivated) {
-    res.status(401).json({ error: "Účet je deaktivovaný.", code: "ACCOUNT_DEACTIVATED" });
+    res.status(401).json(authError("ACCOUNT_DEACTIVATED"));
     return;
   }
 

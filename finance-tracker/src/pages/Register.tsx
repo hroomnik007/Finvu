@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { useTranslation } from '../i18n'
+import { apiErrorMessage } from '../utils/apiError'
 import { useAuth } from '../context/AuthContext'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { AuthThemeToggle } from '../components/AuthThemeToggle'
-import { rateLimitedMessage } from '../utils/authError'
 
 interface RegisterPageProps {
   onNavigateLogin: () => void
@@ -40,8 +40,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
       await register(email, password, name.trim(), gdprConsent)
       setVerificationSent(true)
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setError(rateLimitedMessage(err, t.auth) ?? msg ?? t.auth.registerFailed)
+      setError(apiErrorMessage(err, t.auth.registerFailed, t))
     } finally {
       setIsLoading(false)
     }

@@ -1,4 +1,5 @@
 import { env } from "../config/env";
+import { apiError, type ApiErrorCode } from "./apiErrors";
 
 // Verifies a Google OAuth access token from the browser (implicit flow):
 // userinfo proves it is live and names the account, tokeninfo proves it was
@@ -6,7 +7,7 @@ import { env } from "../config/env";
 // for the user would work here too).
 export type GoogleTokenResult =
   | { ok: true; sub: string; email: string; name: string; expiresIn: number }
-  | { ok: false; status: number; error: string };
+  | { ok: false; status: number; error: string; code?: ApiErrorCode };
 
 export async function verifyGoogleAccessToken(accessToken: unknown): Promise<GoogleTokenResult> {
   if (!accessToken || typeof accessToken !== "string") return { ok: false, status: 400, error: "accessToken is required" };
@@ -14,9 +15,9 @@ export async function verifyGoogleAccessToken(accessToken: unknown): Promise<Goo
   // from one issued to any other Google app — fail closed instead of accepting both.
   if (!env.GOOGLE_CLIENT_ID) {
     console.error("[google] GOOGLE_CLIENT_ID is not set — Google sign-in is disabled.");
-    return { ok: false, status: 503, error: "Google prihlásenie nie je nakonfigurované." };
+    return { ok: false, status: 503, ...apiError("GOOGLE_NOT_CONFIGURED") };
   }
-  const invalid = { ok: false, status: 401, error: "Neplatný Google token." } as const;
+  const invalid = { ok: false, status: 401, ...apiError("GOOGLE_TOKEN_INVALID") } as const;
   try {
     const userinfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -29,12 +30,12 @@ export async function verifyGoogleAccessToken(accessToken: unknown): Promise<Goo
     if (!tokenInfoRes.ok) return invalid;
     const tokenInfo = await tokenInfoRes.json() as { aud?: string; azp?: string; expires_in?: string | number };
     if (tokenInfo.aud !== env.GOOGLE_CLIENT_ID && tokenInfo.azp !== env.GOOGLE_CLIENT_ID) {
-      return { ok: false, status: 401, error: "Google token nebol vydaný pre túto aplikáciu." };
+      return { ok: false, status: 401, ...apiError("GOOGLE_TOKEN_WRONG_APP") };
     }
     const email = info.email.trim().toLowerCase();
     return { ok: true, sub: info.sub, email, name: info.name || email.split("@")[0], expiresIn: Number(tokenInfo.expires_in ?? 0) };
   } catch {
-    return { ok: false, status: 401, error: "Nepodarilo sa overiť Google token." };
+    return { ok: false, status: 401, ...apiError("GOOGLE_TOKEN_INVALID") };
   }
 }
 

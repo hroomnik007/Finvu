@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { apiError } from "../lib/apiErrors";
 import { and, eq, inArray, isNotNull, sql, asc } from "drizzle-orm";
 import { z } from "zod";
 import { zodDetails } from "../lib/validation";
@@ -185,7 +186,7 @@ export async function updateCategory(req: AuthRequest, res: Response): Promise<v
   if (existing.shared) {
     const renamed = body.data.name !== undefined && body.data.name.trim().toLowerCase() !== existing.name.trim().toLowerCase();
     if (renamed || body.data.autoLimit === true) {
-      res.status(400).json({ error: "Shared category can't be renamed or use auto limit. Stop sharing it first." });
+      res.status(400).json(apiError("SHARED_CATEGORY_LOCKED"));
       return;
     }
   }
@@ -256,7 +257,7 @@ export async function setCategoriesShared(req: AuthRequest, res: Response): Prom
     else await unshareCategories(req.userId!, body.data.ids);
   } catch (err) {
     if (err instanceof NotSharingError) {
-      res.status(400).json({ error: "Zdieľať kategórie možno len v domácnosti so zapnutým zdieľaním." });
+      res.status(400).json(apiError("SHARING_REQUIRES_HOUSEHOLD"));
       return;
     }
     throw err;
@@ -320,9 +321,7 @@ export async function deleteCategory(req: AuthRequest, res: Response): Promise<v
     .limit(1);
 
   if (refs.length > 0) {
-    res.status(400).json({
-      error: "Cannot delete category with existing transactions. Reassign or delete them first.",
-    });
+    res.status(400).json(apiError("CATEGORY_IN_USE"));
     return;
   }
 

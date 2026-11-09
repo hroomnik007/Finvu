@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { apiError } from "../lib/apiErrors";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -35,7 +36,7 @@ export async function webauthnRegisterOptions(req: AuthRequest, res: Response): 
 
   const creds = (req.body ?? {}) as { currentPassword?: unknown; currentPin?: unknown };
   if (!(await verifyReauth(user, creds))) {
-    res.status(401).json({ error: "Nesprávne overenie totožnosti." });
+    res.status(401).json(apiError("REAUTH_FAILED"));
     return;
   }
 
@@ -76,7 +77,7 @@ export async function webauthnRegisterVerify(req: AuthRequest, res: Response): P
   const { name: suggestedName, ...body } = (req.body ?? {}) as RegistrationResponseJSON & { name?: unknown };
 
   const expectedChallenge = consumeChallenge(userId);
-  if (!expectedChallenge) { res.status(400).json({ error: "Challenge vypršal." }); return; }
+  if (!expectedChallenge) { res.status(400).json(apiError("CHALLENGE_EXPIRED")); return; }
 
   let verification;
   try {
@@ -92,7 +93,7 @@ export async function webauthnRegisterVerify(req: AuthRequest, res: Response): P
   }
 
   if (!verification.verified || !verification.registrationInfo) {
-    res.status(400).json({ error: "Registrácia zlyhala." }); return;
+    res.status(400).json(apiError("PASSKEY_REGISTRATION_FAILED")); return;
   }
 
   const { credential, credentialDeviceType, credentialBackedUp, aaguid } = verification.registrationInfo;
@@ -199,7 +200,7 @@ export async function webauthnAuthenticateVerify(req: any, res: Response): Promi
 // sensitive action (account deletion) with one of the caller's own passkeys.
 export async function webauthnReauthOptions(req: AuthRequest, res: Response): Promise<void> {
   const options = await passkeyReauthOptions(req.userId!);
-  if (!options) { res.status(400).json({ error: "Nemáš žiadny passkey." }); return; }
+  if (!options) { res.status(400).json(apiError("NO_PASSKEY")); return; }
   res.json(options);
 }
 
@@ -225,7 +226,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // can never remove another user's passkey by guessing ids.
 export async function deletePasskey(req: AuthRequest, res: Response): Promise<void> {
   const id = req.params["id"] as string;
-  if (!UUID_RE.test(id)) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  if (!UUID_RE.test(id)) { res.status(404).json(apiError("PASSKEY_NOT_FOUND")); return; }
   // Without another way to sign in, removing the last passkey would lock the account.
   const [u] = await db
     .select({ passwordHash: users.passwordHash, pinHash: users.pinHash, googleId: users.googleId })
@@ -237,14 +238,14 @@ export async function deletePasskey(req: AuthRequest, res: Response): Promise<vo
     .from(webauthnCredentials)
     .where(eq(webauthnCredentials.userId, req.userId!));
   if (n <= 1 && !u?.passwordHash && !u?.pinHash && !u?.googleId) {
-    res.status(400).json({ error: "Toto je tvoj jediný spôsob prihlásenia. Najprv si nastav heslo, PIN alebo Google." });
+    res.status(400).json(apiError("LAST_SIGN_IN_METHOD"));
     return;
   }
   const removed = await db
     .delete(webauthnCredentials)
     .where(and(eq(webauthnCredentials.id, id), eq(webauthnCredentials.userId, req.userId!)))
     .returning({ id: webauthnCredentials.id });
-  if (removed.length === 0) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  if (removed.length === 0) { res.status(404).json(apiError("PASSKEY_NOT_FOUND")); return; }
   res.json({ success: true });
 }
 
@@ -252,14 +253,14 @@ export async function deletePasskey(req: AuthRequest, res: Response): Promise<vo
 // caller's passkeys. Scoped by user id like DELETE: someone else's id is a 404.
 export async function renamePasskey(req: AuthRequest, res: Response): Promise<void> {
   const id = req.params["id"] as string;
-  if (!UUID_RE.test(id)) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  if (!UUID_RE.test(id)) { res.status(404).json(apiError("PASSKEY_NOT_FOUND")); return; }
   const name = cleanPasskeyName((req.body ?? {}).name);
-  if (!name) { res.status(400).json({ error: "Zadaj názov passkey." }); return; }
+  if (!name) { res.status(400).json(apiError("PASSKEY_NAME_REQUIRED")); return; }
   const updated = await db
     .update(webauthnCredentials)
     .set({ name })
     .where(and(eq(webauthnCredentials.id, id), eq(webauthnCredentials.userId, req.userId!)))
     .returning({ id: webauthnCredentials.id, name: webauthnCredentials.name });
-  if (updated.length === 0) { res.status(404).json({ error: "Passkey nenájdený." }); return; }
+  if (updated.length === 0) { res.status(404).json(apiError("PASSKEY_NOT_FOUND")); return; }
   res.json(updated[0]);
 }

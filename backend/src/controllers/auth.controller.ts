@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
+import { apiError } from "../lib/apiErrors";
 import { lookupLocation } from "../lib/geoip";
 import { localDateISO } from "../lib/localDate";
 import { isIP } from "net";
@@ -551,7 +552,7 @@ export async function updateAvatar(req: AuthRequest, res: Response): Promise<voi
 export async function verifyEmail(req: Request, res: Response): Promise<void> {
   const token = req.query.token as string | undefined;
   if (!token) {
-    res.status(400).json({ error: "Chýba overovací token." });
+    res.status(400).json(apiError("MISSING_VERIFICATION_TOKEN"));
     return;
   }
 
@@ -567,7 +568,7 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
     ))
     .limit(1);
   if (!user) {
-    res.status(400).json({ error: "Neplatný alebo vypršaný overovací odkaz." });
+    res.status(400).json(apiError("INVALID_VERIFICATION_LINK"));
     return;
   }
 
@@ -642,7 +643,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
   const { token, newPassword } = req.body as { token?: string; newPassword?: string };
 
   if (!token || !newPassword || newPassword.length < 8) {
-    res.status(400).json({ error: "Neplatná požiadavka." });
+    res.status(400).json(apiError("INVALID_REQUEST"));
     return;
   }
 
@@ -654,7 +655,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     .limit(1);
 
   if (!resetRecord) {
-    res.status(400).json({ error: "Neplatný alebo vypršaný odkaz na obnovu hesla." });
+    res.status(400).json(apiError("INVALID_RESET_LINK"));
     return;
   }
 
@@ -796,7 +797,7 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
 export async function googleAuth(req: Request, res: Response): Promise<void> {
   const verified = await verifyGoogleAccessToken((req.body ?? {}).accessToken);
   if (!verified.ok) {
-    res.status(verified.status).json({ error: verified.error });
+    res.status(verified.status).json({ error: verified.error, code: verified.code });
     return;
   }
   const { sub: googleId, email, name } = verified;
@@ -861,27 +862,27 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
     .select({ passwordHash: users.passwordHash, pinHash: users.pinHash, googleId: users.googleId })
     .from(users).where(eq(users.id, userId)).limit(1);
   if (!user) {
-    res.status(404).json({ error: "Používateľ neexistuje." });
+    res.status(404).json(apiError("USER_NOT_FOUND"));
     return;
   }
 
   if (user.passwordHash) {
     if (typeof body.currentPassword !== "string" || !body.currentPassword) {
-      res.status(400).json({ error: "Pre zmazanie účtu zadaj aktuálne heslo." });
+      res.status(400).json(apiError("CURRENT_PASSWORD_REQUIRED"));
       return;
     }
     const valid = await bcrypt.compare(body.currentPassword, user.passwordHash);
     if (!valid) {
-      res.status(401).json({ error: "Nesprávne aktuálne heslo." });
+      res.status(401).json(apiError("WRONG_CURRENT_PASSWORD"));
       return;
     }
   } else if (body.passkey !== undefined) {
     if (!(await verifyPasskeyReauth(userId, body.passkey))) {
-      res.status(401).json({ error: "Overenie passkey zlyhalo. Skús to znova." });
+      res.status(401).json(apiError("PASSKEY_REAUTH_FAILED"));
       return;
     }
   } else if (body.pin !== undefined) {
-    const PIN_FAIL = { error: "Nesprávny PIN." };
+    const PIN_FAIL = authError("INVALID_PIN");
     if (!user.pinHash || typeof body.pin !== "string" || !/^\d{4}$/.test(body.pin)) {
       res.status(401).json(PIN_FAIL);
       return;
@@ -889,7 +890,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
     // Same rules as PIN sign-in: only from a device bound to the PIN, and the
     // per-account lockout is checked before (and fed by) the comparison.
     if (!(await verifyAndSlidePinDeviceToken(res, userId, req))) {
-      res.status(401).json({ error: "PIN sa dá použiť len na zariadení, kde bol nastavený.", code: "PIN_DEVICE_NOT_BOUND" });
+      res.status(401).json(apiError("PIN_DEVICE_NOT_BOUND"));
       return;
     }
     const lockKey = pinKey(userId);
@@ -906,15 +907,15 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
   } else if (body.googleAccessToken !== undefined) {
     const google = await verifyGoogleAccessToken(body.googleAccessToken);
     if (!google.ok) {
-      res.status(google.status).json({ error: google.error });
+      res.status(google.status).json({ error: google.error, code: google.code });
       return;
     }
     if (!user.googleId || google.sub !== user.googleId) {
-      res.status(401).json({ error: "Prihlás sa Google účtom, ktorý patrí k tomuto účtu." });
+      res.status(401).json(apiError("GOOGLE_ACCOUNT_MISMATCH"));
       return;
     }
     if (google.expiresIn < FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN) {
-      res.status(401).json({ error: "Prihlásenie cez Google je príliš staré. Skús to znova." });
+      res.status(401).json(apiError("GOOGLE_REAUTH_STALE"));
       return;
     }
   } else {
@@ -924,7 +925,7 @@ export async function deleteAccount(req: AuthRequest, res: Response): Promise<vo
       .from(webauthnCredentials)
       .where(eq(webauthnCredentials.userId, userId));
     const methods = [n > 0 && "passkey", user.pinHash && "pin", user.googleId && "google"].filter(Boolean);
-    res.status(400).json({ error: "Pre zmazanie účtu potvrď svoju totožnosť.", code: "REAUTH_REQUIRED", methods });
+    res.status(400).json({ ...apiError("REAUTH_REQUIRED"), methods });
     return;
   }
 
@@ -945,7 +946,7 @@ export async function pinLogin(req: Request, res: Response): Promise<void> {
   const email = normalizeEmail(body.email);
   const pin = body.pin;
   if (!email || typeof pin !== 'string' || pin.length !== 4) {
-    res.status(400).json({ error: "Neplatná požiadavka." });
+    res.status(400).json(apiError("INVALID_REQUEST"));
     return;
   }
 
@@ -1004,12 +1005,12 @@ export async function updatePin(req: AuthRequest, res: Response): Promise<void> 
   const userId = req.userId!;
   const { pin, currentPassword, currentPin, googleAccessToken } = req.body as { pin?: string; currentPassword?: string; currentPin?: string; googleAccessToken?: unknown };
   if (!pin || typeof pin !== 'string' || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-    res.status(400).json({ error: "PIN musí byť 4-miestne číslo." });
+    res.status(400).json(apiError("PIN_FORMAT"));
     return;
   }
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user) { res.status(404).json({ error: "Používateľ neexistuje." }); return; }
+  if (!user) { res.status(404).json(apiError("USER_NOT_FOUND")); return; }
 
   // Re-auth before planting/replacing a full-strength login credential — a
   // valid access token alone is not enough (see security audit run-1: a
@@ -1023,24 +1024,24 @@ export async function updatePin(req: AuthRequest, res: Response): Promise<void> 
     const pinOk = typeof currentPin === 'string' && currentPin.length === 4 && await bcrypt.compare(currentPin, user.pinHash);
     const pwOk = !pinOk && !!user.passwordHash && typeof currentPassword === 'string' && await bcrypt.compare(currentPassword, user.passwordHash);
     if (!pinOk && !pwOk) {
-      res.status(401).json({ error: "Nesprávne overenie totožnosti." });
+      res.status(401).json(apiError("REAUTH_FAILED"));
       return;
     }
   } else if (user.passwordHash) {
     const pwOk = typeof currentPassword === 'string' && await bcrypt.compare(currentPassword, user.passwordHash);
     if (!pwOk) {
-      res.status(401).json({ error: "Nesprávne heslo." });
+      res.status(401).json(apiError("WRONG_PASSWORD"));
       return;
     }
   } else {
     if (googleAccessToken === undefined) {
-      res.status(400).json({ error: "Pre nastavenie PIN-u potvrď svoju totožnosť.", code: "REAUTH_REQUIRED", methods: ["google"] });
+      res.status(400).json({ ...apiError("REAUTH_REQUIRED"), methods: ["google"] });
       return;
     }
     const google = await verifyGoogleAccessToken(googleAccessToken);
     const verdict = checkGoogleReauth(user, google, FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN);
     if (!verdict.ok) {
-      res.status(verdict.status).json({ error: verdict.error });
+      res.status(verdict.status).json({ error: verdict.error, code: verdict.code });
       return;
     }
   }
@@ -1075,13 +1076,13 @@ export async function removePin(req: AuthRequest, res: Response): Promise<void> 
   const { currentPassword, currentPin } = req.body as { currentPassword?: string; currentPin?: string };
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user) { res.status(404).json({ error: "Používateľ neexistuje." }); return; }
+  if (!user) { res.status(404).json(apiError("USER_NOT_FOUND")); return; }
 
   if (user.pinHash) {
     const pinOk = typeof currentPin === 'string' && currentPin.length === 4 && await bcrypt.compare(currentPin, user.pinHash);
     const pwOk = !pinOk && !!user.passwordHash && typeof currentPassword === 'string' && await bcrypt.compare(currentPassword, user.passwordHash);
     if (!pinOk && !pwOk) {
-      res.status(401).json({ error: "Nesprávne overenie totožnosti." });
+      res.status(401).json(apiError("REAUTH_FAILED"));
       return;
     }
   }
@@ -1129,7 +1130,7 @@ export async function getPinDevices(req: AuthRequest, res: Response): Promise<vo
 
 export async function deletePinDevice(req: AuthRequest, res: Response): Promise<void> {
   const { id } = req.params as { id: string };
-  if (!UUID_RE.test(id)) { res.status(404).json({ error: "Zariadenie nenájdené." }); return; }
+  if (!UUID_RE.test(id)) { res.status(404).json(apiError("DEVICE_NOT_FOUND")); return; }
 
   // Scoped to req.userId — never trust :id alone, or one user could revoke
   // another user's device token by guessing/enumerating IDs.
@@ -1138,7 +1139,7 @@ export async function deletePinDevice(req: AuthRequest, res: Response): Promise<
     .where(and(eq(pinDeviceTokens.id, id), eq(pinDeviceTokens.userId, req.userId!)))
     .returning({ tokenHash: pinDeviceTokens.tokenHash });
 
-  if (deleted.length === 0) { res.status(404).json({ error: "Zariadenie nenájdené." }); return; }
+  if (deleted.length === 0) { res.status(404).json(apiError("DEVICE_NOT_FOUND")); return; }
 
   const cookieToken: string | undefined = req.cookies?.[PIN_DEVICE_COOKIE];
   if (cookieToken && await compareToken(cookieToken, deleted[0].tokenHash)) {
@@ -1153,19 +1154,19 @@ export async function changePassword(req: AuthRequest, res: Response): Promise<v
   const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
 
   if (!currentPassword || !newPassword || newPassword.length < 8) {
-    res.status(400).json({ error: "Neplatná požiadavka." });
+    res.status(400).json(apiError("INVALID_REQUEST"));
     return;
   }
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user?.passwordHash) {
-    res.status(400).json({ error: "Zmena hesla nie je dostupná pre tento typ účtu." });
+    res.status(400).json(apiError("PASSWORD_CHANGE_UNAVAILABLE"));
     return;
   }
 
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) {
-    res.status(401).json({ error: "Nesprávne aktuálne heslo." });
+    res.status(401).json(apiError("WRONG_CURRENT_PASSWORD"));
     return;
   }
 
@@ -1249,16 +1250,16 @@ export async function deactivateAccount(req: AuthRequest, res: Response): Promis
 
   if (body.currentPassword !== undefined) {
     if (!user.passwordHash || !(await verifyReauth(user, { currentPassword: body.currentPassword }))) {
-      res.status(401).json({ error: "Nesprávne aktuálne heslo." })
+      res.status(401).json(apiError("WRONG_CURRENT_PASSWORD"))
       return
     }
   } else if (body.pin !== undefined) {
     if (!user.pinHash || typeof body.pin !== "string" || !/^\d{4}$/.test(body.pin)) {
-      res.status(401).json({ error: "Nesprávny PIN." })
+      res.status(401).json(authError("INVALID_PIN"))
       return
     }
     if (!(await verifyAndSlidePinDeviceToken(res, userId, req))) {
-      res.status(401).json({ error: "PIN sa dá použiť len na zariadení, kde bol nastavený.", code: "PIN_DEVICE_NOT_BOUND" })
+      res.status(401).json(apiError("PIN_DEVICE_NOT_BOUND"))
       return
     }
     const lockKey = pinKey(userId)
@@ -1267,20 +1268,20 @@ export async function deactivateAccount(req: AuthRequest, res: Response): Promis
       return
     }
     if (!(await bcrypt.compare(body.pin, user.pinHash))) {
-      res.status(401).json({ error: "Nesprávny PIN." })
+      res.status(401).json(authError("INVALID_PIN"))
       return
     }
     await clearFailures(lockKey)
   } else if (body.googleAccessToken !== undefined) {
     const check = checkGoogleReauth(user, await verifyGoogleAccessToken(body.googleAccessToken), FRESH_GOOGLE_TOKEN_MIN_EXPIRES_IN)
     if (!check.ok) {
-      res.status(check.status).json({ error: check.error })
+      res.status(check.status).json({ error: check.error, code: check.code })
       return
     }
   } else {
     // Tell the client which proofs this account can give.
     const methods = [user.passwordHash && "password", user.pinHash && "pin", user.googleId && "google"].filter(Boolean)
-    res.status(400).json({ error: "Pre deaktiváciu účtu potvrď svoju totožnosť.", code: "REAUTH_REQUIRED", methods })
+    res.status(400).json({ ...apiError("REAUTH_REQUIRED"), methods })
     return
   }
 

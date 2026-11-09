@@ -1,4 +1,5 @@
 import { Router, type Response } from "express";
+import { apiError } from "../lib/apiErrors";
 import rateLimit from "express-rate-limit";
 import { authenticateToken, type AuthRequest } from "../middleware/authenticate";
 import { buildBackup, restoreBackup, restoreSchema } from "../lib/backup";
@@ -16,7 +17,7 @@ const exportLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => perUser(req as AuthRequest),
-  message: { error: "Príliš veľa záloh naraz. Skús to o chvíľu." },
+  message: apiError("RATE_LIMITED"),
 });
 
 // Restoring rewrites the account in one transaction: a few tries per quarter hour are plenty
@@ -26,7 +27,7 @@ const restoreLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => perUser(req as AuthRequest),
-  message: { error: "Príliš veľa obnovení naraz. Skús to o chvíľu." },
+  message: apiError("RATE_LIMITED"),
 });
 
 router.get("/", exportLimiter, async (req: AuthRequest, res: Response) => {
