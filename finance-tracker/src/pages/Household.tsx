@@ -19,6 +19,7 @@ import { getSummaryCards } from '../api/transactions'
 import { shareCategories } from '../api/categories'
 import type { HouseholdData, MonthlyStats, ActivityItem } from '../api/households'
 import { parseDescription } from '../hooks/useFixedExpenses'
+import { activityMeta } from '../utils/householdMembers'
 
 const CAT_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#A78BFA', '#F97316']
 
@@ -470,7 +471,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                             <span style={{ color: 'var(--aurora-faint)' }}> {actionText} </span>
                             <span style={{ fontWeight: 500 }}>{description}</span>
                           </p>
-                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{timeAgo(a.created_at, ht, locale)}</p>
+                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activityMeta(a, timeAgo(a.created_at, ht, locale), t.annual.noCategory)}</p>
                         </div>
                         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', flexShrink: 0 }}>
                           {isIncome ? '+' : '−'}{formatAmount(a.amount)}

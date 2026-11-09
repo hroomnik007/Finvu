@@ -1017,6 +1017,9 @@ export const pl: Translations = {
     count: 'Znaleziono: {n}',
     more: 'Pokaż więcej',
     fixed: 'Cykliczne',
+    member: 'Członek',
+    everyone: 'Wszyscy',
+    me: 'Ja',
   },
   annual: {
     chartTitle: 'Przychody i wydatki według miesięcy',

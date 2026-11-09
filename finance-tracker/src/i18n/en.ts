@@ -1017,6 +1017,9 @@ export const en: Translations = {
     count: 'Found: {n}',
     more: 'Show more',
     fixed: 'Recurring',
+    member: 'Member',
+    everyone: 'Everyone',
+    me: 'Me',
   },
   annual: {
     chartTitle: 'Income and expenses by month',

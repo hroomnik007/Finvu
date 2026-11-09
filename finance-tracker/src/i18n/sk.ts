@@ -1015,6 +1015,9 @@ export const sk = {
     count: 'Nájdených: {n}',
     more: 'Zobraziť ďalšie',
     fixed: 'Pravidelné',
+    member: 'Člen',
+    everyone: 'Všetci',
+    me: 'Ja',
   },
   annual: {
     chartTitle: 'Príjmy a výdavky po mesiacoch',

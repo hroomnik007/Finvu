@@ -408,9 +408,11 @@ export async function getActivity(req: AuthRequest, res: Response): Promise<void
       createdBy: transactions.createdBy,
       createdByName: users.name,
       createdAt: transactions.createdAt,
+      categoryName: categories.name,
     })
     .from(transactions)
     .leftJoin(users, eq(transactions.createdBy, users.id))
+    .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .where(
       and(
         inArray(transactions.userId, familyMemberIds(householdId)),
@@ -429,6 +431,7 @@ export async function getActivity(req: AuthRequest, res: Response): Promise<void
       created_by: r.createdBy,
       created_by_name: r.createdByName,
       created_at: r.createdAt,
+      category_name: r.categoryName ?? null,
     }))
   );
 }

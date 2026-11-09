@@ -1017,6 +1017,9 @@ export const cs: Translations = {
     count: 'Nalezeno: {n}',
     more: 'Zobrazit další',
     fixed: 'Pravidelné',
+    member: 'Člen',
+    everyone: 'Všichni',
+    me: 'Já',
   },
   annual: {
     chartTitle: 'Příjmy a výdaje po měsících',

@@ -1017,6 +1017,9 @@ export const hu: Translations = {
     count: 'Találatok: {n}',
     more: 'Továbbiak',
     fixed: 'Rendszeres',
+    member: 'Tag',
+    everyone: 'Mindenki',
+    me: 'Én',
   },
   annual: {
     chartTitle: 'Bevételek és kiadások havonta',

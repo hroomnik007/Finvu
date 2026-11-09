@@ -50,6 +50,8 @@ const listQuerySchema = z.object({
   maxAmount: z.coerce.number().min(0).optional(),
   from: isoDate.optional(),
   to: isoDate.optional(),
+  // Family scope only: narrow the list to one sharing member's rows
+  member: z.guid().optional(),
 });
 
 const scopeSchema = z.enum(["personal", "family"]).optional().default("personal");
@@ -132,7 +134,7 @@ export async function listTransactions(req: AuthRequest, res: Response): Promise
     return;
   }
 
-  const { month, type, isFixed, limit, offset, scope, q, minAmount, maxAmount, from, to } = query.data;
+  const { month, type, isFixed, limit, offset, scope, q, minAmount, maxAmount, from, to, member } = query.data;
 
   // Family scope lists every sharing member's rows (read-only context for the
   // dashboard); it silently falls back to the caller's own rows when they are
@@ -145,6 +147,9 @@ export async function listTransactions(req: AuthRequest, res: Response): Promise
     }
   }
   const filters = buildFilters(owner, month, type, isFixed, { q, minAmount, maxAmount, from, to });
+  // The member filter only narrows the owner set above (which already enforces
+  // household access), so an id outside the household simply matches nothing.
+  if (member) filters.push(eq(transactions.userId, member));
 
   const [rows, [{ total }]] = await Promise.all([
     db
