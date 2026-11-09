@@ -42,6 +42,7 @@ import { useAuth } from '../context/AuthContext'
 import type { Category } from '../types'
 import AmountInput from '../components/AmountInput'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
+import { sharedFixedLimit, sharedLimitFor } from '../utils/sharedLimit'
 
 const selectBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
@@ -64,7 +65,13 @@ const PRESET_ICONS = [
 ]
 
 // "fixné X + variabilné Y" for auto-limit categories that reserve room for variable spending
+// (and shared ones whose limit is the household's fixed expenses plus a common reserve)
 function limitBreakdown(cat: Category, formatAmount: (n: number) => string, t: ReturnType<typeof useTranslation>['t']): string {
+  const shared = sharedFixedLimit(cat)
+  if (shared) {
+    if (!shared.reserve) return ''
+    return ` · ${t.expenses.categories.limitBreakdown.replace('{fixed}', formatAmount(shared.fixedTotal)).replace('{reserve}', formatAmount(shared.reserve))}`
+  }
   if (!cat.autoLimit || !cat.limitReserve || cat.budgetLimit == null) return ''
   const fixed = Math.max(0, cat.budgetLimit - cat.limitReserve)
   return ` · ${t.expenses.categories.limitBreakdown.replace('{fixed}', formatAmount(fixed)).replace('{reserve}', formatAmount(cat.limitReserve))}`
@@ -481,12 +488,18 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     setEditing(cat); setName(cat.name); setColor(cat.color); setIcon(cat.icon)
     setBudgetLimit(cat.budgetLimit != null ? formatAmountInput(cat.budgetLimit, decimalSeparator(locale)) : ''); setCatType(cat.type)
     setAutoLimit(cat.hasFixedExpenses ? (cat.autoLimit ?? true) : false)
-    setLimitReserve(cat.limitReserve ? formatAmountInput(cat.limitReserve, decimalSeparator(locale)) : '')
+    // A shared category with household fixed expenses edits the common reserve
+    const reserve = sharedFixedLimit(cat)?.reserve ?? cat.limitReserve
+    setLimitReserve(reserve ? formatAmountInput(reserve, decimalSeparator(locale)) : '')
     setSharedFlag(cat.shared ?? false)
     setSheetOpen(true)
   }
 
   function closeSheet() { setSheetOpen(false); setEditing(null) }
+
+  // Editing a shared category in which some member has fixed expenses: the limit
+  // is their total plus the common reserve, so only the reserve is editable
+  const editingSharedFixed = editing && sharedFlag ? sharedFixedLimit(editing) : null
 
   async function handleSave() {
     if (!name.trim()) return
@@ -525,8 +538,11 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         await updateCategory(editing.id, {
           name: name.trim(), color, icon,
           autoLimit: effectiveAutoLimit,
-          // With auto limit the reserve for variable spending is added on top of the fixed total
-          ...(effectiveAutoLimit ? { limitReserve: parseReserve(limitReserve) } : { budgetLimit: limit && limit > 0 ? limit : undefined }),
+          // With auto limit (or a shared category with household fixed expenses) the
+          // reserve for variable spending is added on top of the fixed total
+          ...(effectiveAutoLimit || editingSharedFixed
+            ? { limitReserve: parseReserve(limitReserve) }
+            : { budgetLimit: limit && limit > 0 ? limit : undefined }),
         })
         if (sharedFlag !== (editing.shared ?? false)) {
           try {
@@ -931,7 +947,30 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
               </button>
             </div>
           )}
-          {editing?.hasFixedExpenses && autoLimit && !sharedFlag ? (
+          {editingSharedFixed ? (
+            <>
+            <div style={{
+              padding: '10px 14px', borderRadius: 12,
+              background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
+              fontSize: 12, color: 'var(--aurora-violet-text)', fontFamily: "'Manrope', sans-serif", lineHeight: 1.4,
+            }}>
+              <div style={{ fontWeight: 600 }}>
+                👥 {t.expenses.categories.sharedFixedComputed
+                  .replace('{amount}', formatAmount(sharedLimitFor(editingSharedFixed.fixedTotal, parseReserve(limitReserve))))
+                  .replace('{fixed}', formatAmount(editingSharedFixed.fixedTotal))
+                  .replace('{reserve}', formatAmount(parseReserve(limitReserve)))}
+              </div>
+              <div style={{ marginTop: 4, color: 'var(--aurora-lo)' }}>{t.expenses.categories.sharedFixedHint}</div>
+            </div>
+            <AmountInput
+              placeholder={t.expenses.categories.limitReserveLabel}
+              aria-label={t.expenses.categories.limitReserveLabel}
+              value={limitReserve}
+              onValueChange={setLimitReserve}
+              style={{ width: '100%', marginTop: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+            />
+            </>
+          ) : editing?.hasFixedExpenses && autoLimit && !sharedFlag ? (
             <>
             <div style={{
               padding: '10px 14px', borderRadius: 12,

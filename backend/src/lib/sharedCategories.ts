@@ -2,8 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { categories, transactions, users } from "../db/schema";
 import { familyMemberIds } from "./household";
-import { pickSharedLimit } from "./sharedLimit";
-import { activeSeriesTotal } from "./recurring";
+import { pickSharedLimit, summarizeSharedFixed } from "./sharedLimit";
 
 // Categories are per user, so "the same category" across the family is matched
 // by type + trimmed, case-insensitive name (the same pairing household stats use).
@@ -23,21 +22,23 @@ export async function sharingMemberIds(userId: string): Promise<string[] | null>
 
 export class NotSharingError extends Error {}
 
-// The shared limit is the family's budget for the category:
-//  - a category with fixed expenses: the fixed expenses of all members added up
-//    (plus the largest reserve a member kept for variable spending),
-//  - otherwise the highest limit any member set.
-// A single member's limit therefore applies as-is when the others have none.
-async function computeSharedLimit(members: string[], name: string): Promise<string | null> {
+// Fixed expenses of the same-named categories of all `members` plus the reserve
+// the shared copies carry, per trimmed lower-case name (see summarizeSharedFixed).
+async function loadSharedFixed(members: string[], names: string[]) {
+  const unique = [...new Set(names)];
+  if (unique.length === 0) return { copies: [], summary: new Map<string, { fixedTotal: number; reserve: number }>() };
   const copies = await db
     .select()
     .from(categories)
-    .where(and(inArray(categories.userId, members), eq(categories.type, "expense"), sameName(name)));
-  if (copies.length === 0) return null;
+    .where(and(
+      inArray(categories.userId, members),
+      eq(categories.type, "expense"),
+      sql`lower(btrim(${categories.name})) IN (${sql.join(unique.map((n) => sql`lower(btrim(${n}))`), sql`, `)})`,
+    ));
+  if (copies.length === 0) return { copies, summary: new Map<string, { fixedTotal: number; reserve: number }>() };
 
-  const today = new Date();
   const fixedRows = await db
-    .select({ userId: transactions.userId, type: transactions.type, description: transactions.description, amount: transactions.amount, date: transactions.date, endedOn: transactions.endedOn })
+    .select({ categoryId: transactions.categoryId, userId: transactions.userId, type: transactions.type, description: transactions.description, amount: transactions.amount, date: transactions.date, endedOn: transactions.endedOn })
     .from(transactions)
     .where(and(
       inArray(transactions.categoryId, copies.map((c) => c.id)),
@@ -45,12 +46,37 @@ async function computeSharedLimit(members: string[], name: string): Promise<stri
       eq(transactions.type, "expense"),
     ))
     .orderBy(transactions.date);
+  const today = new Date();
+  const summary = summarizeSharedFixed({ copies, fixedRows, year: today.getFullYear(), month: today.getMonth() + 1 });
+  return { copies, summary };
+}
+
+// The shared limit is the family's budget for the category:
+//  - a category with fixed expenses: the fixed expenses of all members added up
+//    plus the common reserve for variable spending (set on any shared copy and
+//    propagated to all of them, see propagateSharedReserve),
+//  - otherwise the highest limit any member set.
+// A single member's limit therefore applies as-is when the others have none.
+async function computeSharedLimit(members: string[], name: string): Promise<string | null> {
+  const { copies, summary } = await loadSharedFixed(members, [name]);
+  if (copies.length === 0) return null;
+  const info = summary.get(name.trim().toLowerCase()) ?? { fixedTotal: 0, reserve: 0 };
   const limit = pickSharedLimit({
-    fixedTotal: activeSeriesTotal(fixedRows, today.getFullYear(), today.getMonth() + 1),
-    reserves: copies.map((c) => Number(c.limitReserve ?? 0)),
+    fixedTotal: info.fixedTotal,
+    reserves: [info.reserve],
     limits: copies.map((c) => Number(c.budgetLimit)),
   });
   return limit != null ? String(limit) : null;
+}
+
+// For the caller's shared categories: the household's active fixed total and the
+// reserve that applies, keyed by trimmed lower-case name. Empty when the caller
+// doesn't share with a household. Exposes totals only, never other members' rows.
+export async function sharedFixedInfo(userId: string, names: string[]): Promise<Map<string, { fixedTotal: number; reserve: number }>> {
+  if (names.length === 0) return new Map();
+  const members = await sharingMemberIds(userId);
+  if (!members) return new Map();
+  return (await loadSharedFixed(members, names)).summary;
 }
 
 async function applySharedLimit(members: string[], name: string): Promise<void> {
@@ -138,6 +164,22 @@ export async function propagateSharedLimit(userId: string, name: string, budgetL
   await db
     .update(categories)
     .set({ budgetLimit })
+    .where(and(
+      inArray(categories.userId, members),
+      eq(categories.type, "expense"),
+      eq(categories.shared, true),
+      sameName(name),
+    ));
+}
+
+// The reserve for variable spending is one common value of a shared category:
+// setting it on one copy sets it on everyone's, so lowering it works too.
+export async function propagateSharedReserve(userId: string, name: string, limitReserve: string): Promise<void> {
+  const members = await sharingMemberIds(userId);
+  if (!members) return;
+  await db
+    .update(categories)
+    .set({ limitReserve })
     .where(and(
       inArray(categories.userId, members),
       eq(categories.type, "expense"),
