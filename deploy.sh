@@ -45,7 +45,10 @@ deploy_frontend() {
     ok "Frontend built → ${FRONTEND_SRC}/dist"
 
     log "Deploying frontend to ${FRONTEND_DEST}..."
-    rm -rf "${FRONTEND_DEST:?}"/*
+    # Copy over the old build instead of emptying the folder first, like the CI
+    # deploy: no window where nginx serves nothing, and tabs still running the
+    # previous build can lazy-load its hashed chunks until they reload.
+    mkdir -p "${FRONTEND_DEST}"
     cp -r "${FRONTEND_SRC}/dist/." "${FRONTEND_DEST}/"
     ok "Frontend files deployed"
 

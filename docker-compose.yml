@@ -25,5 +25,4 @@ networks:
     external: true
 
 volumes:
-  postgres_data:
   uploads_data:
