@@ -49,6 +49,10 @@ docker compose restart backend
 sudo tail -f /var/log/nginx/access.log
 ```
 
+`GET /api/health` answers 200 `{"status":"ok","db":"ok"}`, or 503 when Postgres is unreachable; the
+container healthcheck and the deploy's `--wait` use it. On `docker compose stop/up` the backend stops
+its cron jobs, finishes in-flight requests and closes the database pool (20 s cap, compose allows 30 s).
+
 ## Backups
 
 `scripts/backup.sh` dumps the database (`pg_dump -Fc`, checked with `pg_restore --list`) and archives

@@ -8,12 +8,12 @@ Na začiatku každého promptu si prečítaj tento CLAUDE.md súbor celý, pred 
 ## O projekte
 PWA aplikácia na sledovanie rodinných financií. Mobile-first, privacy-first.
 Inšpirovaná Monarch Money. Hostovaná na `pedani.eu` (Hetzner CX23).
-Aktuálna verzia: **Finvu 2026 v3**, vizuál je Aurora design system: CSS premenné `--aurora-*` v `src/index.css`. Fonty (`@theme` v `index.css`): DM Sans (`--font-sans`, základný text), DM Mono (`--font-mono`), Outfit (`--font-outfit`) a Manrope (`--font-manrope`) pre Aurora komponenty, Plus Jakarta Sans (`--font-landing`) pre landing.
+Aktuálna verzia: **Finvu 2026 v3**, vizuál je Aurora design system: CSS premenné `--aurora-*` v `src/index.css`. Fonty (`@theme` v `index.css`): DM Sans (`--font-sans`, základný text), DM Mono (`--font-mono`), Outfit (`--font-outfit`) a Manrope (`--font-manrope`) pre Aurora komponenty, Plus Jakarta Sans (`--font-landing`) pre landing. Fonty sú **self-hosted** (`src/fonts.css` + `src/assets/fonts/*.woff2`, latin + latin-ext) — nepridávať Google Fonts, CSP ich nepovoľuje.
 
 ## Tech Stack
 
 ### Frontend
-- React 19 + TypeScript 5.7 + Vite 8
+- React 19 + TypeScript 5.9 + Vite 8
 - Tailwind CSS 4 (Vite plugin)
 - Recharts — grafy
 - Vite PWA Plugin + Workbox — offline/PWA
@@ -22,7 +22,7 @@ Aktuálna verzia: **Finvu 2026 v3**, vizuál je Aurora design system: CSS premen
 - i18n — SK / CS / PL / HU / EN (5 jazykov, auto-detekcia pri prvej návšteve)
 
 ### Autentifikácia
-- WebAuthn (passkeys)
+- WebAuthn (passkeys) — predvolene vypnuté (`PASSKEYS_ENABLED`, routes vracajú 410)
 - Google OAuth
 - PIN login
 - JWT — Bearer token v pamäti (nie localStorage)
@@ -319,7 +319,8 @@ Pevné detaily jednotlivých sekcií sa tu nevedú (zastarávali) — zdroj prav
 - `BottomSheet` `onImportCsv` must be `undefined` when in edit mode — import only makes sense when adding new records
 - Never render both mobile and desktop Import CSV buttons simultaneously — use `hidden lg:flex` / `lg:hidden` pattern
 - `dashView` force-reset to `'personal'` requires `user` to be loaded — add `&& user` guard to prevent premature reset on initial render
+- **Chyby z API**: backend vracia `{ error: <anglický text>, code }` cez `apiError("CODE")` (`backend/src/lib/apiErrors.ts`, prihlasovacie v `authErrors.ts`); nikdy nie slovenský text v `error`. Frontend zobrazuje `apiErrorMessage(err, fallback, t)` (`src/utils/apiError.ts`) — preklad z i18n skupiny `apiErrors`, nikdy nie text zo servera. Nový kód = pridať do `apiErrors.ts` aj do `apiErrors` vo všetkých 5 jazykoch (test to kontroluje)
 - **i18n — nový jazykový kľúč**: pridať do **všetkých 5 súborov** (`finance-tracker/src/i18n/{sk,en,cs,pl,hu}.ts`) naraz; v angličtine (`en.ts`) sa apostrofy escapujú (`'You\'re'`); TypeScript build zlyhá ak chýba kľúč v niektorom súbore
 - **LanguageSwitcher dropdown**: používa `position: fixed` + `getBoundingClientRect()` — **nie** `position: absolute`, pretože `SectionCard` má `overflow: hidden` ktoré by dropdown orizlo
 - **Savings deep link**: `App.tsx → getPageFromHash()` stripuje `?` query params — bez toho by `#sporenie?id=X` padlo na dashboard
-- **Docker migrácie**: spustiť `docker exec ... node dist/scripts/migrate.js` po každej novej migrácii; migrácie musia byť COPY-ované v Dockerfile pred `npm run build`
+- **Migrácie pri deployi**: CI (`deploy.yml`) spúšťa `npm run db:migrate` na serveri pred buildom kontajnera — ručne netreba nič. Kód musí fungovať aj nad novou schémou so starou verziou (migrácia beží skôr, než sa vymení kontajner), takže stĺpce/tabuľky odstraňovať až v ďalšom releasi

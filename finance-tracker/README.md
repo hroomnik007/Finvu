@@ -33,18 +33,18 @@
 ## Tech stack
 
 ### Frontend
-- **React 19** + **TypeScript 5.8** + **Vite 8**
+- **React 19** + **TypeScript 5.9** + **Vite 8**
 - **Tailwind CSS 4**
-- **i18n** — vlastný typovaný systém (5 jazykov, 413 kľúčov)
+- **i18n** — vlastný typovaný systém (5 jazykov, ~1100 kľúčov); chyby zo servera sa prekladajú podľa kódu
 - **Recharts** — grafy
 - **PWA** — Vite PWA Plugin + Workbox (Service Worker)
 - **Export** — jsPDF, xlsx, papaparse
 
 ### Backend
-- **Node.js** + **Express 5** + **TypeScript 5.8**
+- **Node.js** + **Express 5** + **TypeScript 5.9**
 - **PostgreSQL 17** + **Drizzle ORM**
 - **JWT** (access token v pamäti) + **httpOnly cookie** (refresh token)
-- **WebAuthn** (passkeys), Google OAuth, PIN login
+- E-mail + heslo, Google OAuth, PIN login (passkeys/WebAuthn sú implementované, ale predvolene vypnuté: `PASSKEYS_ENABLED`)
 
 ### Infraštruktúra
 - **Docker** + **Docker Compose** (backend; PostgreSQL beží vo vlastnom kontajneri)
@@ -141,7 +141,7 @@ Podporované metódy:
 |---|---|
 | Email + heslo | Štandardná registrácia |
 | Google OAuth | Prihlásenie cez Google účet |
-| WebAuthn (Passkeys) | Biometria / hardvérový kľúč |
+| WebAuthn (Passkeys) | Predvolene vypnuté (`PASSKEYS_ENABLED=true` ich zapne) |
 | PIN | Rýchle prihlásenie PIN kódom |
 
 ---
