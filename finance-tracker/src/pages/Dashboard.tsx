@@ -18,6 +18,7 @@ import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { useIncomes } from '../hooks/useIncomes'
 import { useFixedExpenses, isFixedExpenseDue } from '../hooks/useFixedExpenses'
+import { monthForecast } from '../utils/monthForecast'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { useFormatters } from '../hooks/useFormatters'
@@ -301,10 +302,19 @@ const upcomingFixed = useMemo(() => {
 
   // ── Forecast (end-of-month prediction) ──────────────────────────────────────
   const forecastProgressPct = daysInMonth > 0 ? (dayOfMonth / daysInMonth) * 100 : 0
-  const predictedBalance = totalIncome - dailyAvgExpense * daysInMonth
+  // Fixed bills count once; only variable spending is extrapolated (see monthForecast)
+  const forecast = monthForecast({
+    income: totalIncome,
+    fixedPaid: totalFixed,
+    fixedPending: allMonthFixedExpenses.filter(f => !isFixedExpenseDue(f.dayOfMonth, month, year)).reduce((s, f) => s + f.amount, 0),
+    variable: totalVariable,
+    day: dayOfMonth,
+    daysInMonth,
+  })
+  const predictedBalance = forecast.balance
   const predictedBalanceText = `${predictedBalance >= 0 ? '+' : ''}${formatAmount(predictedBalance)}`
   const predictedBalanceColor = predictedBalance >= 0 ? 'var(--aurora-emerald)' : 'var(--aurora-rose)'
-  const paceText = t.dashboard.pace.replace('{amount}', formatAmount(dailyAvgExpense))
+  const paceText = t.dashboard.pace.replace('{amount}', formatAmount(forecast.variablePerDay))
 
   // ── Shared JSX blocks ──────────────────────────────────────────────────────
 
