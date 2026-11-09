@@ -1,7 +1,7 @@
 import { useState, useMemo, type ReactNode } from 'react'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, CalendarRange, X, Tag, Target, LayoutTemplate } from 'lucide-react'
+import { CalendarRange, Tag, Target } from 'lucide-react'
 import { ExpenseHeatmap } from '../components/ExpenseHeatmap'
 import { CategoryDonutCard } from '../components/CategoryDonutCard'
 import { ForecastCard } from '../components/ForecastCard'
@@ -261,13 +261,6 @@ const upcomingFixed = useMemo(() => {
     return null
   })()
 
-  async function handleDismissBanner() {
-    try {
-      await updateUserSettings({ onboardingBannerDismissed: true })
-      await refreshUser()
-    } catch { /* non-critical */ }
-  }
-
   async function handleSaveTrackingDate() {
     if (!trackingDate) return
     setTrackingSaving(true)
@@ -278,8 +271,6 @@ const upcomingFixed = useMemo(() => {
     } catch { /* non-critical */ }
     finally { setTrackingSaving(false) }
   }
-
-  const showTrackingBanner = !user?.tracking_start_date && !user?.onboarding_banner_dismissed
 
   // ── Right panel urgency + severity tinting ─────────────────────────────────
   const budgetSeverity = sortedBudgetStatuses.some(b => b.percentage >= 100)
@@ -637,99 +628,15 @@ const upcomingFixed = useMemo(() => {
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
     <div style={{ padding: `20px calc(20px + var(--page-inset, 0px))` }} className="flex flex-col gap-4 lg:gap-0 pb-4 w-full">
 
-      <FirstRunChecklist onNavigate={onNavigate} />
-
-      {/* Budget template offer: non-blocking replacement for the old modal */}
-      {budgetTemplateOffer && (
-        <GlassCard radius={14} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 12, padding: '12px 16px',
-          background: 'rgba(139,92,246,0.1)',
-          border: '1px solid rgba(139,92,246,0.3)',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-            <LayoutTemplate size={18} strokeWidth={1.8} color="var(--aurora-violet)" style={{ flexShrink: 0 }} />
-            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.4 }}>
-              {t.budgetTemplate.bannerText}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <button
-              onClick={budgetTemplateOffer.onOpen}
-              style={{
-                padding: '6px 14px', borderRadius: 10,
-                background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white',
-                fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
-              }}
-            >
-              {t.budgetTemplate.bannerCta}
-            </button>
-            <button
-              onClick={budgetTemplateOffer.onDismiss}
-              style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: 'transparent', border: '1px solid var(--aurora-gline)',
-                color: 'var(--aurora-faint)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}
-              title={t.budgetTemplate.bannerDismiss}
-              aria-label={t.budgetTemplate.bannerDismiss}
-            >
-              <X size={14} strokeWidth={2} />
-            </button>
-          </div>
-        </GlassCard>
-      )}
+      <FirstRunChecklist
+        onNavigate={onNavigate}
+        onOpenTemplate={budgetTemplateOffer?.onOpen}
+        onSetTrackingStart={() => setShowTrackingModal(true)}
+      />
 
       {/* Monthly charges that look like subscriptions: add them as fixed on the Fixed page */}
       {dashView === 'personal' && (
         <SubscriptionSuggestions className="lg:mb-4" max={2} onAdd={sub => { setFixedPrefill(sub); onNavigate('fixed-expenses') }} />
-      )}
-
-      {/* Tracking start date banner */}
-      {showTrackingBanner && (
-        <GlassCard radius={14} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 12, padding: '12px 16px',
-          background: 'rgba(139,92,246,0.1)',
-          border: '1px solid rgba(139,92,246,0.3)',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-            <CalendarClock size={18} strokeWidth={1.8} color="var(--aurora-violet)" style={{ flexShrink: 0 }} />
-            <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', lineHeight: 1.4 }}>
-              {t.dashboard.trackingBannerText}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <button
-              onClick={() => setShowTrackingModal(true)}
-              style={{
-                padding: '6px 14px', borderRadius: 10,
-                background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white',
-                fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
-              }}
-            >
-              {t.settings.setup}
-            </button>
-            <button
-              onClick={handleDismissBanner}
-              style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: 'transparent', border: '1px solid var(--aurora-gline)',
-                color: 'var(--aurora-faint)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}
-              title={t.common.closePermanently}
-              aria-label={t.common.closePermanently}
-            >
-              <X size={14} strokeWidth={2} />
-            </button>
-          </div>
-        </GlassCard>
       )}
 
       {/* Streak detail modal */}

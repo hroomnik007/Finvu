@@ -129,10 +129,10 @@ docker exec finance-tracker-repo-backend-1 node dist/scripts/migrate.js
 
 ## Onboarding
 
-- **7 krokov**: Vitajte → Príjmy → Výdavky → Sporenie → Domácnosť → Nastavenia → Spôsob prihlásenia
+- **Celý onboarding je checklist „Prvé kroky“** na dashboarde (`components/FirstRunChecklist.tsx`, logika v `utils/firstRun.ts`). Žiadna blokujúca obrazovka, tutoriál ani bannery (zrušené 2026-11)
+- Povinné kroky: príjem, výdavok, limit (odškrtávajú sa samé z dát). Nepovinné: šablóna rozpočtu (len kým je ponuka otvorená), dátum začiatku sledovania (otvorí okno v Dashboarde; bez neho platí deň registrácie), PIN (Nastavenia → Bezpečnosť cez `settings_open_section`), domácnosť
+- Checklist sa skryje po splnení povinných krokov alebo zatvorení; vtedy sa zapíše `user.onboarding_complete` (DB) a ponuka šablóny zmizne
 - **Budget template**: výber šablóny **nahradí** existujúce kategórie (nie pridá k nim) — `replaceCategories` flag
-- **"Preskočiť" na template kroku**: zachová default kategórie nezmenené
-- Onboarding sa zobrazí len raz — stav sleduje `user.onboarding_complete` (DB) a `user.onboarding_banner_dismissed`
 
 ## Lokálne overovanie (demo účet neexistuje)
 
