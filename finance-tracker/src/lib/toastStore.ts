@@ -61,6 +61,11 @@ export function showToast(message: string, options: ShowToastOptions = {}): numb
   return id
 }
 
+/** An error message in the app's own toast instead of a native dialog; errors stay a bit longer. */
+export function showErrorToast(message: string): number {
+  return showToast(message, { variant: 'error', duration: 6000 })
+}
+
 /** Runs a toast's action once: the toast is removed first, so a second tap
  * on the same button can't run the action twice. */
 export async function runToastAction(id: number): Promise<void> {

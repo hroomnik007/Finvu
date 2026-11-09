@@ -36,6 +36,7 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
+import { showErrorToast } from '../lib/toastStore'
 import { apiErrorMessage } from '../utils/apiError'
 import { pluralText } from '../utils/plural'
 import { reorderCategories as reorderCategoriesApi, shareCategories } from '../api/categories'
@@ -461,7 +462,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     await reload()
     setBulkBusy(false)
     setBulkOpen(false)
-    if (failed > 0) alert(t.expenses.categories.bulkPartialError.replace('{n}', String(failed)))
+    if (failed > 0) showErrorToast(t.expenses.categories.bulkPartialError.replace('{n}', String(failed)))
     else showToast(t.expenses.categories.bulkDone.replace('{n}', String(ids.length)))
     exitSelectMode()
   }
@@ -475,7 +476,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     await reload()
     setBulkBusy(false)
     setBulkDeleteOpen(false)
-    if (blocked > 0) alert(pluralText(blocked, t.expenses.categories.bulkDeleteBlocked, locale))
+    if (blocked > 0) showErrorToast(pluralText(blocked, t.expenses.categories.bulkDeleteBlocked, locale))
     if (selectedIds.size - blocked > 0) showToast(t.expenses.categories.bulkDeleted.replace('{n}', String(selectedIds.size - blocked)))
     exitSelectMode()
   }
@@ -549,7 +550,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
           try {
             await shareCategories([editing.id], sharedFlag)
           } catch (err: unknown) {
-            alert(apiErrorMessage(err, t.expenses.categories.deleteError, t))
+            showErrorToast(apiErrorMessage(err, t.expenses.categories.deleteError, t))
           }
           await reload()
         }
@@ -572,7 +573,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     try {
       await deleteCategory(id)
     } catch (err: unknown) {
-      alert(apiErrorMessage(err, t.expenses.categories.deleteError, t))
+      showErrorToast(apiErrorMessage(err, t.expenses.categories.deleteError, t))
     }
     setDeleteId(null)
   }
