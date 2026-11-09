@@ -24,6 +24,7 @@ import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { SuggestedCategoryHint } from './SuggestedCategoryHint'
 import AmountInput from './AmountInput'
+import { AmountEntry } from './AmountEntry'
 import { parseAmountInput } from '../utils/amountInput'
 
 type ModalType = 'income' | 'variable' | 'fixed' | 'category' | 'savings' | null
@@ -52,12 +53,6 @@ const PRESET_ICONS = [
   '☕', '🎬', '🛻', '🏥', '🎓', '🌿', '🧴', '💰',
 ]
 
-const amountFieldStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'baseline', gap: 5,
-  background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)',
-  borderRadius: 14, padding: '10px 14px',
-}
-
 const finputStyle: React.CSSProperties = {
   width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)',
   borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13,
@@ -65,17 +60,7 @@ const finputStyle: React.CSSProperties = {
 }
 
 function AmountField({ value, onChange, accent }: { value: string; onChange: (v: string) => void; accent: string }) {
-  return (
-    <div style={amountFieldStyle}>
-      <AmountInput placeholder="0"
-        value={value}
-        onValueChange={onChange}
-        style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
-      />
-      <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
-      <div style={{ width: 2, height: 20, borderRadius: 1, background: accent, flexShrink: 0 }} />
-    </div>
-  )
+  return <AmountEntry value={value} onValueChange={onChange} accent={accent} />
 }
 
 function pillChipStyle(active: boolean, accent: string, accent2: string): React.CSSProperties {
@@ -95,7 +80,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
   return (
     <button
       type="button" onClick={onClick}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 64 }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: 76 }}
     >
       <div style={{
         width: 42, height: 42, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -104,7 +89,7 @@ function CategoryCircle({ icon: Icon, label, selected, accent, accent2, onClick 
       }}>
         <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
       </div>
-      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', textAlign: 'center', lineHeight: 1.2, maxWidth: 64, overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{label}</span>
+      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', textAlign: 'center', lineHeight: 1.2, maxWidth: 76, overflowWrap: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{label}</span>
     </button>
   )
 }
@@ -492,7 +477,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         )}
 
         {!varNewCatMode ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 6px', padding: '2px 2px 4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 4px', padding: '2px 2px 4px' }}>
             {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}
@@ -557,7 +542,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           style={finputStyle}
         />
         {categories.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 6px', padding: '2px 2px 4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 4px', padding: '2px 2px 4px' }}>
             {quickCategories.map(c => (
               <CategoryCircle
                 key={c.id}

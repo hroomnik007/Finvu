@@ -31,7 +31,7 @@ import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import React from 'react'
-import AmountInput from '../components/AmountInput'
+import { AmountEntry } from '../components/AmountEntry'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 import { ValidFromHint } from '../components/ValidFromHint'
 import { todayISO } from '../utils/format'
@@ -730,15 +730,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         submitDisabled={!label.trim() || !amount}
         onImportCsv={editing ? undefined : () => { closeSheet(); setTimeout(() => setCsvOpen(true), 150) }}
       >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
-          <AmountInput
-            placeholder="0"
-            value={amount}
-            onValueChange={setAmount}
-            style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
-          />
-          <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
-        </div>
+        <AmountEntry value={amount} onValueChange={setAmount} />
 
         <input
           type="text"

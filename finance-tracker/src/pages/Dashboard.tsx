@@ -10,10 +10,8 @@ import { StreakModal } from '../components/StreakModal'
 import { GlassCard } from '../components/GlassCard'
 import { HeroCard } from '../components/HeroCard'
 import { HeroAmountPlaceholder, QueryError, Skeleton } from '../components/QueryState'
-import { DailyBudgetCard } from '../components/DailyBudgetCard'
 import { SubscriptionSuggestions } from '../components/SubscriptionSuggestions'
 import { setFixedPrefill } from '../utils/fixedPrefill'
-import { dailyBudget } from '../utils/dailyBudget'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { useIncomes } from '../hooks/useIncomes'
@@ -413,22 +411,15 @@ const upcomingFixed = useMemo(() => {
     </HeroCard>
   )
 
-  // "How much can I still spend": only meaningful for the running month
-  const pendingFixed = allMonthFixedExpenses.filter(f => !isFixedExpenseDue(f.dayOfMonth, month, year)).reduce((s, f) => s + f.amount, 0)
-  const budgetToday = month === now.getMonth() + 1 && year === now.getFullYear()
-    ? dailyBudget({ income: heroIncome, spent: heroExpenses, pendingFixed, day: now.getDate(), daysInMonth })
-    : null
-  const dailyBudgetCard = (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-      {budgetToday && (
-        <div style={{ flex: '1 1 260px', minWidth: 0, display: 'flex' }}>
-          <DailyBudgetCard budget={budgetToday} pendingFixed={pendingFixed} />
-        </div>
-      )}
+  // Link to the yearly overview (the "Tento mesiac môžeš minúť" card that sat
+  // next to it was removed: it compared all of the month's fixed bills with the
+  // income recorded so far and ignored money left from earlier months)
+  const annualLink = (
+    <div style={{ display: 'flex' }}>
       <button
         type="button"
         onClick={() => onNavigate('annual')}
-        style={{ flex: budgetToday ? '0 0 auto' : '1 1 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, padding: '0 20px', borderRadius: 18, border: 'none', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, boxShadow: '0 8px 22px rgba(139,92,246,.35)', whiteSpace: 'nowrap' }}
+        style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, padding: '0 20px', borderRadius: 18, border: 'none', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, boxShadow: '0 8px 22px rgba(139,92,246,.35)', whiteSpace: 'nowrap' }}
       >
         <CalendarRange size={16} /> {t.annual.link}
       </button>
@@ -708,7 +699,7 @@ const upcomingFixed = useMemo(() => {
       <div className="flex flex-col gap-4 lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }}>
         <div>{greetingRow}</div>
         {heroSection}
-        {dailyBudgetCard}
+        {annualLink}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {pieChartCard}
           {heatmapCard}
@@ -727,7 +718,7 @@ const upcomingFixed = useMemo(() => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, overflowX: 'hidden' }}>
           {greetingDesktop}
           {heroSection}
-          {dailyBudgetCard}
+          {annualLink}
           <div className="grid grid-cols-2 items-stretch" style={{ gap: 16 }}>
             {heatmapCard}
             {pieChartCard}

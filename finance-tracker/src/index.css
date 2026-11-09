@@ -816,6 +816,35 @@ html.compact .card { padding: var(--card-padding); }
   bottom: var(--fab-bottom);
 }
 
+/* In-app number pad of the amount fields (AmountEntry), touch devices only */
+.amount-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.amount-keypad button {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--aurora-gline);
+  background: var(--aurora-glass);
+  color: var(--aurora-hi);
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.amount-keypad button:active { background: var(--aurora-hover); }
+/* Short phones (iPhone SE class): a flatter pad so the form still fits */
+@media (max-height: 700px) {
+  .amount-keypad button { height: 36px; font-size: 18px; }
+}
+
 /* The add button steps aside while scrolling down and comes back on scroll up
    or once scrolling stops (html.fab-hidden, set in App.tsx).
    visibility drops it from the tab order once the slide-out has finished. */

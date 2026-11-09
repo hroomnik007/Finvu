@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import { AmountPadSlot } from './amountPadSlot'
 import { X, Check, FileUp, Loader2, Trash2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from '../i18n'
@@ -34,6 +35,7 @@ export function CompactModal({
   accent, accent2, onSubmit, submitDisabled, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount, onDelete,
 }: CompactModalProps) {
   const { t } = useTranslation()
+  const [padSlot, setPadSlot] = useState<HTMLDivElement | null>(null)
   const guard = useSubmitGuard()
   const busy = guard.pending || !!submitting
   const disabled = !!submitDisabled || busy
@@ -88,7 +90,7 @@ export function CompactModal({
           borderRadius: 26,
           padding: 20,
           boxShadow: '0 30px 70px rgba(0,0,0,0.6)',
-          maxHeight: '90svh',
+          maxHeight: '94svh',
           overflowY: 'auto',
           overscrollBehavior: 'contain',
           outline: 'none',
@@ -123,9 +125,13 @@ export function CompactModal({
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-          {children}
-        </div>
+        <AmountPadSlot.Provider value={padSlot}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+            {children}
+          </div>
+        </AmountPadSlot.Provider>
+        {/* An amount field's number pad (AmountEntry) lands here, above save */}
+        <div ref={setPadSlot} />
 
         <div style={{ display: 'flex', justifyContent: onDelete ? 'space-between' : 'flex-end', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           {onDelete && (
