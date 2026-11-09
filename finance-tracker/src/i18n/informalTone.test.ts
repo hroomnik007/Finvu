@@ -66,7 +66,7 @@ describe('informal tone (ty) in sk/cs', () => {
     ]
     const bad = /\b(Skúste|Zadajte|Kliknite|Vitajte|Overte|overte|kontaktujte|ignorujte|Môžete|môžete|nemôžete|Nemáte|máte|Prihláste|potvrďte|opustite|nastavte|Použite)\b|[Vv]áš\b|vášho|\b(Nie ste|Ste už|Ak ste)\b/u
     const hits = files.flatMap((f) => {
-      let src = ''
+      let src: string
       try { src = readFileSync(join(root, f), 'utf8') } catch { return [] }
       return src.split('\n').filter((l) => bad.test(l)).map((l) => `${f}: ${l.trim()}`)
     })
