@@ -14,7 +14,9 @@ updates:
         update-types: [minor, patch]
     ignore:
       # typescript-eslint does not support TypeScript 7 yet (ESLint fails to start);
-      # drop this once it does
+      # support is planned for TS >= 7.1 (typescript-eslint#10940). Drop this
+      # ignore once it ships, then fix the two TS 7 type errors:
+      # src/api/idempotency.test.ts and src/pages/FixedExpenses.tsx
       - dependency-name: typescript
         versions: [">=7.0.0"]
   - package-ecosystem: npm
