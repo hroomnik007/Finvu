@@ -10,12 +10,12 @@ const transporter = env.SMTP_HOST
     })
   : null;
 
-export async function sendEmail(to: string, subject: string, html: string, text?: string): Promise<void> {
+export async function sendEmail(to: string, subject: string, html: string, text?: string, headers?: Record<string, string>): Promise<void> {
   if (!transporter) {
     console.log(`[email] SMTP not configured. To: ${to} | Subject: ${subject}`);
     return;
   }
-  await transporter.sendMail({ from: env.SMTP_FROM, to, subject, html, ...(text ? { text } : {}) });
+  await transporter.sendMail({ from: env.SMTP_FROM, to, subject, html, ...(text ? { text } : {}), ...(headers ? { headers } : {}) });
 }
 
 export function verificationEmailHtml(token: string): string {

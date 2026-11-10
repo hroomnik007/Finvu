@@ -1,5 +1,6 @@
 import { fixedDayOfMonth, isFixedDue, latestActiveSeries } from "./recurring";
 import { isTrackedMonth, type StartMonths } from "./trackingStart";
+import { monthlyEmailText, resolveEmailLang } from "./monthlyEmailText";
 
 // One amount the month counts: a one-off row, or a recurring series at the price
 // valid for the month.
@@ -209,8 +210,6 @@ export function memberSplit(rows: MonthRow[], userNames: Map<string, string>): M
 
 // ── Rendering ────────────────────────────────────────────────────────────────
 
-const MONTHS_SK = ["Január", "Február", "Marec", "Apríl", "Máj", "Jún", "Júl", "August", "September", "Október", "November", "December"];
-
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
@@ -234,6 +233,10 @@ export interface SummaryData {
   upcoming: UpcomingPayment[];
   goals: SummaryGoal[];
   members: MemberSplit[];
+  // Language of the text (users.language); unknown or missing renders Slovak.
+  language?: string | null;
+  // Where the footer links to for turning the e-mail off; no link when absent.
+  settingsUrl?: string;
 }
 
 const card = "background:#2A1F4A;border-radius:16px;padding:16px 20px;margin-bottom:12px;";
@@ -242,20 +245,21 @@ const row = (left: string, right: string) =>
   `<tr><td style="padding:3px 0;font-size:14px;color:#E2D9F3;">${left}</td><td style="padding:3px 0;font-size:14px;color:#E2D9F3;text-align:right;white-space:nowrap;font-family:monospace;">${right}</td></tr>`;
 
 export function renderSummaryHtml(d: SummaryData): string {
-  const label = `${MONTHS_SK[d.month - 1]} ${d.year}`;
+  const t = monthlyEmailText(d.language);
+  const label = `${t.months[d.month - 1]} ${d.year}`;
   const balance = d.income - d.expense;
   const rate = savingsRate(d.income, d.expense);
   const prevRate = savingsRate(d.prevIncome, d.prevExpense);
   const pct = (v: number) => `${(v * 100).toFixed(0).replace("-", "−")} %`;
   let rateLine = "";
   if (rate !== null) {
-    rateLine = `Odložených ${pct(rate)} príjmov`;
+    rateLine = t.saved(pct(rate));
     if (prevRate !== null) {
       const diff = Math.round((rate - prevRate) * 100);
-      rateLine += diff === 0 ? " — rovnako ako minulý mesiac" : ` (${diff > 0 ? "+" : "−"}${Math.abs(diff)} p. b. oproti minulému mesiacu)`;
+      rateLine += diff === 0 ? t.sameAsLast : t.diffVsLast(diff > 0 ? "+" : "−", Math.abs(diff));
     }
   } else {
-    rateLine = "Tento mesiac si nemal žiadne príjmy.";
+    rateLine = t.noIncome;
   }
 
   const sections: string[] = [];
@@ -263,9 +267,9 @@ export function renderSummaryHtml(d: SummaryData): string {
   sections.push(`
   <div style="${card}">
     <table width="100%" cellspacing="0" cellpadding="0">
-      ${row("Príjmy", `<span style="color:#34D399;">+${formatEur(d.income)}</span>`)}
-      ${row("Výdavky", `<span style="color:#F87171;">−${formatEur(d.expense)}</span>`)}
-      ${row("<b>Zostatok</b>", `<b style="color:${balance >= 0 ? "#34D399" : "#F87171"};">${balance >= 0 ? "+" : ""}${formatEur(balance)}</b>`)}
+      ${row(t.income, `<span style="color:#34D399;">+${formatEur(d.income)}</span>`)}
+      ${row(t.expense, `<span style="color:#F87171;">−${formatEur(d.expense)}</span>`)}
+      ${row(`<b>${t.balance}</b>`, `<b style="color:${balance >= 0 ? "#34D399" : "#F87171"};">${balance >= 0 ? "+" : ""}${formatEur(balance)}</b>`)}
     </table>
     <p style="font-size:13px;color:#C4B5FD;margin:10px 0 0;">${rateLine}</p>
   </div>`);
@@ -273,7 +277,7 @@ export function renderSummaryHtml(d: SummaryData): string {
   if (d.family && d.members.length > 1) {
     sections.push(`
   <div style="${card}">
-    <p style="${h2}">Rodina podľa členov</p>
+    <p style="${h2}">${t.byMember}</p>
     <table width="100%" cellspacing="0" cellpadding="0">
       ${d.members.map((m) => row(escapeHtml(m.name), `<span style="color:#34D399;">+${formatEur(m.income)}</span> &nbsp; <span style="color:#F87171;">−${formatEur(m.expense)}</span>`)).join("")}
     </table>
@@ -283,7 +287,7 @@ export function renderSummaryHtml(d: SummaryData): string {
   if (d.top.length) {
     sections.push(`
   <div style="${card}">
-    <p style="${h2}">Najväčšie kategórie výdavkov</p>
+    <p style="${h2}">${t.topCategories}</p>
     <table width="100%" cellspacing="0" cellpadding="0">
       ${d.top.map((c, i) => row(`${i + 1}. ${escapeHtml(c.name)}`, formatEur(c.amount))).join("")}
     </table>
@@ -293,9 +297,9 @@ export function renderSummaryHtml(d: SummaryData): string {
   if (d.largest) {
     sections.push(`
   <div style="${card}">
-    <p style="${h2}">Najväčšia jednotlivá platba</p>
+    <p style="${h2}">${t.largest}</p>
     <table width="100%" cellspacing="0" cellpadding="0">
-      ${row(escapeHtml(d.largest.label || "Bez popisu"), formatEur(d.largest.amount))}
+      ${row(escapeHtml(d.largest.label || t.noDescription), formatEur(d.largest.amount))}
     </table>
   </div>`);
   }
@@ -303,11 +307,11 @@ export function renderSummaryHtml(d: SummaryData): string {
   if (d.over.length) {
     sections.push(`
   <div style="${card}border:1px solid #7F1D1D;">
-    <p style="${h2}color:#F87171;">Prekročený limit</p>
+    <p style="${h2}color:#F87171;">${t.overLimit}</p>
     <table width="100%" cellspacing="0" cellpadding="0">
       ${d.over
         .map((o) => {
-          const head = row(`${escapeHtml(o.name)}${o.shared ? " <span style=\"color:#9D84D4;\">(spoločná)</span>" : ""}`, `${formatEur(o.spent)} / ${formatEur(o.limit)}`);
+          const head = row(`${escapeHtml(o.name)}${o.shared ? " <span style=\"color:#9D84D4;\">${t.shared}</span>" : ""}`, `${formatEur(o.spent)} / ${formatEur(o.limit)}`);
           const split = o.split.length > 1
             ? o.split.map((s) => `<tr><td style="padding:0 0 0 14px;font-size:12px;color:#9D84D4;">${escapeHtml(s.name)}</td><td style="font-size:12px;color:#9D84D4;text-align:right;font-family:monospace;">${formatEur(s.amount)}</td></tr>`).join("")
             : "";
@@ -321,15 +325,15 @@ export function renderSummaryHtml(d: SummaryData): string {
   if (d.upcoming.length) {
     const shown = d.upcoming.slice(0, 8);
     const more = d.upcoming.length - shown.length;
-    const when = (u: UpcomingPayment) => (u.inDays <= 0 ? "dnes" : u.inDays === 1 ? "zajtra" : `o ${u.inDays} dní`);
+    const when = (u: UpcomingPayment) => (u.inDays <= 0 ? t.today : u.inDays === 1 ? t.tomorrow : t.inDays(u.inDays));
     const total = d.upcoming.reduce((s, u) => s + u.amount, 0);
     sections.push(`
   <div style="${card}">
-    <p style="${h2}">Čo ťa čaká budúci mesiac</p>
+    <p style="${h2}">${t.upcoming}</p>
     <table width="100%" cellspacing="0" cellpadding="0">
-      ${shown.map((u) => row(`${u.day}. ${escapeHtml(u.label || "Platba")} <span style="color:#9D84D4;font-size:12px;">(${when(u)})</span>`, formatEur(u.amount))).join("")}
-      ${more > 0 ? row(`<span style="color:#9D84D4;">… a ďalších ${more}</span>`, "") : ""}
-      ${row("<b>Spolu</b>", `<b>${formatEur(total)}</b>`)}
+      ${shown.map((u) => row(`${u.day}. ${escapeHtml(u.label || t.payment)} <span style="color:#9D84D4;font-size:12px;">(${when(u)})</span>`, formatEur(u.amount))).join("")}
+      ${more > 0 ? row(`<span style="color:#9D84D4;">${t.more(more)}</span>`, "") : ""}
+      ${row(`<b>${t.total}</b>`, `<b>${formatEur(total)}</b>`)}
     </table>
   </div>`);
   }
@@ -337,12 +341,12 @@ export function renderSummaryHtml(d: SummaryData): string {
   if (d.goals.length) {
     sections.push(`
   <div style="${card}">
-    <p style="${h2}">Sporiace ciele</p>
+    <p style="${h2}">${t.goals}</p>
     ${d.goals
       .map((g) => {
         const p = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
         const owner = g.owner ? ` <span style="color:#9D84D4;font-size:12px;">· ${escapeHtml(g.owner)}</span>` : "";
-        return `<p style="font-size:14px;margin:8px 0 4px;color:#E2D9F3;">${escapeHtml(g.name)}${owner}${g.paused ? " <span style=\"color:#9D84D4;font-size:12px;\">(pozastavený)</span>" : ""}</p>
+        return `<p style="font-size:14px;margin:8px 0 4px;color:#E2D9F3;">${escapeHtml(g.name)}${owner}${g.paused ? " <span style=\"color:#9D84D4;font-size:12px;\">${t.paused}</span>" : ""}</p>
       <div style="background:#1E1535;border-radius:6px;height:8px;"><div style="background:#8B5CF6;border-radius:6px;height:8px;width:${p}%;"></div></div>
       <p style="font-size:12px;color:#9D84D4;margin:4px 0 0;">${formatEur(g.saved)} z ${formatEur(g.target)} · ${p} %</p>`;
       })
@@ -350,15 +354,18 @@ export function renderSummaryHtml(d: SummaryData): string {
   </div>`);
   }
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+  const footerLink = d.settingsUrl
+    ? `<a href="${escapeHtml(d.settingsUrl)}" style="color:#9D84D4;text-decoration:underline;">${t.footerLink}</a>`
+    : t.footerLink;
+  return `<!DOCTYPE html><html lang="${resolveEmailLang(d.language)}"><head><meta charset="utf-8"></head>
 <body style="font-family:sans-serif;background:#0D0A1A;color:#E2D9F3;padding:32px;max-width:520px;margin:0 auto;">
   <div style="text-align:center;margin-bottom:24px;">
-    <h1 style="font-size:22px;font-weight:700;color:#E2D9F3;margin:0 0 4px;">Finvu — Mesačný súhrn${d.family ? " rodiny" : ""}</h1>
+    <h1 style="font-size:22px;font-weight:700;color:#E2D9F3;margin:0 0 4px;">${d.family ? t.titleFamily : t.title}</h1>
     <p style="font-size:13px;color:#9D84D4;margin:0;">${label}</p>
   </div>${sections.join("")}
   <p style="font-size:12px;color:#6B5A9E;text-align:center;margin-top:24px;">
-    Správu dostávaš, pretože máš zapnutý mesačný súhrn vo Finvu.<br>
-    Vypnúť ho alebo zmeniť čas odoslania môžeš v Nastaveniach.
+    ${t.footerLead}<br>
+    ${t.footerBeforeLink}${footerLink}${t.footerAfterLink}
   </p>
 </body></html>`;
 }
