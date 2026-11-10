@@ -15,7 +15,7 @@ describe('newIdempotencyKey', () => {
 
   it('falls back to getRandomValues without randomUUID', () => {
     const real = globalThis.crypto
-    vi.stubGlobal('crypto', { getRandomValues: (b: Uint8Array) => real.getRandomValues(b) })
+    vi.stubGlobal('crypto', { getRandomValues: (b: Uint8Array<ArrayBuffer>) => real.getRandomValues(b) })
     try {
       const k = newIdempotencyKey()
       expect(k).toMatch(/^[0-9a-f]{32}$/)

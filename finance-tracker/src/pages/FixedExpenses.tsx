@@ -297,7 +297,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                 <Cell fill="var(--aurora-violet)" />
               </Pie>
               <Tooltip
-                formatter={(v: number) => [formatAmount(v)]}
+                formatter={(v) => [formatAmount(Number(v))]}
                 contentStyle={{ background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 8, fontSize: 12, fontFamily: "'Manrope', sans-serif", color: 'var(--aurora-hi)' }}
               />
             </PieChart>

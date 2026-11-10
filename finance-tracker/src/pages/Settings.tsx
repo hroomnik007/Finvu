@@ -1681,7 +1681,7 @@ export function SettingsPage() {
       <ConfirmDialog
         open={!!pinDeviceConfirmId}
         message={t.settings.revokeCurrentDeviceWarning}
-        onConfirm={() => pinDeviceConfirmId && handleRevokePinDevice(pinDeviceConfirmId)}
+        onConfirm={() => (pinDeviceConfirmId ? handleRevokePinDevice(pinDeviceConfirmId) : undefined)}
         onCancel={() => setPinDeviceConfirmId(null)}
       />
 
