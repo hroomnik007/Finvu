@@ -3,6 +3,8 @@ import { and, asc, eq, inArray, lt, or, gte } from "drizzle-orm";
 import { db } from "../db";
 import { users, transactions, categories, savingsGoals } from "../db/schema";
 import { sendEmail } from "../lib/email";
+import { env } from "../config/env";
+import { monthlyEmailText } from "../lib/monthlyEmailText";
 import { sharingMemberIds } from "../lib/sharedCategories";
 import { loadStartMonths } from "../lib/loadStartMonths";
 import {
@@ -11,7 +13,6 @@ import {
 } from "../lib/monthlySummary";
 
 const TZ = "Europe/Bratislava";
-const MONTHS_SK = ["Január", "Február", "Marec", "Apríl", "Máj", "Jún", "Júl", "August", "September", "Október", "November", "December"];
 
 // Calendar date and hour in the app's home time zone, whatever the server runs in.
 function localNow(at: Date = new Date()): { year: number; month: number; day: number; hour: number } {
@@ -34,7 +35,7 @@ function shiftMonth(year: number, month: number, by: number): { year: number; mo
 
 // Everything the e-mail shows for one subscriber, for the month that is ending.
 export async function buildSummary(
-  user: { id: string; monthlyEmailScope: string },
+  user: { id: string; monthlyEmailScope: string; language?: string | null },
   year: number,
   month: number,
   today: Date,
@@ -109,6 +110,7 @@ export async function buildSummary(
       owner: family ? userNames.get(g.userId) : undefined,
     })),
     members: family ? memberSplit(rows, userNames) : [],
+    language: user.language,
   };
 }
 
@@ -119,17 +121,20 @@ async function sendMonthlyReports(): Promise<void> {
 
   const ym = `${now.year}-${String(now.month).padStart(2, "0")}`;
   const subscribers = await db
-    .select({ id: users.id, email: users.email, monthlyEmailScope: users.monthlyEmailScope, monthlyEmailLastSent: users.monthlyEmailLastSent })
+    .select({ id: users.id, email: users.email, monthlyEmailScope: users.monthlyEmailScope, language: users.language, monthlyEmailLastSent: users.monthlyEmailLastSent })
     .from(users)
     .where(and(eq(users.monthlyEmailEnabled, true), eq(users.monthlyEmailHour, now.hour), eq(users.isDeactivated, false)));
 
-  const label = `${MONTHS_SK[now.month - 1]} ${now.year}`;
+  // Where the e-mail footer sends people to turn it off (also the List-Unsubscribe target)
+  const settingsUrl = `${env.APP_URL.replace(/\/+$/, "")}/#settings`;
   const today = new Date(now.year, now.month - 1, now.day);
   for (const user of subscribers) {
     if (user.monthlyEmailLastSent === ym) continue;
     try {
       const data = await buildSummary(user, now.year, now.month, today);
-      await sendEmail(user.email, `Finvu — Mesačný súhrn (${label})`, renderSummaryHtml(data));
+      const t = monthlyEmailText(user.language);
+      const subject = t.subject(`${t.months[now.month - 1]} ${now.year}`);
+      await sendEmail(user.email, subject, renderSummaryHtml({ ...data, settingsUrl }), undefined, { "List-Unsubscribe": `<${settingsUrl}>` });
       await db.update(users).set({ monthlyEmailLastSent: ym }).where(eq(users.id, user.id));
     } catch (err) {
       console.error(`[monthlyReport] send failed for ${user.id}:`, err);

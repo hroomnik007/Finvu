@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { monthlyEmailText, resolveEmailLang } from "./monthlyEmailText";
 import {
   monthRows, totals, savingsRate, topCategories, largestPayment, categoriesOverLimit, upcomingPayments, memberSplit,
   renderSummaryHtml, escapeHtml, type RawTx, type SummaryData,
@@ -108,5 +109,54 @@ describe("memberSplit + render", () => {
     expect(html).toContain("+7");
     expect(html).toContain("Dovolenka");
     expect(escapeHtml(`a"b'c`)).toBe("a&quot;b&#39;c");
+  });
+});
+
+describe("monthly e-mail language and unsubscribe link", () => {
+  const base: SummaryData = {
+    year: 2026, month: 10, family: false, income: 1800, expense: 800, prevIncome: 1800, prevExpense: 800,
+    top: [{ name: "Food", amount: 500 }], largest: { label: "", amount: 650, date: "2026-10-05" }, over: [],
+    upcoming: [{ label: "", amount: 650, day: 5, inDays: 3 }], goals: [], members: [],
+  };
+
+  it("renders Slovak by default and for an unknown language", () => {
+    for (const language of [undefined, null, "xx", "constructor"]) {
+      const html = renderSummaryHtml({ ...base, language });
+      expect(html).toContain("Príjmy");
+      expect(html).toContain("Október 2026");
+      expect(html).toContain('<html lang="sk">');
+    }
+  });
+
+  it("renders every supported language without Slovak leftovers", () => {
+    const expected: Record<string, [string, string]> = {
+      cs: ["Příjmy", "Říjen 2026"], pl: ["Przychody", "Październik 2026"],
+      hu: ["Bevételek", "Október 2026"], en: ["Income", "October 2026"],
+    };
+    for (const [language, [word, month]] of Object.entries(expected)) {
+      const html = renderSummaryHtml({ ...base, language });
+      expect(html).toContain(word);
+      expect(html).toContain(month);
+      expect(html).toContain(`<html lang="${language}">`);
+      expect(html).not.toContain("Príjmy");
+      expect(html).not.toContain("Zostatok");
+      expect(html).not.toMatch(/undefined|NaN/);
+    }
+  });
+
+  it("localises the subject", () => {
+    expect(monthlyEmailText("en").subject("October 2026")).toBe("Finvu — Monthly summary (October 2026)");
+    expect(monthlyEmailText("sk").subject("Október 2026")).toBe("Finvu — Mesačný súhrn (Október 2026)");
+    expect(resolveEmailLang("pl")).toBe("pl");
+    expect(resolveEmailLang("de")).toBe("sk");
+  });
+
+  it("links the footer to the settings page when a URL is given, escaped", () => {
+    const url = "https://finvu.pedani.eu/#settings";
+    const html = renderSummaryHtml({ ...base, language: "en", settingsUrl: url });
+    expect(html).toContain(`<a href="${url}"`);
+    expect(html).toMatch(/in <a href="[^"]+"[^>]*>Settings<\/a>\./);
+    expect(renderSummaryHtml({ ...base, settingsUrl: 'https://x/"><script>' })).not.toContain("<script>");
+    expect(renderSummaryHtml(base)).not.toContain("<a href");
   });
 });
