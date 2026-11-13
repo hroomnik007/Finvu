@@ -816,6 +816,148 @@ html.compact .card { padding: var(--card-padding); }
   bottom: var(--fab-bottom);
 }
 
+/* Day of month typed straight into the fixed-expense stepper */
+.day-stepper-input {
+  width: 26px;
+  padding: 0;
+  border: none;
+  border-bottom: 1px dashed var(--aurora-gline);
+  background: transparent;
+  color: var(--aurora-hi);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+}
+.day-stepper-input:focus { border-bottom-color: var(--aurora-violet); }
+
+/* Phone-only switch between the expense pages (ExpenseTabs) */
+.expense-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 2px;
+  margin: 10px 20px 0;
+  padding: 4px;
+  border-radius: 16px;
+  border: 1px solid var(--aurora-gline);
+  background: var(--aurora-glass);
+}
+.expense-tab {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--aurora-lo);
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.expense-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expense-tab.is-active {
+  background: linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia));
+  color: #fff;
+}
+/* Dim behind the "Viac" sheet of the bottom nav */
+.nav-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* Small text link inside a hero card header (Dashboard: yearly overview) */
+.hero-link {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin: -8px -8px -8px 0;
+  padding: 0 8px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--aurora-lo);
+  font-family: 'Manrope', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Phones: icon only, so the card's own heading keeps one line */
+@media (max-width: 479px) { .hero-link-text { display: none; } .hero-link { min-width: 32px; justify-content: center; } }
+@media (hover: hover) { .hero-link:hover { color: var(--aurora-hi); background: var(--aurora-hover); } }
+
+/* Save / info / error toasts: content-width pills, centred. On phones they sit
+   above the add button so they never cover it; on desktop near the
+   bottom edge, centred in the content area next to the sidebar. */
+.toast-stack {
+  position: fixed;
+  z-index: 1100;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--fab-bottom) + var(--fab-size) + 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  pointer-events: none;
+}
+@media (min-width: 1024px) {
+  .toast-stack { bottom: 24px; left: var(--sidebar-w, 0px); }
+}
+.toast-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(100%, 420px);
+  min-height: 44px;
+  padding: 8px 8px 8px 10px;
+  border-radius: 22px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-elevated);
+  color: var(--text);
+  font-family: 'Manrope', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+.toast-pill-icon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toast-pill-text { min-width: 0; padding-right: 8px; overflow-wrap: anywhere; }
+.toast-pill-action {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid var(--aurora-gline);
+  background: var(--aurora-glass);
+  color: var(--aurora-hi);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+@media (hover: hover) { .toast-pill-action:hover { background: var(--aurora-hover); } }
+
 /* In-app number pad of the amount fields (AmountEntry), touch devices only */
 .amount-keypad {
   display: grid;

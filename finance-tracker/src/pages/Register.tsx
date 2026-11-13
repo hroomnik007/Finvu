@@ -65,7 +65,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
   if (verificationSent) {
     return (
       <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', background: 'var(--aurora-bg-image)' }}>
-        <div className="fu" style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16,
+        <div className="fu" style={{ width: '100%', maxWidth: 392, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16,
           background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 24, padding: 32,
           boxShadow: 'var(--shadow-elevated)',
         }}>
@@ -101,7 +101,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
         <AuthThemeToggle />
       </div>
 
-      <div className="fade-up" style={{ width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative', zIndex: 1 }}>
+      <div className="fade-up" style={{ width: '100%', maxWidth: 392, display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative', zIndex: 1 }}>
 
         {/* Brand row — logo beside title, unified with Login */}
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 32 }}>
@@ -204,7 +204,6 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
                 name="confirm-password"
                 autoComplete="new-password"
                 type={showConfirm ? 'text' : 'password'}
-                placeholder="••••••••"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 onFocus={() => setFocused('confirm')}
@@ -235,7 +234,7 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
               id="gdpr"
               checked={gdprConsent}
               onChange={e => setGdprConsent(e.target.checked)}
-              style={{ width: 18, height: 18, accentColor: 'var(--violet)', cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
+              style={{ width: 18, height: 18, accentColor: 'var(--violet)', colorScheme: 'var(--aurora-color-scheme)', cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
             />
             <label htmlFor="gdpr" style={{ fontSize: 13, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1.5 }}>
               {t.auth.gdprConsent}{' '}

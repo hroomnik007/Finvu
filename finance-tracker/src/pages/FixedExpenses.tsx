@@ -708,6 +708,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         autoFocusAmount={!editing}
         onDelete={editing?.id ? () => { const id = editing.id!; closeSheet(); setDeleteId(id) } : undefined}
         submitDisabled={!label.trim() || !amount}
+        submitHint={!amount ? t.common.needAmount : t.common.needName}
         onImportCsv={editing ? undefined : () => { closeSheet(); setTimeout(() => setCsvOpen(true), 150) }}
       >
         <AmountEntry value={amount} onValueChange={setAmount} />
@@ -738,7 +739,16 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
             <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dayShort}</span>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{dayOfMonth}</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              className="day-stepper-input"
+              aria-label={t.expenses.fixed.dayLabel}
+              value={dayOfMonth}
+              onFocus={e => e.currentTarget.select()}
+              onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); setDayOfMonth(v && parseInt(v) > 31 ? '31' : v) }}
+              onBlur={() => { if (!dayOfMonth || parseInt(dayOfMonth) < 1) setDayOfMonth('1') }}
+            />
             <button
               type="button"
               className="hit-44"

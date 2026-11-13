@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { Home, TrendingUp, Settings, Receipt, Tag, Search, PiggyBank, MoreHorizontal, CalendarRange, Repeat } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Home, TrendingUp, Settings, Search, PiggyBank, MoreHorizontal, CalendarRange } from 'lucide-react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useScrollCollapse } from '../hooks/useScrollCollapse'
-import { activeBottomTab, bottomTabs, moreMenuPages, EXPENSE_MENU_PAGES, type BottomTabId } from '../utils/bottomNav'
+import { activeBottomTab, bottomTabs, moreMenuPages, type BottomTabId } from '../utils/bottomNav'
 
 interface BottomNavProps {
   current: Page
@@ -30,9 +30,23 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
   const householdEnabled = user?.household_enabled ?? false
   const savingsEnabled = user?.savings_enabled ?? false
 
-  const [openMenu, setOpenMenu] = useState<'expenses' | 'more' | null>(null)
+  // The "Viac" sheet remembers the page it was opened on, so any navigation
+  // (a tab, a link in the page, the back button) closes it without an effect.
+  const [menuOpenedOn, setMenuOpenedOn] = useState<Page | null>(null)
+  const openMenu: 'more' | null = menuOpenedOn === current ? 'more' : null
+  const setOpenMenu = (m: 'more' | null) => setMenuOpenedOn(m ? current : null)
   const collapsed = useScrollCollapse()
-  const active = activeBottomTab(current)
+  const tabs = bottomTabs({ householdEnabled })
+  // Household opened while the module is off has no tab of its own
+  const pageTab = activeBottomTab(current)
+  const active = tabs.includes(pageTab) ? pageTab : 'more'
+
+  useEffect(() => {
+    if (!openMenu) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpenedOn(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [openMenu])
 
   const submenuCardStyle: React.CSSProperties = {
     position: 'fixed',
@@ -54,9 +68,6 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
   )
 
   const pageItem: Record<string, { icon: React.ReactNode; label: string }> = {
-    'variable-expenses': { icon: <Receipt size={16} aria-hidden />, label: t.nav.variable },
-    'fixed-expenses': { icon: <Repeat size={16} aria-hidden />, label: t.nav.fixed },
-    categories: { icon: <Tag size={16} aria-hidden />, label: t.nav.categories },
     search: { icon: <Search size={16} aria-hidden />, label: t.nav.search },
     savings: { icon: <PiggyBank size={16} aria-hidden />, label: t.nav.savings },
     annual: { icon: <CalendarRange size={16} aria-hidden />, label: t.nav.annual },
@@ -70,15 +81,15 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
 
   const menu = openMenu && (
     <>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 98 }} onClick={() => setOpenMenu(null)} />
+      <div className="nav-menu-backdrop" onClick={() => setOpenMenu(null)} />
       <div
-        id={`bottom-nav-menu-${openMenu}`}
+        id="bottom-nav-menu-more"
         role="menu"
-        aria-label={openMenu === 'expenses' ? t.nav.expenses : t.nav.more}
+        aria-label={t.nav.more}
         style={submenuCardStyle}
       >
         {dragHandle}
-        {(openMenu === 'expenses' ? EXPENSE_MENU_PAGES : moreMenuPages({ savingsEnabled })).map(page => {
+        {moreMenuPages({ savingsEnabled }).map(page => {
           const on = current === page
           return (
             <button
@@ -104,13 +115,13 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
     </>
   )
 
-  const tabs = bottomTabs({ householdEnabled })
-  const tabDef: Record<BottomTabId, { icon: React.ReactNode; label: string; onClick: () => void; menu?: 'expenses' | 'more' }> = {
+  const tabDef: Record<BottomTabId, { icon: React.ReactNode; label: string; onClick: () => void; menu?: 'more' }> = {
     dashboard: { icon: <Home size={20} aria-hidden />, label: t.nav.overview, onClick: () => go('dashboard') },
     income: { icon: <TrendingUp size={20} aria-hidden />, label: t.nav.income, onClick: () => go('income') },
-    expenses: { icon: <CardIcon />, label: t.nav.expenses, menu: 'expenses', onClick: () => setOpenMenu(m => m === 'expenses' ? null : 'expenses') },
+    // Straight to the one-off expenses; Fixed and Categories are a switch at the top of the page (ExpenseTabs)
+    expenses: { icon: <CardIcon />, label: t.nav.expenses, onClick: () => go('variable-expenses') },
     household: { icon: <HouseIcon size={20} />, label: t.nav.household, onClick: () => go('household') },
-    more: { icon: <MoreHorizontal size={20} aria-hidden />, label: t.nav.more, menu: 'more', onClick: () => setOpenMenu(m => m === 'more' ? null : 'more') },
+    more: { icon: <MoreHorizontal size={20} aria-hidden />, label: t.nav.more, menu: 'more', onClick: () => setOpenMenu(openMenu ? null : 'more') },
   }
 
   return (

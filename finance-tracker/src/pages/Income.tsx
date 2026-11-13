@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Repeat, Edit2, Trash2, Calendar, Plus, CalendarDays, PiggyBank, ArrowUp } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
 
@@ -22,7 +22,9 @@ import { todayISO } from '../utils/format'
 import { dateForRecurringToggle, defaultEntryDate } from '../utils/entryDefaults'
 import { ValidFromHint } from '../components/ValidFromHint'
 import { useUndoableDelete } from '../hooks/useUndoableDelete'
-import { getAllTransactions } from '../api/allTransactions'
+import { useQuery } from '@tanstack/react-query'
+import { getMonthlySeries } from '../api/transactions'
+import { monthsUpTo, yearTotals } from '../utils/annual'
 import type { Income } from '../types'
 import { useOffline } from '../hooks/useOfflineQueue'
 import { PendingBadge } from '../components/OfflineStatus'
@@ -111,7 +113,6 @@ export function IncomePage({ month, year }: IncomePageProps) {
   const [form, setForm] = useState<FormState>(() => makeEmpty(month, year))
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [csvOpen, setCsvOpen] = useState(false)
-  const [yearlyIncome, setYearlyIncome] = useState(0)
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
   // Editing a recurring income: a changed amount is a price change from `priceFrom`
   // (YYYY-MM) unless ticked as a correction of a typo
@@ -121,17 +122,13 @@ export function IncomePage({ month, year }: IncomePageProps) {
   const [endOpen, setEndOpen] = useState(false)
   const [endMonth, setEndMonth] = useState(nowYM)
 
-  useEffect(() => {
-    const months = Array.from({ length: 12 }, (_, i) =>
-      `${year}-${String(i + 1).padStart(2, '0')}`
-    )
-    Promise.all(months.map(m => getAllTransactions({ type: 'income', month: m })))
-      .then(results => {
-        const total = results.flat().reduce((s, tx) => s + tx.amount, 0)
-        setYearlyIncome(total)
-      })
-      .catch(() => {})
-  }, [year])
+  // Same source and rules as the Annual page (tracking start respected, future
+  // months left out), so the two yearly figures always agree. Shares its cache.
+  const { data: yearSeries } = useQuery({
+    queryKey: ['monthlySeries', `${year}-01`, `${year}-12`, 'personal', 'categories'],
+    queryFn: () => getMonthlySeries(`${year}-01`, `${year}-12`, 'personal', 'categories'),
+  })
+  const yearlyIncome = yearTotals(monthsUpTo(yearSeries?.months ?? [], todayISO().substring(0, 7))).income
 
   const openAdd = () => { setEditing(null); setIsCorrection(false); setEndOpen(false); setForm(makeEmpty(month, year)); setSheetOpen(true) }
   const openEdit = (income: Income) => {
@@ -358,6 +355,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
         autoFocusAmount={!editing}
         onDelete={editing?.id ? () => { const inc = editing; setSheetOpen(false); requestDelete(inc) } : undefined}
         submitDisabled={!form.label.trim() || !form.amount}
+        submitHint={!form.amount ? t.common.needAmount : t.common.needName}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
         <FormBody form={form} setForm={setForm} t={t} adding={editing ? undefined : { month, year }} />

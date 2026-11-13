@@ -266,6 +266,7 @@ export const en: Translations = {
       noPaymentsThisDay: 'No payments this day',
     },
     categories: {
+      pctOfLimit: '{pct}% of {limit}',
       title: 'Categories',
       subtitle: 'Manage expense categories',
       add: 'Add',
@@ -385,6 +386,9 @@ export const en: Translations = {
     notificationsSection: 'Notifications',
     theme: 'Theme',
     themeSubtitle: 'App color scheme',
+    themeDark: 'Dark',
+    themeLight: 'Light',
+    themeSystem: 'System',
     accentColor: 'Button color',
     accentColorDescription: 'Used for buttons, icons and charts',
     backgroundColor: 'Background',
@@ -553,6 +557,7 @@ export const en: Translations = {
     pdfGeneratedOn: 'Generated with Finvu · {date}',
   },
   profile: {
+    verified: 'Verified',
     personalData: 'Personal data',
     phone: 'Phone',
     country: 'Country',
@@ -721,6 +726,9 @@ export const en: Translations = {
     emptyCategory: 'Create category',
   },
   common: {
+    needAmount: 'Enter an amount',
+    needName: 'Enter a name',
+    needCategory: 'Pick a category',
     numberPad: 'Number pad',
     deleteDigit: 'Delete digit',
     allCategories: 'All',
@@ -1116,7 +1124,7 @@ export const en: Translations = {
     badgeTitle: { one: 'You\'ve tracked your finances {n} day in a row!', few: 'You\'ve tracked your finances {n} days in a row!', many: 'You\'ve tracked your finances {n} days in a row!' },
   },
   subscriptions: {
-    title: 'Looks like a subscription',
+    summary: { one: '{n} possible recurring payment', few: '{n} possible recurring payments', many: '{n} possible recurring payments' },
     perMonth: 'a month',
     detail: '{n} months in a row, usually around day {day}',
     add: 'Add as fixed',

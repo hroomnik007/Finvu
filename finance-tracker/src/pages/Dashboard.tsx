@@ -362,8 +362,20 @@ const upcomingFixed = useMemo(() => {
   } as const
   const heroSection = (
     <HeroCard variant="neutral">
-      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
-        {t.dashboard.balance} · {t.months[month - 1]} {year}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, minWidth: 0 }}>
+          {t.dashboard.balance} · {t.months[month - 1]} {year}
+        </div>
+        {/* Quiet link to the yearly overview (was a second primary button under the card) */}
+        <button
+          type="button"
+          onClick={() => onNavigate('annual')}
+          className="hero-link"
+          aria-label={t.annual.link}
+          title={t.annual.link}
+        >
+          <CalendarRange size={15} aria-hidden /> <span className="hero-link-text">{t.annual.link}</span>
+        </button>
       </div>
       {dashFailed ? <QueryError compact onRetry={retryDash} /> : dashLoading ? <HeroAmountPlaceholder error={false} /> : (
       <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
@@ -412,20 +424,11 @@ const upcomingFixed = useMemo(() => {
     </HeroCard>
   )
 
-  // Link to the yearly overview (the "Tento mesiac môžeš minúť" card that sat
-  // next to it was removed: it compared all of the month's fixed bills with the
-  // income recorded so far and ignored money left from earlier months)
-  const annualLink = (
-    <div style={{ display: 'flex' }}>
-      <button
-        type="button"
-        onClick={() => onNavigate('annual')}
-        style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, padding: '0 20px', borderRadius: 18, border: 'none', background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, boxShadow: '0 8px 22px rgba(139,92,246,.35)', whiteSpace: 'nowrap' }}
-      >
-        <CalendarRange size={16} /> {t.annual.link}
-      </button>
-    </div>
-  )
+  // Monthly charges that look like subscriptions: one collapsed row under the
+  // balance; adding one continues on the Fixed page
+  const subscriptionHints = dashView === 'personal'
+    ? <SubscriptionSuggestions max={2} onAdd={sub => { setFixedPrefill(sub); onNavigate('fixed-expenses') }} />
+    : null
 
   const pieChartCard = (
     dashLoading || dashFailed ? (
@@ -626,11 +629,6 @@ const upcomingFixed = useMemo(() => {
         onSetTrackingStart={() => setShowTrackingModal(true)}
       />
 
-      {/* Monthly charges that look like subscriptions: add them as fixed on the Fixed page */}
-      {dashView === 'personal' && (
-        <SubscriptionSuggestions className="lg:mb-4" max={2} onAdd={sub => { setFixedPrefill(sub); onNavigate('fixed-expenses') }} />
-      )}
-
       {/* Streak detail modal */}
       {streakModalOpen && (
         <StreakModal
@@ -700,7 +698,7 @@ const upcomingFixed = useMemo(() => {
       <div className="flex flex-col gap-4 lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }}>
         <div>{greetingRow}</div>
         {heroSection}
-        {annualLink}
+        {subscriptionHints}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {pieChartCard}
           {heatmapCard}
@@ -719,7 +717,7 @@ const upcomingFixed = useMemo(() => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, overflowX: 'hidden' }}>
           {greetingDesktop}
           {heroSection}
-          {annualLink}
+          {subscriptionHints}
           <div className="grid grid-cols-2 items-stretch" style={{ gap: 16 }}>
             {heatmapCard}
             {pieChartCard}

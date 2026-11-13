@@ -6,8 +6,11 @@ import { useTranslation } from '../i18n'
 
 const CHIP_WIDTH = 76
 
-export function CategoryCircle({ icon: Icon, label, selected, accent, accent2 = accent, onClick }: {
-  icon: LucideIcon; label: string; selected: boolean; accent: string; accent2?: string; onClick: () => void
+export function CategoryCircle({ icon: Icon, label, selected, accent, accent2 = accent, tint, onClick }: {
+  icon: LucideIcon; label: string; selected: boolean; accent: string; accent2?: string
+  /** Icon colour while not selected (the category's own colour, so same-icon categories differ) */
+  tint?: string
+  onClick: () => void
 }) {
   return (
     <button
@@ -20,7 +23,7 @@ export function CategoryCircle({ icon: Icon, label, selected, accent, accent2 = 
         background: selected ? `linear-gradient(135deg,${accent},${accent2})` : 'var(--aurora-glass)',
         border: selected ? '1px solid transparent' : '1px solid var(--aurora-gline)',
       }}>
-        <Icon size={18} color={selected ? '#fff' : 'var(--aurora-lo)'} strokeWidth={1.8} />
+        <Icon size={18} color={selected ? '#fff' : tint ?? 'var(--aurora-lo)'} strokeWidth={1.8} />
       </div>
       <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: selected ? 'var(--aurora-hi)' : 'var(--aurora-lo)', textAlign: 'center', lineHeight: 1.2, maxWidth: CHIP_WIDTH, overflowWrap: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{label}</span>
     </button>
@@ -102,7 +105,7 @@ export function CategoryPicker({ categories, selectedId, onPick, gradient = fals
           icon={CATEGORY_ICON_MAP[c.icon ?? ''] ?? Tag}
           label={c.name}
           selected={selectedId === c.id}
-          accent={c.color} accent2={gradient ? c.color : undefined}
+          accent={c.color} accent2={gradient ? c.color : undefined} tint={c.color}
           onClick={() => { onPick(c.id ?? ''); setExpanded(false) }}
         />
       ))}

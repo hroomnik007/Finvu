@@ -486,6 +486,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         autoFocusAmount={!editing}
         onDelete={editing?.id ? () => { const id = editing.id!; setSheetOpen(false); removeWithUndo(id) } : undefined}
         submitDisabled={newCatMode ? !newCatName.trim() || !form.amount : !form.categoryId || !form.amount}
+        submitHint={!form.amount ? t.common.needAmount : newCatMode ? t.common.needName : t.common.needCategory}
         onImportCsv={editing ? undefined : () => { setSheetOpen(false); setTimeout(() => setCsvOpen(true), 150) }}
       >
         <AmountEntry value={form.amount} onValueChange={v => setForm(f => ({ ...f, amount: v }))} />

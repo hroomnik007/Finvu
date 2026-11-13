@@ -261,7 +261,6 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
               name="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
-              placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
               onFocus={() => setFocused('password')}

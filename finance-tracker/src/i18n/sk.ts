@@ -264,6 +264,7 @@ export const sk = {
       noPaymentsThisDay: 'Žiadne platby tento deň',
     },
     categories: {
+      pctOfLimit: '{pct} % z {limit}',
       title: 'Kategórie',
       subtitle: 'Správa kategórií výdavkov',
       add: 'Pridať',
@@ -383,6 +384,9 @@ export const sk = {
     notificationsSection: 'Notifikácie',
     theme: 'Téma',
     themeSubtitle: 'Farebné schéma aplikácie',
+    themeDark: 'Tmavá',
+    themeLight: 'Svetlá',
+    themeSystem: 'Systém',
     accentColor: 'Farba tlačidiel',
     accentColorDescription: 'Použije sa pre tlačidlá, ikony a grafy',
     backgroundColor: 'Pozadie',
@@ -551,6 +555,7 @@ export const sk = {
     pdfGeneratedOn: 'Vygenerované cez Finvu · {date}',
   },
   profile: {
+    verified: 'Overený',
     personalData: 'Osobné údaje',
     phone: 'Telefón',
     country: 'Krajina',
@@ -719,6 +724,9 @@ export const sk = {
     emptyCategory: 'Vytvoriť kategóriu',
   },
   common: {
+    needAmount: 'Zadaj sumu',
+    needName: 'Zadaj názov',
+    needCategory: 'Vyber kategóriu',
     numberPad: 'Číselná klávesnica',
     deleteDigit: 'Zmazať číslicu',
     allCategories: 'Všetky',
@@ -1114,7 +1122,7 @@ export const sk = {
     badgeTitle: { one: 'Sleduješ financie {n} deň v rade!', few: 'Sleduješ financie {n} dni v rade!', many: 'Sleduješ financie {n} dní v rade!' },
   },
   subscriptions: {
-    title: 'Vyzerá to na predplatné',
+    summary: { one: '{n} možná opakovaná platba', few: '{n} možné opakované platby', many: '{n} možných opakovaných platieb' },
     perMonth: 'mesačne',
     detail: '{n}× za sebou, zvyčajne okolo {day}. dňa v mesiaci',
     add: 'Pridať ako fixný',

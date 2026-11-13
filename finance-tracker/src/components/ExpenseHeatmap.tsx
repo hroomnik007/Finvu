@@ -8,6 +8,7 @@ import { pluralText } from '../utils/plural'
 import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { todayISO } from '../utils/format'
+import { useSettingsContext } from '../context/SettingsContext'
 
 interface ExpenseHeatmapProps {
   expenses: VariableExpense[]
@@ -37,6 +38,7 @@ type TooltipState = {
 export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavigate }: ExpenseHeatmapProps) {
   const { formatAmount, formatLongDate } = useFormatters()
   const { t, locale } = useTranslation()
+  const { settings } = useSettingsContext()
   const [tooltip, setTooltip] = useState<TooltipState>(null)
   const [lastClickedDay, setLastClickedDay] = useState<string | null>(null)
 
@@ -71,6 +73,12 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
   const todayDay = isCurrentMonth ? new Date().getDate() : 0
 
   const monthLabel = `${t.months[month - 1]} ${year}`
+  // A real calendar: 7 columns starting on the user's first day of the week
+  // (t.daysShort starts on Monday), so weekday patterns are readable.
+  const sundayFirst = settings.firstDayOfWeek === 'sunday'
+  const weekdayLabels = sundayFirst ? [t.daysShort[6], ...t.daysShort.slice(0, 6)] : t.daysShort
+  const firstWeekday = new Date(year, month - 1, 1).getDay() // 0 = Sunday
+  const leadingBlanks = sundayFirst ? firstWeekday : (firstWeekday + 6) % 7
   const legendBorder = '1px solid var(--aurora-gline)'
 
   return (
@@ -82,8 +90,14 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
         {monthLabel}
       </p>
 
-      {/* Day-strip — wrapping row of day pills, color-coded by daily spend severity */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+      {/* Month calendar — day cells color-coded by daily spend severity */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 5, marginBottom: 6 }}>
+        {weekdayLabels.map(d => (
+          <div key={d} style={{ textAlign: 'center', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)' }}>{d}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 5 }}>
+        {Array.from({ length: leadingBlanks }, (_, i) => <div key={`blank-${i}`} />)}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const day = i + 1
           const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -97,8 +111,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
             <div
               key={day}
               style={{
-                width: 28,
-                height: 28,
+                height: 30,
                 borderRadius: 8,
                 background: hasSpend ? severityColor(amount) : 'var(--aurora-glass)',
                 cursor: hasSpend ? 'pointer' : 'default',

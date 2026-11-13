@@ -266,6 +266,7 @@ export const hu: Translations = {
       noPaymentsThisDay: 'Nincs fizetés ezen a napon',
     },
     categories: {
+      pctOfLimit: '{limit} {pct}%-a',
       title: 'Kategóriák',
       subtitle: 'Kiadási kategóriák kezelése',
       add: 'Hozzáadás',
@@ -385,6 +386,9 @@ export const hu: Translations = {
     notificationsSection: 'Értesítések',
     theme: 'Téma',
     themeSubtitle: 'Az alkalmazás színsémája',
+    themeDark: 'Sötét',
+    themeLight: 'Világos',
+    themeSystem: 'Rendszer',
     accentColor: 'Gombszín',
     accentColorDescription: 'Gombokhoz, ikonokhoz és grafikonokhoz használjuk',
     backgroundColor: 'Háttér',
@@ -553,6 +557,7 @@ export const hu: Translations = {
     pdfGeneratedOn: 'Készült a Finvu-val · {date}',
   },
   profile: {
+    verified: 'Megerősítve',
     personalData: 'Személyes adatok',
     phone: 'Telefon',
     country: 'Ország',
@@ -721,6 +726,9 @@ export const hu: Translations = {
     emptyCategory: 'Kategória létrehozása',
   },
   common: {
+    needAmount: 'Add meg az összeget',
+    needName: 'Add meg a nevet',
+    needCategory: 'Válassz kategóriát',
     numberPad: 'Számbillentyűzet',
     deleteDigit: 'Számjegy törlése',
     allCategories: 'Összes',
@@ -1116,7 +1124,7 @@ export const hu: Translations = {
     badgeTitle: { one: '{n} napja egymás után követed a pénzügyeidet!', few: '{n} napja egymás után követed a pénzügyeidet!', many: '{n} napja egymás után követed a pénzügyeidet!' },
   },
   subscriptions: {
-    title: 'Előfizetésnek tűnik',
+    summary: { one: '{n} lehetséges ismétlődő fizetés', few: '{n} lehetséges ismétlődő fizetés', many: '{n} lehetséges ismétlődő fizetés' },
     perMonth: 'havonta',
     detail: '{n} hónapja egymás után, általában a hónap {day}. napja körül',
     add: 'Hozzáadás fix kiadásként',

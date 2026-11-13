@@ -5,6 +5,8 @@ import { BottomNav } from './components/BottomNav'
 import { useScrollCollapse } from './hooks/useScrollCollapse'
 import { Topbar } from './components/Topbar'
 import { GlobalFAB, type FabLaunch } from './components/GlobalFAB'
+import { ExpenseTabs } from './components/ExpenseTabs'
+import { EXPENSE_MENU_PAGES } from './utils/bottomNav'
 import { CsvImportModal } from './components/CsvImportModal'
 import { takePendingIntent, takeSharedFile } from './utils/shareIntent'
 import { PullToRefresh } from './components/PullToRefresh'
@@ -132,6 +134,8 @@ function App() {
   function getAuthPageFromHash(): AuthPage {
     const hash = window.location.hash
     if (hash === '#register') return 'register'
+    if (hash === '#forgot-password') return 'forgot-password'
+    if (hash === '#privacy-policy') return 'privacy-policy'
     if (hash.startsWith('#verify-email')) return 'verify-email'
     if (hash.startsWith('#reset-password')) return 'reset-password'
     return 'login'
@@ -437,8 +441,8 @@ function App() {
 
   function goAuthPage(p: AuthPage) {
     setAuthPage(p)
-    if (p === 'login') window.location.hash = 'login'
-    else if (p === 'register') window.location.hash = 'register'
+    // Token pages keep their own hash; the rest get one so links and Back work
+    if (p !== 'reset-password' && p !== 'verify-email') window.location.hash = p
   }
 
   if (!isAuthenticated) {
@@ -448,7 +452,7 @@ function App() {
         {authPage === 'register' && (
           <RegisterPage
             onNavigateLogin={() => goAuthPage('login')}
-            onNavigatePrivacyPolicy={() => setAuthPage('privacy-policy')}
+            onNavigatePrivacyPolicy={() => goAuthPage('privacy-policy')}
           />
         )}
         {authPage === 'forgot-password' && (
@@ -470,7 +474,7 @@ function App() {
         {authPage === 'login' && (
           <LoginPage
             onNavigateRegister={() => goAuthPage('register')}
-            onNavigateForgotPassword={() => setAuthPage('forgot-password')}
+            onNavigateForgotPassword={() => goAuthPage('forgot-password')}
           />
         )}
       </Suspense>
@@ -549,6 +553,7 @@ function App() {
           onToggleTheme={handleToggleTheme}
         />
         <OfflineStatus />
+        {!isDesktop && EXPENSE_MENU_PAGES.includes(page) && <ExpenseTabs current={page} onChange={setPage} />}
         <PullToRefresh onRefresh={() => queryClient.refetchQueries()}>
           <Suspense fallback={null}>
           {page === 'dashboard' && (

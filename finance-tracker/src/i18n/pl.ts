@@ -266,6 +266,7 @@ export const pl: Translations = {
       noPaymentsThisDay: 'Brak płatności tego dnia',
     },
     categories: {
+      pctOfLimit: '{pct}% z {limit}',
       title: 'Kategorie',
       subtitle: 'Zarządzaj kategoriami wydatków',
       add: 'Dodaj',
@@ -385,6 +386,9 @@ export const pl: Translations = {
     notificationsSection: 'Powiadomienia',
     theme: 'Motyw',
     themeSubtitle: 'Schemat kolorów aplikacji',
+    themeDark: 'Ciemny',
+    themeLight: 'Jasny',
+    themeSystem: 'System',
     accentColor: 'Kolor przycisków',
     accentColorDescription: 'Używany dla przycisków, ikon i wykresów',
     backgroundColor: 'Tło',
@@ -553,6 +557,7 @@ export const pl: Translations = {
     pdfGeneratedOn: 'Wygenerowano w Finvu · {date}',
   },
   profile: {
+    verified: 'Zweryfikowany',
     personalData: 'Dane osobowe',
     phone: 'Telefon',
     country: 'Kraj',
@@ -721,6 +726,9 @@ export const pl: Translations = {
     emptyCategory: 'Utwórz kategorię',
   },
   common: {
+    needAmount: 'Wpisz kwotę',
+    needName: 'Wpisz nazwę',
+    needCategory: 'Wybierz kategorię',
     numberPad: 'Klawiatura numeryczna',
     deleteDigit: 'Usuń cyfrę',
     allCategories: 'Wszystkie',
@@ -1116,7 +1124,7 @@ export const pl: Translations = {
     badgeTitle: { one: 'Śledzisz finanse {n} dzień z rzędu!', few: 'Śledzisz finanse {n} dni z rzędu!', many: 'Śledzisz finanse {n} dni z rzędu!' },
   },
   subscriptions: {
-    title: 'Wygląda na subskrypcję',
+    summary: { one: '{n} możliwa płatność cykliczna', few: '{n} możliwe płatności cykliczne', many: '{n} możliwych płatności cyklicznych' },
     perMonth: 'miesięcznie',
     detail: '{n}× z rzędu, zwykle około {day}. dnia miesiąca',
     add: 'Dodaj jako stały',

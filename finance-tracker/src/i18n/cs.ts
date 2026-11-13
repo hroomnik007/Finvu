@@ -266,6 +266,7 @@ export const cs: Translations = {
       noPaymentsThisDay: 'Žádné platby tento den',
     },
     categories: {
+      pctOfLimit: '{pct} % z {limit}',
       title: 'Kategorie',
       subtitle: 'Spravovat kategorie výdajů',
       add: 'Přidat',
@@ -385,6 +386,9 @@ export const cs: Translations = {
     notificationsSection: 'Oznámení',
     theme: 'Motiv',
     themeSubtitle: 'Barevné schéma aplikace',
+    themeDark: 'Tmavý',
+    themeLight: 'Světlý',
+    themeSystem: 'Systém',
     accentColor: 'Barva tlačítek',
     accentColorDescription: 'Použije se pro tlačítka, ikony a grafy',
     backgroundColor: 'Pozadí',
@@ -553,6 +557,7 @@ export const cs: Translations = {
     pdfGeneratedOn: 'Vygenerováno přes Finvu · {date}',
   },
   profile: {
+    verified: 'Ověřený',
     personalData: 'Osobní údaje',
     phone: 'Telefon',
     country: 'Země',
@@ -721,6 +726,9 @@ export const cs: Translations = {
     emptyCategory: 'Vytvořit kategorii',
   },
   common: {
+    needAmount: 'Zadej částku',
+    needName: 'Zadej název',
+    needCategory: 'Vyber kategorii',
     numberPad: 'Číselná klávesnice',
     deleteDigit: 'Smazat číslici',
     allCategories: 'Všechny',
@@ -1116,7 +1124,7 @@ export const cs: Translations = {
     badgeTitle: { one: 'Sleduješ finance {n} den v řadě!', few: 'Sleduješ finance {n} dny v řadě!', many: 'Sleduješ finance {n} dní v řadě!' },
   },
   subscriptions: {
-    title: 'Vypadá to na předplatné',
+    summary: { one: '{n} možná opakovaná platba', few: '{n} možné opakované platby', many: '{n} možných opakovaných plateb' },
     perMonth: 'měsíčně',
     detail: '{n}× po sobě, obvykle kolem {day}. dne v měsíci',
     add: 'Přidat jako fixní',

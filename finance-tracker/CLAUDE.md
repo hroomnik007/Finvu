@@ -252,7 +252,7 @@ Zámok prihlasovania (`lib/loginLockout.ts`, `lib/lockoutStore.ts`, politika v `
 
 ### Grid a šírky
 - Kostra aplikácie (navigácia, `Topbar`, obsah stránky v `PullToRefresh`) je v `src/App.tsx`; presné štýly wrapperov pozri tam
-- Šírku a centrovanie obsahu riadi `PullToRefresh` (`PAGE_MAX_WIDTH` = 1232): nastaví CSS premennú `--page-inset` na scroll kontajneri a stránky ju pridávajú do horizontálneho paddingu (`padding: 20px calc(20px + var(--page-inset, 0px))`), takže scrollbar ostáva na okraji obrazovky. Na page-level komponentoch (Dashboard, Income, …) sa nepoužíva `max-w-*`; k 2026-11-01 sa `max-w-*` v `src/` vyskytuje len v `ConfirmDialog` a `ToastContainer` (dialóg/toast, nie stránky). Sidebar a Topbar zostávajú na celú šírku
+- Šírku a centrovanie obsahu riadi `PullToRefresh` (`PAGE_MAX_WIDTH` = 1232): nastaví CSS premennú `--page-inset` na scroll kontajneri a stránky ju pridávajú do horizontálneho paddingu (`padding: 20px calc(20px + var(--page-inset, 0px))`), takže scrollbar ostáva na okraji obrazovky. Na page-level komponentoch (Dashboard, Income, …) sa nepoužíva `max-w-*`; k 2026-11-13 sa `max-w-*` v `src/` vyskytuje len v `ConfirmDialog` (dialóg, nie stránka). Sidebar a Topbar zostávajú na celú šírku
 - Dashboard má na desktope (lg+) dva stĺpce (hlavný obsah vľavo, kontextový panel vpravo), na mobile jeden stĺpec; presné rozmery pozri `src/pages/Dashboard.tsx`
 
 ### Sidebar
@@ -266,7 +266,7 @@ Pevné detaily jednotlivých sekcií sa tu nevedú (zastarávali) — zdroj prav
 
 ### Responsive pravidlo
 - Desktop (lg+): sidebar + 2-stĺpcový grid
-- Mobile: bottom pill nav, single column, FAB pre pridávanie
+- Mobile: bottom pill nav, single column, FAB pre pridávanie. Záložka „Výdavky“ ide rovno na variabilné výdavky; medzi Variabilné / Fixné / Kategórie sa prepína pásom `ExpenseTabs` nad stránkou (len mobil). Toasty (`.toast-stack`) sú na mobile nad FAB, nikdy cez neho
 
 ### Topbar
 - Desktop: 2 sekcie — ľavá (greeting 22px bold + dátum) | pravá (toggle + monthNav + themeBtn + avatar)

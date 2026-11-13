@@ -2,7 +2,7 @@ import { pluralForm as pluralFormOf } from '../utils/plural'
 import { useState, useEffect, useRef, useMemo, useId, createContext, useContext } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
-  X, Palette, Bell, Shield, Database, User, Monitor, Laptop, Smartphone, Tablet,
+  X, Palette, Bell, Shield, Database, User, Wallet, Monitor, Laptop, Smartphone, Tablet,
   CalendarClock, Users, PiggyBank, KeyRound, Hash, ChevronRight, Check, Sun, Moon, SunMoon,
   AlertTriangle, Trash2, RotateCcw, UserX, Ban, ArrowLeft,
   ShieldCheck,
@@ -238,7 +238,7 @@ type SettingsSection = 'appearance' | 'finance' | 'notifications' | 'security' |
 
 const SECTIONS = [
   { id: 'appearance' as SettingsSection, label: 'Vzhľad', icon: Palette },
-  { id: 'finance' as SettingsSection, label: 'Financie', icon: User },
+  { id: 'finance' as SettingsSection, label: 'Financie', icon: Wallet },
   { id: 'notifications' as SettingsSection, label: 'Notifikácie', icon: Bell },
   { id: 'security' as SettingsSection, label: 'Bezpečnosť', icon: Shield },
   { id: 'data' as SettingsSection, label: 'Dáta', icon: Database },
@@ -927,9 +927,9 @@ export function SettingsPage() {
                   <SettingRow label={t.settings.theme} sublabel={t.settings.themeSubtitle}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {([
-                        { id: 'dark', icon: Moon, label: 'Dark' },
-                        { id: 'light', icon: Sun, label: 'Light' },
-                        { id: 'system', icon: SunMoon, label: 'System' },
+                        { id: 'dark', icon: Moon, label: t.settings.themeDark },
+                        { id: 'light', icon: Sun, label: t.settings.themeLight },
+                        { id: 'system', icon: SunMoon, label: t.settings.themeSystem },
                       ] as const).map(({ id, icon: Icon, label }) => (
                         <button
                           key={id}
@@ -1428,7 +1428,7 @@ export function SettingsPage() {
                   <SettingRow label={t.backup.restoreTitle} sublabel={t.backup.restoreSub}>
                     <button
                       onClick={() => setBackupModal('restore')}
-                      style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))', border: 'none', color: '#fff', cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                      style={{ padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', color: 'var(--aurora-hi)', cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
                     >
                       {t.backup.restore}
                     </button>

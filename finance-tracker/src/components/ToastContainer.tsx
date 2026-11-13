@@ -14,43 +14,39 @@ export function ToastContainer({ toasts }: ToastContainerProps) {
     <>
       {/* Save / info / error toasts — bottom, above the nav, and above open
           modals (z 1000) so an error is visible while the form stays open.
+          Content-width pills that sit above the add button (.toast-stack).
           The live region is always mounted so screen readers announce new toasts. */}
       <div
         data-modal-keep
         role="status"
         aria-live="polite"
-        className="fixed left-1/2 -translate-x-1/2 flex flex-col gap-2 w-full max-w-[390px] px-4 bottom-[calc(112px+env(safe-area-inset-bottom))] lg:bottom-6 lg:left-[calc(50%+120px)]"
-        style={{ zIndex: 1100, pointerEvents: 'none' }}
+        className="toast-stack"
       >
         {defaultToasts.map(toast => {
           const isError = toast.variant === 'error'
           const isSuccess = toast.variant === 'success'
+          const tone = isError ? 'var(--aurora-rose)' : 'var(--aurora-emerald)'
           return (
             <div
               key={toast.id}
-              className="px-4 py-3 text-sm shadow-xl fade-in"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                color: 'var(--text)',
-                backgroundColor: 'var(--bg-elevated)',
-                border: `1px solid ${isError ? 'rgba(248,113,113,.55)' : 'var(--border-medium)'}`,
-                borderRadius: '16px',
-                boxShadow: 'var(--shadow-elevated)',
-                pointerEvents: 'auto',
-              }}
+              className="toast-pill fade-in"
+              style={isError ? { borderColor: 'color-mix(in srgb, var(--aurora-rose) 55%, transparent)' } : undefined}
             >
-              {isSuccess && <Check size={16} color="#34D399" strokeWidth={2.6} aria-hidden style={{ flexShrink: 0 }} />}
-              {isError && <AlertCircle size={16} color="#f87171" strokeWidth={2.4} aria-hidden style={{ flexShrink: 0 }} />}
-              <span style={{ flex: 1, minWidth: 0 }}>{toast.message}</span>
+              {(isSuccess || isError) && (
+                <span
+                  aria-hidden
+                  className="toast-pill-icon"
+                  style={{ color: tone, background: `color-mix(in srgb, ${tone} 16%, transparent)` }}
+                >
+                  {isSuccess ? <Check size={14} strokeWidth={3} /> : <AlertCircle size={14} strokeWidth={2.6} />}
+                </span>
+              )}
+              <span className="toast-pill-text">{toast.message}</span>
               {toast.action && (
                 <button
                   type="button"
+                  className="toast-pill-action"
                   onClick={() => { void runToastAction(toast.id) }}
-                  style={{
-                    flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--aurora-violet, #8B5CF6)', fontWeight: 700, fontSize: 13,
-                    padding: '4px 6px', borderRadius: 8,
-                  }}
                 >
                   {toast.action.label}
                 </button>

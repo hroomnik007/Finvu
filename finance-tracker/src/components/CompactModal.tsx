@@ -19,6 +19,8 @@ interface CompactModalProps {
    * spinner, is disabled and further submits are ignored. */
   onSubmit: () => void | Promise<unknown>
   submitDisabled?: boolean
+  /** Shown next to the save button while it is disabled: what is still missing */
+  submitHint?: string
   /** Extra busy flag for saves the parent tracks itself. */
   submitting?: boolean
   onImportCsv?: () => void
@@ -32,7 +34,7 @@ interface CompactModalProps {
 
 export function CompactModal({
   open, onClose, icon: Icon, iconColor, iconBg, title,
-  accent, accent2, onSubmit, submitDisabled, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount, onDelete,
+  accent, accent2, onSubmit, submitDisabled, submitHint, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount, onDelete,
 }: CompactModalProps) {
   const { t } = useTranslation()
   const [padSlot, setPadSlot] = useState<HTMLDivElement | null>(null)
@@ -149,6 +151,9 @@ export function CompactModal({
               <Trash2 size={15} strokeWidth={2.2} aria-hidden />
               {t.common.delete}
             </button>
+          )}
+          {submitDisabled && !busy && submitHint && (
+            <span style={{ marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-faint)', textAlign: 'right' }}>{submitHint}</span>
           )}
           <button
             type="button"

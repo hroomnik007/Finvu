@@ -442,7 +442,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                   <div style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: '1px solid var(--aurora-gline)' }}>
                     <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', width: 80, flexShrink: 0 }}>{t.auth.email}</span>
                     <span style={{ flex: 1, fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email ?? '—'}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(52,211,153,0.12)', color: 'var(--aurora-emerald)', border: '1px solid rgba(52,211,153,0.25)', letterSpacing: '0.06em', flexShrink: 0, marginLeft: 6 }}>VERIF.</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(52,211,153,0.12)', color: 'var(--aurora-emerald)', border: '1px solid rgba(52,211,153,0.25)', flexShrink: 0, marginLeft: 6 }}>{t.profile.verified}</span>
                   </div>
                   {/* Krajina row */}
                   <div style={{ display: 'flex', alignItems: 'center', padding: '13px 16px' }}>

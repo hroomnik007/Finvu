@@ -406,6 +406,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         accent="#34D399" accent2="#22D3EE"
         onSubmit={saveIncome}
         submitDisabled={!incLabel.trim() || !incAmt}
+        submitHint={!incAmt ? t.common.needAmount : t.common.needName}
         autoFocusAmount
       >
         <AmountField value={incAmt} onChange={setIncAmt} accent="#34D399" />
@@ -441,6 +442,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         accent="#FB7185" accent2="#f43f5e"
         onSubmit={saveVariable}
         submitDisabled={varNewCatMode ? !varNewCatName.trim() || !varAmt : !varCatId || !varAmt}
+        submitHint={!varAmt ? t.common.needAmount : varNewCatMode ? t.common.needName : t.common.needCategory}
         autoFocusAmount
       >
         <AmountField value={varAmt} onChange={setVarAmt} accent="#FB7185" />
@@ -501,6 +503,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={saveFixed}
         submitDisabled={!fixLabel.trim() || !fixAmt}
+        submitHint={!fixAmt ? t.common.needAmount : t.common.needName}
         autoFocusAmount
       >
         <AmountField value={fixAmt} onChange={setFixAmt} accent="#FBBF24" />
@@ -527,7 +530,16 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >−</button>
             <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', fontWeight: 600 }}>{t.expenses.fixed.dayShort}</span>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', minWidth: 14, textAlign: 'center' }}>{fixDay}</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              className="day-stepper-input"
+              aria-label={t.expenses.fixed.dayLabel}
+              value={fixDay}
+              onFocus={e => e.currentTarget.select()}
+              onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); setFixDay(v && parseInt(v) > 31 ? '31' : v) }}
+              onBlur={() => { if (!fixDay || parseInt(fixDay) < 1) setFixDay('1') }}
+            />
             <button
               type="button"
               className="hit-44"
@@ -552,6 +564,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={saveCategory}
         submitDisabled={!catName.trim()}
+        submitHint={t.common.needName}
       >
         <input
           type="text" placeholder={t.expenses.categories.namePlaceholder}

@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import { CalendarRange, LayoutDashboard, PiggyBank, Plus, Receipt, Repeat, Search, Settings, SunMoon, Tag, TrendingUp, Users } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { Page } from '../App'
+import { useAuth } from '../context/AuthContext'
 import { useTranslation } from '../i18n'
 import { useFormatters } from '../hooks/useFormatters'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -26,8 +29,9 @@ interface PaletteAction {
   kind: 'nav' | 'act'
   id: string
   label: string
+  /** English keyword: matched by the search, not shown */
   hint: string
-  icon: string
+  icon: LucideIcon
   action: () => void
 }
 
@@ -38,6 +42,7 @@ interface PaletteItem extends PaletteAction {
 
 export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme, transactions = [], onTransactionNavigate }: CommandPaletteProps) {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const { formatAmount, formatDate } = useFormatters()
   const [query, setQuery] = useState('')
   const [selIdx, setSelIdx] = useState(0)
@@ -55,19 +60,19 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
   }, [open])
 
   const actions: PaletteAction[] = [
-    { kind: 'nav', id: 'dashboard', label: t.nav.overview, hint: 'Dashboard', icon: '📊', action: () => onNavigate('dashboard') },
-    { kind: 'nav', id: 'income', label: t.nav.income, hint: 'Income', icon: '💰', action: () => onNavigate('income') },
-    { kind: 'nav', id: 'variable-expenses', label: t.palette.variableExpenses, hint: 'Variable', icon: '🧾', action: () => onNavigate('variable-expenses') },
-    { kind: 'nav', id: 'fixed-expenses', label: t.palette.fixedExpenses, hint: 'Fixed', icon: '🔒', action: () => onNavigate('fixed-expenses') },
-    { kind: 'nav', id: 'search', label: t.nav.search, hint: 'Search', icon: '🔎', action: () => onNavigate('search') },
-    { kind: 'nav', id: 'annual', label: t.nav.annual, hint: 'Annual', icon: '📅', action: () => onNavigate('annual') },
-    { kind: 'nav', id: 'categories', label: t.nav.categories, hint: 'Categories', icon: '🏷️', action: () => onNavigate('categories') },
-    { kind: 'nav', id: 'household', label: t.nav.household, hint: 'Household', icon: '🏠', action: () => onNavigate('household') },
-    { kind: 'nav', id: 'savings', label: t.nav.savings, hint: 'Savings', icon: '🐷', action: () => onNavigate('savings') },
-    { kind: 'nav', id: 'settings', label: t.nav.settings, hint: 'Settings', icon: '⚙️', action: () => onNavigate('settings') },
-    { kind: 'act', id: 'add-exp', label: t.expenses.variable.add, hint: 'New expense', icon: '➕', action: () => onAdd('expense') },
-    { kind: 'act', id: 'add-inc', label: t.income.add, hint: 'New income', icon: '➕', action: () => onAdd('income') },
-    { kind: 'act', id: 'toggle-theme', label: t.palette.toggleTheme, hint: 'Theme', icon: '🌓', action: onToggleTheme },
+    { kind: 'nav', id: 'dashboard', label: t.nav.overview, hint: 'Dashboard', icon: LayoutDashboard, action: () => onNavigate('dashboard') },
+    { kind: 'nav', id: 'income', label: t.nav.income, hint: 'Income', icon: TrendingUp, action: () => onNavigate('income') },
+    { kind: 'nav', id: 'variable-expenses', label: t.palette.variableExpenses, hint: 'Variable', icon: Receipt, action: () => onNavigate('variable-expenses') },
+    { kind: 'nav', id: 'fixed-expenses', label: t.palette.fixedExpenses, hint: 'Fixed', icon: Repeat, action: () => onNavigate('fixed-expenses') },
+    { kind: 'nav', id: 'search', label: t.nav.search, hint: 'Search', icon: Search, action: () => onNavigate('search') },
+    { kind: 'nav', id: 'annual', label: t.nav.annual, hint: 'Annual', icon: CalendarRange, action: () => onNavigate('annual') },
+    { kind: 'nav', id: 'categories', label: t.nav.categories, hint: 'Categories', icon: Tag, action: () => onNavigate('categories') },
+    ...(user?.household_enabled ? [{ kind: 'nav' as const, id: 'household', label: t.nav.household, hint: 'Household', icon: Users, action: () => onNavigate('household') }] : []),
+    ...(user?.savings_enabled ? [{ kind: 'nav' as const, id: 'savings', label: t.nav.savings, hint: 'Savings', icon: PiggyBank, action: () => onNavigate('savings') }] : []),
+    { kind: 'nav', id: 'settings', label: t.nav.settings, hint: 'Settings', icon: Settings, action: () => onNavigate('settings') },
+    { kind: 'act', id: 'add-exp', label: t.expenses.variable.add, hint: 'New expense', icon: Plus, action: () => onAdd('expense') },
+    { kind: 'act', id: 'add-inc', label: t.income.add, hint: 'New income', icon: Plus, action: () => onAdd('income') },
+    { kind: 'act', id: 'toggle-theme', label: t.palette.toggleTheme, hint: 'Theme', icon: SunMoon, action: onToggleTheme },
   ]
 
   const q = query.toLowerCase().trim()
@@ -135,9 +140,8 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
           transition: 'background 0.08s',
         }}
       >
-        <span style={{ fontSize: 15, width: 22, display: 'flex', justifyContent: 'center' }}>{item.icon}</span>
+        <span style={{ width: 22, display: 'flex', justifyContent: 'center', color: 'var(--text3)' }}><item.icon size={16} aria-hidden /></span>
         <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text)', fontWeight: sel ? 500 : 400 }}>{item.label}</span>
-        <span style={{ fontSize: 12, color: 'var(--text3)', fontFamily: "'DM Mono',monospace" }}>{item.hint}</span>
         {sel && <KbdKey label="↵" />}
       </div>
     )

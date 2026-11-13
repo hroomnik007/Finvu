@@ -614,9 +614,13 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
               </div>
               {heroTotalLimit > 0 && (
                 <span style={{ marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: `${heroBarColor}22`, color: heroBarColor, border: `1px solid ${heroBarColor}55` }}>
-                  {heroOverallPct}% z {Math.round(heroTotalLimit)} €
+                  {t.expenses.categories.pctOfLimit.replace('{pct}', String(heroOverallPct)).replace('{limit}', formatAmount(heroTotalLimit))}
                 </span>
               )}
+            </div>
+            {/* Says what the big number is: spent this month in categories that have a limit */}
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 6 }}>
+              {t.expenses.categories.spent} · {t.dashboard.budgetThisMonth}
             </div>
             {heroTotalLimit > 0 && (
               <div style={{ height: 8, borderRadius: 99, background: 'var(--aurora-gline)', overflow: 'hidden', marginTop: 12 }}>
@@ -851,6 +855,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         submitDisabled={!name.trim()}
+        submitHint={t.common.needName}
         submitting={saveGuard.pending}
       >
         <input
