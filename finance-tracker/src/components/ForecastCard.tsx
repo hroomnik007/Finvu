@@ -7,6 +7,8 @@ interface ForecastCardProps {
   predictedBalanceText: string
   predictedBalanceColor: string
   paceText: string
+  /** Optional extra line: the lowest account balance still ahead this month. */
+  lowest?: { label: string; text: string; negative: boolean }
 }
 
 const SIZE = 72
@@ -21,6 +23,7 @@ export function ForecastCard({
   predictedBalanceText,
   predictedBalanceColor,
   paceText,
+  lowest,
 }: ForecastCardProps) {
   const clamped = Math.min(Math.max(progressPct, 0), 100)
   const offset = CIRCUMFERENCE * (1 - clamped / 100)
@@ -49,6 +52,12 @@ export function ForecastCard({
           <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{paceText}</p>
         </div>
       </div>
+      {lowest && (
+        <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', minWidth: 0 }}>{lowest.label}</span>
+          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: lowest.negative ? 'var(--aurora-rose)' : 'var(--aurora-hi)', whiteSpace: 'nowrap', flexShrink: 0 }}>{lowest.text}</span>
+        </div>
+      )}
     </GlassCard>
   )
 }

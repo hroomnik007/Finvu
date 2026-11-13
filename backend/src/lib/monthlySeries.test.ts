@@ -44,7 +44,10 @@ describe("buildSeries", () => {
   it("treats months before the tracking start as empty: January recurring income, start in April", () => {
     const babka = [tx({ type: "income", amount: "200", description: "Babka", date: "2026-01-05", isFixed: true })];
     const s = buildSeries(babka, "2026-01", "2026-06", today, { startMonths: new Map([["u1", "2026-04"]]) });
-    expect(s.map((m) => m.income)).toEqual([0, 0, 0, 200, 200, 200]);
+    // today = 10 Apr: April's payday (the 5th) has arrived, May and June are still ahead
+    expect(s.map((m) => m.income)).toEqual([0, 0, 0, 200, 0, 0]);
+    const later = buildSeries(babka, "2026-01", "2026-06", new Date(2026, 6, 1), { startMonths: new Map([["u1", "2026-04"]]) });
+    expect(later.map((m) => m.income)).toEqual([0, 0, 0, 200, 200, 200]);
   });
 
   it("applies each member's own start, one-off rows included", () => {

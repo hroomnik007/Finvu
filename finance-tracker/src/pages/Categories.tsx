@@ -129,7 +129,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
             ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>
             : cat.autoLimit
               ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', marginTop: 2 }}>⚡ {t.expenses.categories.autoLimit}</div>
-              : <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{t.expenses.categories.noLimit}</div>
+              : <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat.type === 'income' ? t.expenses.categories.typeIncome : t.expenses.categories.noLimit}</div>
           }
         </div>
         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -158,6 +158,15 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
             <span>{t.expenses.categories.spent}</span>
             <span style={{ fontWeight: 700, color: barColor }}>{Math.round(status?.percentage ?? 0)}%</span>
           </div>
+        </>
+      )}
+      {/* No limit: still say what went through the category this month */}
+      {cat.budgetLimit == null && status && status.spent > 0 && (
+        <>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-rose)', marginBottom: 8 }}>
+            −{formatAmount(status.spent)}
+          </div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{t.expenses.categories.spent}</div>
         </>
       )}
     </div>
@@ -339,6 +348,27 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [personalStatuses, sharingOn, categories, familyVariable, familyFixed])
+
+  // What the cards show: the budget status of a category with a limit, or — for an
+  // expense category without one — just what was spent in it this month (own
+  // variable expenses plus own fixed expenses already due). The hero keeps using
+  // `budgetStatuses`, which only covers categories with a limit.
+  const cardStatuses = useMemo(() => {
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
+    const withLimit = new Set(budgetStatuses.map(b => b.categoryId))
+    const extra: BudgetStatus[] = categories
+      .filter(c => c.type === 'expense' && c.id && !withLimit.has(c.id))
+      .map(c => ({
+        categoryId: c.id!, categoryName: c.name, categoryIcon: c.icon, categoryColor: c.color,
+        spent:
+          variableExpenses.filter(e => e.categoryId === c.id).reduce((sum, e) => sum + e.amount, 0) +
+          fixedExpenses.filter(f => f.categoryId === c.id && isFixedExpenseDue(f.dayOfMonth, month, year, new Date())).reduce((sum, f) => sum + f.amount, 0),
+        limit: 0, percentage: 0, isWarning: false, isOver: false,
+      }))
+    return [...budgetStatuses, ...extra]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [budgetStatuses, categories, variableExpenses, fixedExpenses])
 
   // Single most urgent over/near-budget category gets a tinted card — everything else stays neutral
   const worstBudgetStatus = useMemo(() =>
@@ -583,6 +613,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const heroTotalLimit = budgetStatuses.reduce((s, b) => s + b.limit, 0)
   const heroOverallPct = heroTotalLimit > 0 ? Math.round(heroTotalSpent / heroTotalLimit * 100) : 0
   const heroNearLimitCount = budgetStatuses.filter(b => b.limit > 0 && b.spent >= b.limit * 0.9).length
+  // Once something is actually over, say so (and count only those) instead of "near limit"
+  const heroOverLimitCount = budgetStatuses.filter(b => b.limit > 0 && b.spent > b.limit).length
   const heroCatCount = categories.length
   const heroBarColor = heroOverallPct >= 90 ? 'var(--aurora-rose)' : heroOverallPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-violet)'
   const animatedHeroSpent = useCountUp(heroTotalSpent, 800)
@@ -620,7 +652,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             </div>
             {/* Says what the big number is: spent this month in categories that have a limit */}
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 6 }}>
-              {t.expenses.categories.spent} · {t.dashboard.budgetThisMonth}
+              {t.expenses.categories.spentFromBudget} · {t.dashboard.budgetThisMonth}
             </div>
             {heroTotalLimit > 0 && (
               <div style={{ height: 8, borderRadius: 99, background: 'var(--aurora-gline)', overflow: 'hidden', marginTop: 12 }}>
@@ -637,8 +669,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(Math.max(0, heroTotalLimit - heroTotalSpent))}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.nearLimit}</div>
-                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: heroNearLimitCount > 0 ? 'var(--aurora-rose)' : 'var(--aurora-hi)' }}>{heroNearLimitCount}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{heroOverLimitCount > 0 ? t.expenses.categories.overLimit : t.expenses.categories.nearLimit}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: heroOverLimitCount > 0 ? 'var(--aurora-rose)' : heroNearLimitCount > 0 ? 'var(--aurora-amber)' : 'var(--aurora-hi)' }}>{heroOverLimitCount > 0 ? heroOverLimitCount : heroNearLimitCount}</div>
               </div>
             </div>
           </HeroCard>
@@ -704,7 +736,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                       gap: 12,
                     }}>
                       {sortedCategories.map(cat => {
-                        const status = budgetStatuses.find(b => b.categoryId === cat.id)
+                        const status = cardStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
                         if (view === 'list') {
                           return <SortableListCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
@@ -729,7 +761,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 'var(--page-pad-bottom)' }}>
                       {sortedCategories.map(cat => {
-                        const status = budgetStatuses.find(b => b.categoryId === cat.id)
+                        const status = cardStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
                         return <SortableMobileCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={(id) => setDeleteId(id)} selected={selectedIds.has(cat.id!)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
                       })}

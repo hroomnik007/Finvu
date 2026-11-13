@@ -51,6 +51,7 @@ export const users = pgTable("users", {
   theme: varchar("theme", { length: 20 }).default("dark"),
   language: varchar("language", { length: 10 }).default("sk"),
   trackingStartDate: date("tracking_start_date"),
+  openingBalance: numeric("opening_balance", { precision: 12, scale: 2 }).default("0").notNull(),
   onboardingBannerDismissed: boolean("onboarding_banner_dismissed").default(false).notNull(),
   lastActiveAt: timestamp("last_active_at"),
   autoLockMinutes: integer("auto_lock_minutes"),

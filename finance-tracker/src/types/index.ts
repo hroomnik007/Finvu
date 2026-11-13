@@ -128,6 +128,8 @@ export interface AuthUser {
   household_enabled?: boolean
   savings_enabled?: boolean
   tracking_start_date?: string | null
+  /** What was in the account when tracking began; part of the total balance. */
+  opening_balance?: number
   onboarding_banner_dismissed?: boolean
   has_pin?: boolean
   has_password?: boolean

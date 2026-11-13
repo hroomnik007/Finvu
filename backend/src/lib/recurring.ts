@@ -12,8 +12,9 @@ export function fixedDayOfMonth(description: string | null, date: string): numbe
   return day;
 }
 
-// A fixed expense only becomes "spent" once its due day in the given month has
-// arrived — mirrors the frontend's isFixedExpenseDue (useFixedExpenses.ts).
+// A recurring item only counts once its day in the given month has arrived: a
+// fixed expense on its due day, a recurring income on its payday (the day of the
+// row's date) — mirrors the frontend's isFixedExpenseDue (useFixedExpenses.ts).
 // Past months always count in full, future months not at all.
 export function isFixedDue(dayOfMonth: number, year: number, month: number, today: Date): boolean {
   const curMonth = today.getMonth() + 1;
@@ -22,6 +23,13 @@ export function isFixedDue(dayOfMonth: number, year: number, month: number, toda
   if (month !== curMonth) return month < curMonth;
   // Due on the 29th–31st in a shorter month = due on its last day
   return Math.min(dayOfMonth, new Date(year, month, 0).getDate()) <= today.getDate();
+}
+
+// Day of month a recurring row counts from: a fixed expense's due day, or the
+// payday of a recurring income (its description is the plain label, so the day
+// is the one of the row's own date).
+export function recurringDay(row: { type: string; description: string | null; date: string }): number {
+  return row.type === "income" ? (row.date ? Number(row.date.slice(8, 10)) : 1) : fixedDayOfMonth(row.description, row.date);
 }
 
 export interface FixedRow {
@@ -50,7 +58,7 @@ export function isActiveInMonth(endedOn: string | null | undefined, year: number
 // `rows` must be ascending by date and contain only rows dated before the end of
 // that month. A recurring row is entered once and counts in every month from its
 // own date on: each series (user + type + description) via its latest
-// occurrence, and recurring expenses only once their due day has arrived.
+// occurrence, and only once its day (due day / payday) has arrived.
 export function recurringTotalsForMonth(
   rows: FixedRow[],
   year: number,
@@ -65,8 +73,9 @@ export function recurringTotalsForMonth(
   for (const row of latest.values()) {
     if (!isActiveInMonth(row.endedOn, year, month)) continue;
     const amount = parseFloat(row.amount);
+    if (!isFixedDue(recurringDay(row), year, month, today)) continue;
     if (row.type === "income") income += amount;
-    else if (isFixedDue(fixedDayOfMonth(row.description, row.date), year, month, today)) expense += amount;
+    else expense += amount;
   }
   return { income, expense };
 }
@@ -112,8 +121,8 @@ export function activeSeriesTotal(rows: FixedRow[], year: number, month: number)
 // + month - 1), built month by month with the SAME rules as the monthly cards:
 // one-off rows count in the month they are dated (`oneOffByMonth`, key "YYYY-MM"),
 // while a recurring row is entered once and counts in every month from its own
-// date on — each series via its latest occurrence, recurring expenses only once
-// their due day has arrived. `fixedRows` must be ascending by date.
+// date on — each series via its latest occurrence, and only once its day (due
+// day / payday) has arrived. `fixedRows` must be ascending by date.
 export function cumulativeBalanceFromRows(
   oneOffByMonth: Map<string, { income: number; expense: number }>,
   fixedRows: FixedRow[],
@@ -141,7 +150,7 @@ export function cumulativeBalanceFromRows(
         userId: row.userId,
         isIncome: row.type === "income",
         amount: parseFloat(row.amount),
-        dueDay: fixedDayOfMonth(row.description, row.date),
+        dueDay: recurringDay(row),
         endIdx: row.endedOn ? monthIndex(Number(row.endedOn.slice(0, 4)), Number(row.endedOn.slice(5, 7))) : Infinity,
       });
     }
@@ -153,8 +162,9 @@ export function cumulativeBalanceFromRows(
     for (const row of latest.values()) {
       if (idx >= row.endIdx) continue;
       if (!isTrackedMonth(starts, row.userId, ym)) continue;
+      if (!isFixedDue(row.dueDay, y, m, today)) continue;
       if (row.isIncome) income += row.amount;
-      else if (isFixedDue(row.dueDay, y, m, today)) expense += row.amount;
+      else expense += row.amount;
     }
     balance += income - expense;
   }

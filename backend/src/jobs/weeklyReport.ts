@@ -1,3 +1,4 @@
+import { appToday } from "../lib/localDate";
 import cron from "node-cron";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { db } from "../db";
@@ -49,7 +50,7 @@ function formatAmount(n: number): string {
 // toggle (kept as-is in the DB; the Settings UI now labels it "Súhrn v polovici
 // mesiaca"). Same summary content as before — only the schedule/label changed.
 function getMonthToMidRange(): { from: string; to: string; month: number; year: number } {
-  const now = new Date();
+  const now = appToday();
   const y = now.getFullYear();
   const m = now.getMonth() + 1;
   return {
@@ -115,7 +116,7 @@ async function sendMidMonthReports(): Promise<void> {
     .where(and(eq(users.weeklyEmailEnabled, true), eq(users.isDeactivated, false)));
 
   for (const user of subscribers) {
-    const { income: totalIncome, expense: totalExpense } = await periodTotals(user.id, from, to, new Date(), startMonthOf(user.trackingStartDate, user.createdAt));
+    const { income: totalIncome, expense: totalExpense } = await periodTotals(user.id, from, to, appToday(), startMonthOf(user.trackingStartDate, user.createdAt));
     const balance = totalIncome - totalExpense;
 
     const { subject } = midMonthLabels(user.language, month, year);

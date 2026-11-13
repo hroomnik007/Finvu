@@ -1,3 +1,4 @@
+import { appToday } from "./localDate";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { categories, transactions, users } from "../db/schema";
@@ -46,7 +47,7 @@ async function loadSharedFixed(members: string[], names: string[]) {
       eq(transactions.type, "expense"),
     ))
     .orderBy(transactions.date);
-  const today = new Date();
+  const today = appToday();
   const summary = summarizeSharedFixed({ copies, fixedRows, year: today.getFullYear(), month: today.getMonth() + 1 });
   return { copies, summary };
 }

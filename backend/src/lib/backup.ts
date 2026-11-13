@@ -72,6 +72,8 @@ const settingsSchema = z.object({
   theme: z.string().max(20).nullable(),
   language: z.string().max(10).nullable(),
   trackingStartDate: day.nullable(),
+  // Absent in backups made before the opening balance existed
+  openingBalance: z.number().min(-9_999_999_999.99).max(9_999_999_999.99).optional(),
   currencyFormat: z.string().max(10).nullable(),
   defaultPage: z.string().max(50).nullable(),
   savingsEnabled: z.boolean().nullable(),
@@ -102,7 +104,7 @@ export const restoreSchema = z.object({
 export async function buildBackup(userId: string, now = new Date()): Promise<Backup> {
   const [u] = await db
     .select({
-      theme: users.theme, language: users.language, trackingStartDate: users.trackingStartDate,
+      theme: users.theme, language: users.language, trackingStartDate: users.trackingStartDate, openingBalance: users.openingBalance,
       currencyFormat: users.currencyFormat, defaultPage: users.defaultPage, savingsEnabled: users.savingsEnabled,
     })
     .from(users).where(eq(users.id, userId)).limit(1);
@@ -127,7 +129,7 @@ export async function buildBackup(userId: string, now = new Date()): Promise<Bac
     version: BACKUP_VERSION,
     exportedAt: now.toISOString(),
     data: {
-      settings: u,
+      settings: { ...u, openingBalance: Number(u.openingBalance ?? 0) || 0 },
       categories: cats.map(c => ({
         id: c.id, name: c.name, type: c.type as "income" | "expense", color: c.color, icon: c.icon, isDefault: c.isDefault,
         budgetLimit: c.budgetLimit, autoLimit: c.autoLimit, limitReserve: c.limitReserve, shared: c.shared, sortOrder: c.sortOrder,
@@ -190,6 +192,7 @@ export async function restoreBackup(userId: string, backup: Backup, mode: "repla
         ...(s.defaultPage ? { defaultPage: s.defaultPage } : {}),
         ...(s.savingsEnabled !== null ? { savingsEnabled: s.savingsEnabled } : {}),
         trackingStartDate: s.trackingStartDate,
+        ...(s.openingBalance !== undefined ? { openingBalance: s.openingBalance.toFixed(2) } : {}),
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
     }

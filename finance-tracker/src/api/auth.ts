@@ -95,6 +95,7 @@ export async function updateUserSettings(settings: {
   theme?: string
   savingsEnabled?: boolean
   trackingStartDate?: string | null
+  openingBalance?: number
   onboardingBannerDismissed?: boolean
   language?: string
   autoLockMinutes?: number | null

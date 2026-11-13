@@ -4,6 +4,9 @@ import { X, Upload, Check, Landmark, FileText, Trash2 } from 'lucide-react'
 import { createTransactionsBulk, findDuplicateRows } from '../api/transactions'
 import { getCategoryRules, saveCategoryRule, deleteCategoryRule } from '../api/categoryRules'
 import { useCategories } from '../hooks/useCategories'
+import { useAuth } from '../context/AuthContext'
+import { updateUserSettings } from '../api/auth'
+import { trackingStartOf } from '../utils/trackingStart'
 import { matchRule, suggestKeyword } from '../utils/importRules'
 import { CamtError, looksLikeXml, parseCamt053 } from '../utils/camt053'
 import { useTranslation } from '../i18n'
@@ -435,6 +438,7 @@ export function CsvImportModal({ open, onClose, filterType, initialFile }: CsvIm
   const [customMapping, setCustomMapping] = useState({ date: '', description: '', amount: '' })
   const fileRef = useRef<HTMLInputElement>(null)
   const qc = useQueryClient()
+  const { user, refreshUser } = useAuth()
   const { categories } = useCategories()
   const { data: rules = [] } = useQuery({ queryKey: ['categoryRules'], queryFn: getCategoryRules, enabled: open })
   const { panelRef, titleId, dialogProps } = useModalA11y({ open, onClose: importing ? undefined : onClose })
@@ -630,6 +634,16 @@ export function CsvImportModal({ open, onClose, filterType, initialFile }: CsvIm
       if (toRemember.length > 0) {
         await Promise.allSettled(toRemember.map(r => saveCategoryRule(suggestKeyword(r.description), r.categoryId!)))
         await qc.invalidateQueries({ queryKey: ['categoryRules'] })
+      }
+      // Imported history older than the tracking start would stay out of every
+      // monthly figure, so the start moves back to the oldest imported row.
+      const oldest = selected.reduce((min, r) => (r.date < min ? r.date : min), selected[0].date)
+      const start = trackingStartOf(user)
+      if (start && oldest.slice(0, 7) < start.slice(0, 7)) {
+        try {
+          await updateUserSettings({ trackingStartDate: oldest })
+          await refreshUser()
+        } catch { /* the import itself succeeded; the start can be set in Settings */ }
       }
       // Lists, summaries and charts all read transactions, so refresh everything
       void qc.invalidateQueries()

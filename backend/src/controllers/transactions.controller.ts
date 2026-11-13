@@ -2,6 +2,7 @@ import { Response } from "express";
 import { and, eq, gte, lt, lte, or, inArray, isNull, sql, count, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { zodDetails } from "../lib/validation";
+import { apiError } from "../lib/apiErrors";
 import { db } from "../db";
 import { transactions, categories, users, householdMembers } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
@@ -9,9 +10,9 @@ import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
 import { familyMemberIds } from "../lib/household";
 import { escapeLike } from "../lib/search";
-import { localDateISO } from "../lib/localDate";
+import { appToday, localDateISO } from "../lib/localDate";
 import { nextStreak } from "../lib/streak";
-import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows } from "../lib/recurring";
+import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows, recurringDay } from "../lib/recurring";
 import { earliestStart, isTrackedMonth, type StartMonths } from "../lib/trackingStart";
 import { loadStartMonths } from "../lib/loadStartMonths";
 
@@ -35,7 +36,11 @@ const createSchema = z.object({
   isFixed: z.boolean().optional().default(false),
 });
 
-const updateSchema = createSchema.partial();
+// isFixed must NOT carry the create default here: zod 4 applies a default inside
+// an optional field, so `createSchema.partial()` turned every update that did not
+// mention isFixed into `isFixed: false` — editing a fixed expense (the app sends
+// only amount, description and category) silently made it a one-off row.
+const updateSchema = createSchema.extend({ isFixed: z.boolean().optional() }).partial();
 
 const listQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
@@ -212,6 +217,10 @@ export async function createTransaction(req: AuthRequest, res: Response): Promis
   }
 
   const { amount, categoryId, ...rest } = body.data;
+  if (rest.isFixed && await clashesWithRunningSeries(req.userId!, rest.type, rest.description ?? null, rest.date)) {
+    res.status(409).json(apiError("RECURRING_NAME_EXISTS"));
+    return;
+  }
   const userCtx = await resolveUserHousehold(req.userId!);
 
   const [row] = await db
@@ -376,11 +385,27 @@ function seriesWhere(userId: string, type: string, description: string | null) {
   );
 }
 
+// Whether a new recurring row would silently join a series that is still running.
+// A series is identified by user + type + description, so a second item with the
+// same name would replace the first one in every total (and deleting either would
+// delete both). Restarting a series that has ended is fine: the new row must then
+// be dated in or after the first month the old one no longer applies.
+async function clashesWithRunningSeries(userId: string, type: string, description: string | null, date: string): Promise<boolean> {
+  const [latest] = await db
+    .select({ date: transactions.date, endedOn: transactions.endedOn })
+    .from(transactions)
+    .where(seriesWhere(userId, type, description))
+    .orderBy(sql`${transactions.date} DESC, ${transactions.createdAt} DESC`)
+    .limit(1);
+  if (!latest) return false;
+  return !latest.endedOn || date < latest.endedOn;
+}
+
 export async function updateTransaction(req: AuthRequest, res: Response): Promise<void> {
   const id = req.params["id"] as string;
 
   const [existing] = await db
-    .select({ userId: transactions.userId, categoryId: transactions.categoryId, isFixed: transactions.isFixed, type: transactions.type, description: transactions.description })
+    .select({ userId: transactions.userId, categoryId: transactions.categoryId, isFixed: transactions.isFixed, type: transactions.type, description: transactions.description, date: transactions.date })
     .from(transactions)
     .where(eq(transactions.id, id))
     .limit(1);
@@ -405,6 +430,19 @@ export async function updateTransaction(req: AuthRequest, res: Response): Promis
   }
 
   const { amount, categoryId, ...rest } = body.data;
+  // Renaming a recurring item onto another running one (or turning a one-off row
+  // into a recurring one with a taken name) would merge the two series.
+  {
+    const willBeFixed = rest.isFixed ?? existing.isFixed;
+    const newType = rest.type ?? existing.type;
+    const newDescription = rest.description !== undefined ? rest.description : existing.description;
+    const joinsOtherSeries = willBeFixed
+      && (!existing.isFixed || newDescription !== existing.description || newType !== existing.type);
+    if (joinsOtherSeries && await clashesWithRunningSeries(req.userId!, newType, newDescription ?? null, rest.date ?? existing.date)) {
+      res.status(409).json(apiError("RECURRING_NAME_EXISTS"));
+      return;
+    }
+  }
   const patch: Record<string, unknown> = { ...rest, updatedAt: new Date() };
   if (amount !== undefined) patch.amount = String(amount);
   if (categoryId !== undefined) patch.categoryId = categoryId;
@@ -520,6 +558,12 @@ export async function changeFixedPrice(req: AuthRequest, res: Response): Promise
     .limit(1);
 
   const fromDate = `${body.data.from}-01`;
+  // The new row keeps the series' day of month (clamped to the month's length):
+  // a recurring income's payday is the day of its date, and an older fixed
+  // expense without a stored due day falls back to it as well.
+  const [fy, fm] = body.data.from.split("-").map(Number);
+  const keptDay = Math.min(Number(latest.date.slice(8, 10)) || 1, new Date(fy, fm, 0).getDate());
+  const rowDate = `${body.data.from}-${String(keptDay).padStart(2, "0")}`;
   if (body.data.from < latest.date.slice(0, 7)) {
     res.status(400).json({ error: "Price already changes later; edit it from that month." });
     return;
@@ -541,7 +585,7 @@ export async function changeFixedPrice(req: AuthRequest, res: Response): Promise
         type: latest.type,
         amount: String(body.data.amount),
         description: latest.description,
-        date: fromDate,
+        date: rowDate,
         isFixed: true,
         endedOn: latest.endedOn,
         createdBy: req.userId!,
@@ -724,7 +768,16 @@ async function cumulativeBalance(
     // series on the same date, the later-created one wins.
     .orderBy(transactions.date, transactions.createdAt, transactions.id);
 
-  return cumulativeBalanceFromRows(oneOffByMonth, fixedRows, firstMonth, target, new Date(), starts);
+  // Each member's opening balance (what was in the account when tracking began)
+  // counts from their first tracked month on.
+  const targetYM = `${year}-${String(month).padStart(2, "0")}`;
+  const openings = await db.select({ id: users.id, openingBalance: users.openingBalance }).from(users).where(inArray(users.id, ids));
+  const opening = openings
+    .filter((u) => isTrackedMonth(starts, u.id, targetYM))
+    .reduce((sum, u) => sum + (parseFloat(u.openingBalance ?? "0") || 0), 0);
+
+  const flow = cumulativeBalanceFromRows(oneOffByMonth, fixedRows, firstMonth, target, appToday(), starts);
+  return Math.round((opening + flow) * 100) / 100;
 }
 
 export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promise<void> {
@@ -819,12 +872,14 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
   // user re-adding it — mirrors the fixed (recurring) expense handling below and the
   // frontend's useIncomes carry-forward logic. Each distinct recurring income (per
   // user, keyed by its description) counts once per month using its most recent
-  // occurrence at or before the end of the requested month. Unlike fixed expenses,
-  // recurring income is not gated by a due day — the frontend always carries it
-  // forward in full once its month has arrived.
+  // occurrence at or before the end of the requested month. Like a fixed expense's
+  // due day, it only counts once its payday (the day of the row's date) has arrived.
   const latestRecurringIncomeRows = await db
     .selectDistinctOn([transactions.userId, transactions.description], {
       amount: transactions.amount,
+      type: transactions.type,
+      description: transactions.description,
+      date: transactions.date,
       endedOn: transactions.endedOn,
     })
     .from(transactions)
@@ -836,8 +891,9 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
     ))
     .orderBy(transactions.userId, transactions.description, sql`${transactions.date} DESC`, sql`${transactions.createdAt} DESC`, sql`${transactions.id} DESC`);
 
+  const today = appToday();
   const recurringIncome = latestRecurringIncomeRows
-    .filter(r => isActiveInMonth(r.endedOn, year, month))
+    .filter(r => isActiveInMonth(r.endedOn, year, month) && isFixedDue(recurringDay(r), year, month, today))
     .reduce((acc, r) => acc + parseFloat(r.amount), 0);
 
   const income = Math.round((nonRecurringIncome + recurringIncome) * 100) / 100;
@@ -865,7 +921,6 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
   // A fixed expense only becomes "spent" once its due day in the requested
   // month has actually arrived — mirrors the frontend's isFixedExpenseDue
   // (useFixedExpenses.ts). Months fully in the past always count in full.
-  const today = new Date();
   const fixedExpenses = latestFixedRows.filter(r => isActiveInMonth(r.endedOn, year, month)).reduce(
     (acc, r) => isFixedDue(fixedDayOfMonth(r.description, r.date), year, month, today) ? acc + parseFloat(r.amount) : acc,
     0,

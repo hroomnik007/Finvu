@@ -1,3 +1,4 @@
+import { appToday } from "../lib/localDate";
 import { Response } from "express";
 import { apiError } from "../lib/apiErrors";
 import { and, eq, sql, desc, inArray } from "drizzle-orm";
@@ -12,7 +13,7 @@ import { familyMemberIds } from "../lib/household";
 import { loadStartMonths } from "../lib/loadStartMonths";
 import { isTrackedMonth } from "../lib/trackingStart";
 import { recalcSharedForHousehold, syncSharedToNewMember, unshareAllFor } from "../lib/sharedCategories";
-import { fixedDayOfMonth, isFixedDue, isActiveInMonth } from "../lib/recurring";
+import { isFixedDue, isActiveInMonth, recurringDay } from "../lib/recurring";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -268,7 +269,7 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
   const isMember = await assertMember(householdId, req.userId!, res);
   if (!isMember) return;
 
-  const now = new Date();
+  const now = appToday();
   const yearRaw = parseInt((req.query["year"] as string) ?? "", 10);
   const monthRaw = parseInt((req.query["month"] as string) ?? "", 10);
   const year = yearRaw >= 2000 && yearRaw <= 2100 ? yearRaw : now.getFullYear();
@@ -362,10 +363,10 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
     if (!isActiveInMonth(r.endedOn, year, monthNum)) continue;
     const amount = parseFloat(r.amount);
     const m = memberOf(r.userId);
+    // Same rule as the cards: a recurring item counts once its day has arrived
+    if (!isFixedDue(recurringDay(r), year, monthNum, now)) continue;
     if (r.type === "income") m.income += amount;
-    else if (isFixedDue(fixedDayOfMonth(r.description, r.date), year, monthNum, now)) {
-      addExpense(m, r.categoryId, r.categoryName, r.categoryColor, amount);
-    }
+    else addExpense(m, r.categoryId, r.categoryName, r.categoryColor, amount);
   }
 
   if (memberMap.size > 0) {
@@ -393,7 +394,7 @@ export async function getActivity(req: AuthRequest, res: Response): Promise<void
   const limitRaw = parseInt((req.query["limit"] as string) ?? "10", 10);
   const limit = Math.min(isNaN(limitRaw) ? 10 : limitRaw, 50);
 
-  const now = new Date();
+  const now = appToday();
   const yearRaw = parseInt((req.query["year"] as string) ?? "", 10);
   const monthRaw = parseInt((req.query["month"] as string) ?? "", 10);
   const year = isNaN(yearRaw) ? now.getFullYear() : yearRaw;

@@ -19,7 +19,7 @@ import {
 // budget_met         🏆 Mesačný cieľ      — a completed month kept under total budget
 // speedster          ⚡ Rýchly            — ≥ 10 transactions logged on a single day
 // team_player        👥 Tímový hráč       — household has ≥ 2 members
-// veteran            💎 Veterán           — ≥ 365 days since account/tracking start
+// veteran            💎 Veterán           — ≥ 365 days since the account was created
 export const ACHIEVEMENT_KEYS = [
   "first_transaction",
   "week_streak",
@@ -134,7 +134,9 @@ export async function evaluateAchievements(userId: string): Promise<EvaluateAchi
     });
   const memberCount = Number(memberCountRows[0]?.memberCount ?? 0);
 
-  const startRef = user.trackingStartDate ?? localDateISO(user.createdAt);
+  // Counted from the account's creation, never from the tracking start: that one is
+  // user-editable (it may reach back before registration for imported history).
+  const startRef = localDateISO(user.createdAt);
   const daysActive = Math.floor((Date.now() - new Date(startRef).getTime()) / 86400000);
 
   const qualifies: Record<AchievementKey, boolean> = {

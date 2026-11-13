@@ -1,4 +1,4 @@
-import { fixedDayOfMonth, isFixedDue, latestActiveSeries } from "./recurring";
+import { fixedDayOfMonth, isFixedDue, latestActiveSeries, recurringDay } from "./recurring";
 import { isTrackedMonth, type StartMonths } from "./trackingStart";
 import { monthlyEmailText, resolveEmailLang } from "./monthlyEmailText";
 
@@ -54,8 +54,9 @@ function labelOf(description: string | null): string {
 
 // The rows that make up ONE month for the given transactions (ascending by date):
 // one-off rows dated in it plus every active recurring series. A finished month
-// counts all recurring expenses in full (their due day has passed); pass `today`
-// to count the running month like the app does — only the expenses already due.
+// counts all recurring items in full (their day has passed); pass `today` to count
+// the running month like the app does — only expenses already due and incomes
+// whose payday has arrived.
 // With `starts`, a user's month before their tracking start is empty (see
 // trackingStart.ts); their recurring rows dated earlier still count afterwards.
 export function monthRows(txs: RawTx[], year: number, month: number, today?: Date, starts?: StartMonths): MonthRow[] {
@@ -72,7 +73,7 @@ export function monthRows(txs: RawTx[], year: number, month: number, today?: Dat
   });
   const oneOff = txs.filter((t) => !t.isFixed && t.date.startsWith(ym)).map(toRow);
   const fixed = latestActiveSeries(txs.filter((t) => t.isFixed), year, month)
-    .filter((t) => !today || t.type === "income" || isFixedDue(fixedDayOfMonth(t.description, t.date), year, month, today))
+    .filter((t) => !today || isFixedDue(recurringDay(t), year, month, today))
     .map(toRow);
   return [...oneOff, ...fixed];
 }

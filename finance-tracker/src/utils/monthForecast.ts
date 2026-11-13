@@ -7,6 +7,8 @@
 export interface MonthForecast {
   /** Predicted balance at the end of the month. */
   balance: number
+  /** Predicted expenses of the whole month. */
+  expenses: number
   /** Variable spending per day so far. */
   variablePerDay: number
 }
@@ -17,14 +19,19 @@ export function monthForecast(input: {
   fixedPaid: number
   /** Fixed expenses still to come this month. */
   fixedPending: number
-  /** Variable spending so far this month. */
+  /** Variable spending so far this month (dated up to today). */
   variable: number
+  /**
+   * Variable spending already entered with a later date this month. It is known,
+   * so it counts once and stays out of the daily pace.
+   */
+  variablePlanned?: number
   /** Days elapsed, today included (daysInMonth for a past month). */
   day: number
   daysInMonth: number
 }): MonthForecast {
   const day = Math.min(Math.max(input.day, 1), input.daysInMonth)
   const variablePerDay = input.variable / day
-  const balance = input.income - input.fixedPaid - input.fixedPending - variablePerDay * input.daysInMonth
-  return { balance, variablePerDay }
+  const expenses = input.fixedPaid + input.fixedPending + variablePerDay * input.daysInMonth + (input.variablePlanned ?? 0)
+  return { balance: input.income - expenses, expenses, variablePerDay }
 }

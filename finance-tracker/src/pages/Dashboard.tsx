@@ -15,8 +15,9 @@ import { setFixedPrefill } from '../utils/fixedPrefill'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { useIncomes } from '../hooks/useIncomes'
-import { useFixedExpenses, isFixedExpenseDue } from '../hooks/useFixedExpenses'
+import { useFixedExpenses, isFixedExpenseDue, isEndedInMonth } from '../hooks/useFixedExpenses'
 import { monthForecast } from '../utils/monthForecast'
+import { cashFlowOutlook } from '../utils/cashFlow'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { useFormatters } from '../hooks/useFormatters'
@@ -24,7 +25,7 @@ import { useTranslation } from '../i18n'
 import { pluralText } from '../utils/plural'
 import { useSettingsContext } from '../context/SettingsContext'
 import { useAuth } from '../context/AuthContext'
-import { getMonthlySeries, getSummaryCards, type SeriesMonth } from '../api/transactions'
+import { getMonthlySeries, getSummaryCards } from '../api/transactions'
 import { trackingStartOf } from '../utils/trackingStart'
 import { updateUserSettings } from '../api/auth'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
@@ -55,19 +56,6 @@ function auroraSeverityStyle(severity: AuroraSeverity) {
     WebkitBackdropFilter: 'blur(16px)',
     padding: 16,
   }
-}
-
-function getLast6Months(monthsShort: string[]) {
-  const now = new Date()
-  return Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
-    return {
-      month: d.getMonth() + 1,
-      year: d.getFullYear(),
-      label: monthsShort[d.getMonth()],
-      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-    }
-  })
 }
 
 function getGreeting(name: string, t: Translations): { text: string } {
@@ -113,10 +101,11 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   const sortedBudgetStatuses = useMemo(() =>
     budgetStatuses
       .filter(b => b.limit > 0)
-      .map(b => ({ ...b, txCount: allVariableExpenses.filter(e => e.categoryId === b.categoryId).length }))
-      .sort((a, b) => b.txCount - a.txCount || b.spent - a.spent)
+      // Closest to (or furthest over) its limit first: an exceeded category must
+      // never drop out of the five just because it has few transactions.
+      .sort((a, b) => b.percentage - a.percentage || b.spent - a.spent)
       .slice(0, 5),
-    [budgetStatuses, allVariableExpenses]
+    [budgetStatuses]
   )
   const { goals: savingsGoals } = useSavings()
   const { formatAmount, formatAmountParts, formatLongDate } = useFormatters()
@@ -144,7 +133,13 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
       : allVariableExpenses,
   [householdEnabled, dashView, allVariableExpenses, user?.id])
 
-  const totalIncome = useMemo(() => incomes.reduce((s, i) => s + i.amount, 0), [incomes])
+  // A recurring income counts once its payday in the viewed month has arrived,
+  // like a fixed expense on its due day (the server cards use the same rule).
+  // `plannedIncome` is the whole month's income, used by the forecast.
+  const plannedIncome = useMemo(() => incomes.reduce((s, i) => s + i.amount, 0), [incomes])
+  const totalIncome = useMemo(() => incomes
+    .filter(i => !i.recurring || isFixedExpenseDue(Number(i.date.slice(8, 10)) || 1, month, year))
+    .reduce((s, i) => s + i.amount, 0), [incomes, month, year])
   const totalFixed = useMemo(() => fixedExpenses.reduce((s, f) => s + f.amount, 0), [fixedExpenses])
   const totalVariable = useMemo(() => variableExpenses.reduce((s, v) => s + v.amount, 0), [variableExpenses])
   const totalExpenses = totalFixed + totalVariable
@@ -158,8 +153,9 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     const ownByName = new Map(categories.map(c => [c.name.trim().toLowerCase(), c]))
     const groups = new Map<string, { name: string; icon: string | null | undefined; color: string; value: number }>()
     const add = (row: { categoryName?: string | null; categoryIcon?: string | null; categoryColor?: string | null; amount: number }) => {
-      const label = (row.categoryName ?? '').trim()
-      if (!label) return
+      // Rows without a category get their own slice: the centre shows all
+      // expenses, so leaving them out made every percentage too high.
+      const label = (row.categoryName ?? '').trim() || t.annual.noCategory
       const key = label.toLowerCase()
       const own = ownByName.get(key)
       const group = groups.get(key) ?? {
@@ -174,28 +170,18 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     variableExpenses.forEach(add)
     fixedExpenses.forEach(add)
     return [...groups.values()].filter(d => d.value > 0)
-  }, [categories, variableExpenses, fixedExpenses])
+  }, [categories, variableExpenses, fixedExpenses, t])
 
+  // Expenses of the month before the viewed one (same recurring-item and
+  // tracking-start rules as the cards), for the comparison below.
   const chartStart = trackingStartOf(user)
-  const { data: chartData = [] } = useQuery({
-    queryKey: ['dashboardChart', month, year, chartStart, dashView],
+  const prevKey = month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, '0')}`
+  const { data: prevMonthExpenses = 0 } = useQuery({
+    queryKey: ['dashboardChart', prevKey, chartStart, dashView],
     queryFn: async () => {
-      const minYear = chartStart ? Number(chartStart.slice(0, 4)) : 0
-      const minMonth = chartStart ? Number(chartStart.slice(5, 7)) : 0
-      const months = getLast6Months(t.monthsShort).filter(m =>
-        m.year > minYear || (m.year === minYear && m.month >= minMonth)
-      )
-      if (months.length === 0) return []
-      // One request with the same recurring-item and tracking-start rules as the
-      // cards and the annual view (the per-month /summary counted a recurring
-      // item only in the month it was entered).
-      const series = await getMonthlySeries(months[0].key, months[months.length - 1].key, dashView).catch(() => null)
-      const byMonth = new Map<string, SeriesMonth>((series?.months ?? []).map(s => [s.month, s]))
-      return months.map(m => ({
-        label: m.label,
-        income: byMonth.get(m.key)?.income ?? 0,
-        expenses: byMonth.get(m.key)?.expense ?? 0,
-      }))
+      if (chartStart && prevKey < chartStart.slice(0, 7)) return 0
+      const series = await getMonthlySeries(prevKey, prevKey, dashView).catch(() => null)
+      return series?.months[0]?.expense ?? 0
     },
     enabled: !!user,
   })
@@ -218,11 +204,12 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
 
   const now = new Date()
   const daysInMonth = new Date(year, month, 0).getDate()
-  const dayOfMonth = (month === now.getMonth() + 1 && year === now.getFullYear()) ? now.getDate() : daysInMonth
+  const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear()
+  const isFutureMonth = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth() + 1)
+  const dayOfMonth = isCurrentMonth ? now.getDate() : daysInMonth
   const dailyAvgExpense = dayOfMonth > 0 ? totalExpenses / dayOfMonth : 0
 
-  const prevMonthData = chartData[chartData.length - 2]
-  const monthChallengeTarget = prevMonthData?.expenses ?? 0
+  const monthChallengeTarget = prevMonthExpenses
   const challengeProgress = monthChallengeTarget > 0 ? Math.min(totalExpenses / monthChallengeTarget, 1) : 0
 
   function countdownBadge(daysUntil: number) {
@@ -235,12 +222,22 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
 
 const upcomingFixed = useMemo(() => {
     const n = new Date()
-    const today = n.getDate()
-    const monthDays = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate()
+    const today = new Date(n.getFullYear(), n.getMonth(), n.getDate())
     // Whole viewed month is before the real current month → everything in it is already paid
     const isPastMonth = year < n.getFullYear() || (year === n.getFullYear() && month < n.getMonth() + 1)
-    return [...allFixedExpenses]
-      .map(e => ({ ...e, daysUntil: ((Math.min(e.dayOfMonth, monthDays) - today + 31) % 31), paid: isPastMonth }))
+    return allFixedExpenses
+      .map(e => {
+        // The real next due date: this month when the day is still ahead, otherwise
+        // next month — each clamped to its own month's length (31st → 30th / 28th).
+        const dueIn = (y: number, m0: number) => new Date(y, m0, Math.min(e.dayOfMonth, new Date(y, m0 + 1, 0).getDate()))
+        let due = dueIn(today.getFullYear(), today.getMonth())
+        if (due < today) due = dueIn(today.getFullYear(), today.getMonth() + 1)
+        const dueYM = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}`
+        // The price valid in the month it falls due (a change may start next month)
+        const price = [...(e.history ?? [])].reverse().find(h => h.from <= dueYM)?.amount ?? e.amount
+        return { ...e, amount: isPastMonth ? e.amount : price, dueYM, daysUntil: Math.round((due.getTime() - today.getTime()) / 86400000), paid: isPastMonth }
+      })
+      .filter(e => isPastMonth || !isEndedInMonth(e.endedOn, e.dueYM))
       .sort((a, b) => isPastMonth ? a.dayOfMonth - b.dayOfMonth : a.daysUntil - b.daysUntil)
       .slice(0, 4)
   }, [allFixedExpenses, year, month])
@@ -278,29 +275,63 @@ const upcomingFixed = useMemo(() => {
       ? 'warning'
       : null
 
-  const hasMonthComparison = (prevMonthData?.expenses ?? 0) > 0
+  // ── Forecast (end-of-month prediction) ──────────────────────────────────────
+  const forecastProgressPct = daysInMonth > 0 ? (isFutureMonth ? 0 : (dayOfMonth / daysInMonth) * 100) : 0
+  // Fixed bills count once; only variable spending up to today is extrapolated,
+  // and expenses already entered with a later date count once (see monthForecast).
+  const todayKey = todayISO()
+  const variableSoFar = isFutureMonth ? 0 : variableExpenses.filter(v => !isCurrentMonth || v.date <= todayKey).reduce((s, v) => s + v.amount, 0)
+  const forecast = monthForecast({
+    income: plannedIncome,
+    fixedPaid: totalFixed,
+    fixedPending: allMonthFixedExpenses.filter(f => !isFixedExpenseDue(f.dayOfMonth, month, year)).reduce((s, f) => s + f.amount, 0),
+    variable: variableSoFar,
+    variablePlanned: totalVariable - variableSoFar,
+    day: dayOfMonth,
+    daysInMonth,
+  })
+
+  // Comparison with the month before. The running month is compared by where it
+  // is heading (the forecast), not by what was spent so far — a month that is one
+  // week old always looked "cheaper" than a whole one. A future month has nothing
+  // to compare yet.
+  const comparedExpenses = isCurrentMonth ? forecast.expenses : totalExpenses
+  const hasMonthComparison = prevMonthExpenses > 0 && !isFutureMonth
   const comparisonDiffPct = hasMonthComparison
-    ? Math.abs(((totalExpenses - prevMonthData!.expenses) / prevMonthData!.expenses) * 100)
+    ? Math.abs(((comparedExpenses - prevMonthExpenses) / prevMonthExpenses) * 100)
     : 0
-  const comparisonIsUp = hasMonthComparison && totalExpenses > prevMonthData!.expenses
+  const comparisonIsUp = hasMonthComparison && comparedExpenses > prevMonthExpenses
+  const comparisonText = isCurrentMonth
+    ? (comparisonIsUp ? t.dashboard.spendingMore : t.dashboard.spendingLess)
+    : (comparisonIsUp ? t.dashboard.spentMore : t.dashboard.spentLess)
   const insightMainText = hasMonthComparison
-    ? (comparisonIsUp ? t.dashboard.spendingMore : t.dashboard.spendingLess).replace('{pct}', String(Math.round(comparisonDiffPct)))
+    ? comparisonText.replace('{pct}', String(Math.round(comparisonDiffPct)))
     : motivationalMsg?.msg ?? null
   const insightMainColor = hasMonthComparison
     ? (comparisonIsUp ? 'var(--aurora-rose)' : 'var(--aurora-emerald)')
     : (motivationalMsg?.color ?? 'var(--aurora-hi)')
 
-  // ── Forecast (end-of-month prediction) ──────────────────────────────────────
-  const forecastProgressPct = daysInMonth > 0 ? (dayOfMonth / daysInMonth) * 100 : 0
-  // Fixed bills count once; only variable spending is extrapolated (see monthForecast)
-  const forecast = monthForecast({
-    income: totalIncome,
-    fixedPaid: totalFixed,
-    fixedPending: allMonthFixedExpenses.filter(f => !isFixedExpenseDue(f.dayOfMonth, month, year)).reduce((s, f) => s + f.amount, 0),
-    variable: totalVariable,
-    day: dayOfMonth,
-    daysInMonth,
-  })
+  // Outlook of the account for the rest of the running month: where the total
+  // balance bottoms out before the next income. The server's balance already
+  // contains one-off rows dated later this month, so those are taken out first
+  // and applied on their own day instead.
+  const lowestAhead = (() => {
+    if (!isCurrentMonth || !summaryCards) return null
+    const dayOf = (iso: string) => Number(iso.slice(8, 10)) || 1
+    const laterVariable = variableExpenses.filter(v => v.date > todayKey)
+    const laterOneOffIncome = incomes.filter(i => !i.recurring && i.date > todayKey)
+    const events = [
+      ...allMonthFixedExpenses.filter(f => !isFixedExpenseDue(f.dayOfMonth, month, year)).map(f => ({ day: f.dayOfMonth, amount: -f.amount })),
+      ...incomes.filter(i => i.recurring && !isFixedExpenseDue(dayOf(i.date), month, year)).map(i => ({ day: dayOf(i.date), amount: i.amount })),
+      ...laterVariable.map(v => ({ day: dayOf(v.date), amount: -v.amount })),
+      ...laterOneOffIncome.map(i => ({ day: dayOf(i.date), amount: i.amount })),
+    ]
+    const balanceToday = summaryCards.balance
+      + laterVariable.reduce((s, v) => s + v.amount, 0)
+      - laterOneOffIncome.reduce((s, i) => s + i.amount, 0)
+    return cashFlowOutlook({ balanceToday, today: dayOfMonth, daysInMonth, events, variablePerDay: forecast.variablePerDay })
+  })()
+
   const predictedBalance = forecast.balance
   const predictedBalanceText = `${predictedBalance >= 0 ? '+' : ''}${formatAmount(predictedBalance)}`
   const predictedBalanceColor = predictedBalance >= 0 ? 'var(--aurora-emerald)' : 'var(--aurora-rose)'
@@ -339,6 +370,7 @@ const upcomingFixed = useMemo(() => {
   const heroBalance = summaryCards?.balance ?? (dashView === 'personal' ? balance : 0)
   const heroIncome = summaryCards?.income ?? (dashView === 'personal' ? totalIncome : 0)
   const heroExpenses = summaryCards?.expenses ?? (dashView === 'personal' ? totalExpenses : 0)
+  const monthResult = heroIncome - heroExpenses
   const savRate = heroIncome > 0 ? Math.round(((heroIncome - heroExpenses) / heroIncome) * 100) : 0
   const animatedBalance = useCountUp(heroBalance, 800)
   const animatedIncome = useCountUp(heroIncome, 800)
@@ -364,7 +396,7 @@ const upcomingFixed = useMemo(() => {
     <HeroCard variant="neutral">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, minWidth: 0 }}>
-          {t.dashboard.balance} · {t.months[month - 1]} {year}
+          {t.dashboard.totalBalance}
         </div>
         {/* Quiet link to the yearly overview (was a second primary button under the card) */}
         <button
@@ -397,7 +429,15 @@ const upcomingFixed = useMemo(() => {
         </span>
       </div>
       )}
-      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+      {/* The big figure is the running total since tracking began; the tiles below
+          are this month's, so the month's own result is spelled out between them. */}
+      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', marginTop: 10 }}>
+        {t.dashboard.monthResult} · {t.months[month - 1]} {year}:{' '}
+        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: monthResult < 0 ? 'var(--aurora-rose)' : 'var(--aurora-emerald)' }}>
+          {heroValue(`${monthResult >= 0 ? '+' : '−'}${formatAmount(Math.abs(monthResult))}`)}
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <div
           onClick={() => onNavigate('income')}
           onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--aurora-hover)' }}
@@ -579,6 +619,11 @@ const upcomingFixed = useMemo(() => {
         predictedBalanceText={predictedBalanceText}
         predictedBalanceColor={predictedBalanceColor}
         paceText={paceText}
+        lowest={lowestAhead && lowestAhead.lowestDay > dayOfMonth ? {
+          label: t.dashboard.lowestBalance.replace('{day}', `${lowestAhead.lowestDay}.`),
+          text: `${lowestAhead.lowest < 0 ? '−' : ''}${formatAmount(Math.abs(lowestAhead.lowest))}`,
+          negative: lowestAhead.lowest < 0,
+        } : undefined}
       />
 
       {(user?.savings_enabled && savingsGoals.length > 0) && (
@@ -732,13 +777,9 @@ const upcomingFixed = useMemo(() => {
             borderRadius: 20,
             padding: '16px 12px',
             overflowX: 'hidden',
-            overflowY: 'auto',
-            maxHeight: 'calc(100vh - 120px)',
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
-            position: 'sticky',
-            top: 0,
             alignSelf: 'flex-start',
           }}
         >

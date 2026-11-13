@@ -238,8 +238,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
       }
       closeSheet()
       feedback.saved()
-    } catch {
-      feedback.failed()
+    } catch (err) {
+      feedback.failed(err)
     }
   }
 

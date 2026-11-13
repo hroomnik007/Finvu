@@ -156,8 +156,8 @@ export function IncomePage({ month, year }: IncomePageProps) {
         // name), so undo is offered only for one-off incomes.
         feedback.saved(form.recurring ? undefined : () => deleteIncome(id))
       }
-    } catch {
-      feedback.failed()
+    } catch (err) {
+      feedback.failed(err)
     }
   }
 
@@ -282,6 +282,12 @@ export function IncomePage({ month, year }: IncomePageProps) {
                                   <Repeat size={8} /> {t.income.recurringBadge}
                                 </span>
                               )}
+                              {income.recurring && income.date > todayISO() && (
+                                // Counts in the balance from its payday on (like a fixed expense on its due day)
+                                <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'color-mix(in srgb, var(--aurora-amber) 15%, transparent)', color: 'var(--aurora-amber)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  {t.income.expectedBadge}
+                                </span>
+                              )}
                               <PendingBadge state={income.pending} />
                             </div>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', flexShrink: 0 }}>+{formatAmount(income.amount)}</span>
@@ -309,6 +315,12 @@ export function IncomePage({ month, year }: IncomePageProps) {
                               {income.recurring && (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'rgba(139,92,246,0.15)', color: 'var(--aurora-violet-text)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                   <Repeat size={8} /> {t.income.recurringBadge}
+                                </span>
+                              )}
+                              {income.recurring && income.date > todayISO() && (
+                                // Counts in the balance from its payday on (like a fixed expense on its due day)
+                                <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99, background: 'color-mix(in srgb, var(--aurora-amber) 15%, transparent)', color: 'var(--aurora-amber)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  {t.income.expectedBadge}
                                 </span>
                               )}
                               <PendingBadge state={income.pending} />

@@ -49,6 +49,8 @@ export const API_ERRORS = {
   SHARING_REQUIRES_HOUSEHOLD: "Categories can only be shared in a household with sharing turned on.",
   SHARED_CATEGORY_LOCKED: "Shared category can't be renamed or use auto limit. Stop sharing it first.",
   CATEGORY_IN_USE: "Cannot delete category with existing transactions. Reassign or delete them first.",
+  // Transactions
+  RECURRING_NAME_EXISTS: "A recurring item with this name already exists. Edit it or use a different name.",
 } as const;
 
 export type ApiErrorCode = keyof typeof API_ERRORS;

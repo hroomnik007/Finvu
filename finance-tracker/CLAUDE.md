@@ -119,6 +119,15 @@ docker exec finance-tracker-repo-backend-1 node dist/scripts/migrate.js
 - Ak používateľ nastaví manuálny limit na kategórii s `auto_limit = true`, dostane varovanie
 - **Spoločná kategória (`shared`)** s fixnými výdavkami ktoréhokoľvek člena: limit = súčet aktívnych fixných výdavkov domácnosti + spoločná rezerva (`limit_reserve`, pri úprave sa prepíše na všetkých zdieľaných kópiách). API vracia pri zdieľaných kategóriách `sharedFixedTotal` (len súčet) a `sharedReserve`; UI vtedy namiesto limitu upravuje rezervu. Bez fixných výdavkov platí ručný limit (najvyšší z limitov členov)
 
+## Opakované položky a zostatok (pravidlá výpočtu)
+
+- **Séria** = používateľ + typ + `description` (fixný výdavok má v popise JSON `{l,n,d}`, opakovaný príjem čistý názov). Druhú bežiacu položku s rovnakým popisom server odmietne (`409 RECURRING_NAME_EXISTS`); po ukončení série sa dá založiť znova až od mesiaca, v ktorom už neplatí
+- **Kedy sa započíta**: fixný výdavok od dňa splatnosti (`d`), opakovaný príjem od dňa výplaty (deň z dátumu riadku, `recurringDay` v `backend/src/lib/recurring.ts`). Minulý mesiac celý, budúci vôbec. Zmena ceny zachová deň v mesiaci
+- **„Dnes“ na serveri** je vždy `appToday()` (`lib/localDate.ts`, Europe/Bratislava), nie `new Date()`
+- **Celkový zostatok** = `users.opening_balance` (Nastavenia → Financie) + kumulatívny tok od začiatku sledovania. Začiatok sledovania smie byť aj pred registráciou (import starších výpisov ho sám posunie); odznak „Veterán“ sa počíta z `created_at`
+- **`updateSchema` transakcie nesmie dediť `default` z `createSchema`** (zod 4 aplikuje default aj vo voliteľnom poli; úprava bez `isFixed` vtedy menila fixný výdavok na jednorazový, opravené migráciou 039)
+- Automatický limit kategórie sa prepočíta aj pri prvom načítaní kategórií v novom mesiaci (`refreshLimitsForNewMonth`)
+
 ## Modul Profil
 
 - **Úspory stat**: suma všetkých `savedAmount` naprieč savings goals; zobrazuje `—` keď žiadne ciele neexistujú (nie `0 €`)

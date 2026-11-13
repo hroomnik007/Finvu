@@ -7,6 +7,7 @@ import { db } from "../db";
 import { categories, transactions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { activeSeriesTotal } from "../lib/recurring";
+import { appToday, localDateISO } from "../lib/localDate";
 import { NotSharingError, propagateSharedLimit, propagateSharedReserve, recalcSharedLimit, shareCategories, sharedFixedInfo, unshareCategories } from "../lib/sharedCategories";
 
 type CategoryRow = typeof categories.$inferSelect;
@@ -61,7 +62,7 @@ export async function recalculateCategoryLimit(categoryId: string, userId: strin
     ))
     .orderBy(transactions.date);
 
-  const today = new Date();
+  const today = appToday();
   const fixedTotal = activeSeriesTotal(fixedRows, today.getFullYear(), today.getMonth() + 1);
   if (fixedTotal > 0) {
     // Fixed expenses plus the user's reserve for variable spending in the category.
@@ -98,12 +99,32 @@ const updateSchema = z.object({
   limitReserve: z.number().min(0).max(9_999_999_999.99).optional(),
 });
 
+// Limits that follow fixed expenses (auto limit, shared categories) are stored, and
+// only recomputed when a fixed expense changes. A price change or an end that
+// takes effect "from next month" therefore needs one more pass when that month
+// begins: the first category list of each month refreshes them. Kept in memory —
+// after a restart every user simply gets one extra refresh.
+const limitsRefreshedFor = new Map<string, string>();
+
+async function refreshLimitsForNewMonth(userId: string, rows: CategoryRow[]): Promise<boolean> {
+  const ym = localDateISO().slice(0, 7);
+  if (limitsRefreshedFor.get(userId) === ym) return false;
+  limitsRefreshedFor.set(userId, ym);
+  const follow = rows.filter((r) => r.type === "expense" && (r.autoLimit || r.shared));
+  for (const cat of follow) {
+    try { await recalculateCategoryLimit(cat.id, userId); } catch (err) { console.error("monthly limit refresh failed:", err); }
+  }
+  return follow.length > 0;
+}
+
 export async function listCategories(req: AuthRequest, res: Response): Promise<void> {
-  const rows = await db
+  const load = () => db
     .select()
     .from(categories)
     .where(eq(categories.userId, req.userId!))
     .orderBy(sql`sort_order NULLS LAST`, asc(categories.type), asc(categories.name));
+  let rows = await load();
+  if (await refreshLimitsForNewMonth(req.userId!, rows)) rows = await load();
 
   // Determine which categories have at least one fixed expense transaction
   const categoryIds = rows.map((r) => r.id);

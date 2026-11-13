@@ -95,6 +95,7 @@ export function userPublic(u: {
   theme?: string | null;
   language?: string | null;
   trackingStartDate?: string | null;
+  openingBalance?: string | null;
   onboardingBannerDismissed?: boolean | null;
   pinHash?: string | null;
   passwordHash?: string | null;
@@ -118,6 +119,7 @@ export function userPublic(u: {
     theme: u.theme ?? null,
     language: u.language ?? null,
     tracking_start_date: u.trackingStartDate ?? null,
+    opening_balance: Number(u.openingBalance ?? 0) || 0,
     onboarding_banner_dismissed: u.onboardingBannerDismissed ?? false,
     has_pin: !!u.pinHash,
     // Lets the frontend decide whether changing/removing a PIN should ask for
@@ -474,6 +476,7 @@ export async function me(req: AuthRequest, res: Response): Promise<void> {
       language: users.language,
       autoLockMinutes: users.autoLockMinutes,
       trackingStartDate: users.trackingStartDate,
+      openingBalance: users.openingBalance,
       onboardingBannerDismissed: users.onboardingBannerDismissed,
       pinHash: users.pinHash,
       passwordHash: users.passwordHash,
@@ -741,7 +744,7 @@ export async function updateWeeklyEmail(req: AuthRequest, res: Response): Promis
 
 export async function updateUserSettings(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.userId!;
-  const { onboardingComplete, monthlyEmailEnabled, monthlyEmailScope, monthlyEmailHour, defaultPage, currencyFormat, theme, savingsEnabled, trackingStartDate, onboardingBannerDismissed, language, autoLockMinutes } = req.body as {
+  const { onboardingComplete, monthlyEmailEnabled, monthlyEmailScope, monthlyEmailHour, defaultPage, currencyFormat, theme, savingsEnabled, trackingStartDate, openingBalance, onboardingBannerDismissed, language, autoLockMinutes } = req.body as {
     onboardingComplete?: boolean;
     monthlyEmailEnabled?: boolean;
     monthlyEmailScope?: string;
@@ -751,6 +754,7 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
     theme?: string;
     savingsEnabled?: boolean;
     trackingStartDate?: string | null;
+    openingBalance?: number;
     onboardingBannerDismissed?: boolean;
     language?: string;
     autoLockMinutes?: number | null;
@@ -771,20 +775,19 @@ export async function updateUserSettings(req: AuthRequest, res: Response): Promi
   if (typeof language === 'string' && VALID_LANGS.includes(language)) update.language = language;
   if (typeof savingsEnabled === 'boolean') update.savingsEnabled = savingsEnabled;
   if (trackingStartDate === null || (typeof trackingStartDate === 'string' && DATE_RE.test(trackingStartDate))) {
-    // Floored at the account's real creation date and capped at today — an
-    // arbitrarily old value here used to instantly satisfy the "veteran"
-    // (daysActive >= 365) achievement with zero genuine usage (security audit
-    // run-1). A single fetch is cheap and keeps the floor authoritative
-    // (server-recorded createdAt), not something the client can also spoof.
+    // Capped at today; it may reach back before registration so imported history
+    // (bank statements) counts. Nothing that rewards usage reads it: the "veteran"
+    // achievement counts from users.created_at (security audit run-1).
     if (trackingStartDate === null) {
       update.trackingStartDate = null;
     } else {
-      const [row] = await db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId)).limit(1);
-      const floor = row ? localDateISO(row.createdAt) : trackingStartDate;
       const today = localDateISO();
-      const clamped = trackingStartDate < floor ? floor : (trackingStartDate > today ? today : trackingStartDate);
-      update.trackingStartDate = clamped;
+      update.trackingStartDate = trackingStartDate > today ? today : trackingStartDate;
     }
+  }
+  // May be negative (overdraft); bounded by numeric(12,2)
+  if (typeof openingBalance === 'number' && Number.isFinite(openingBalance) && Math.abs(openingBalance) <= 9_999_999_999.99) {
+    update.openingBalance = (Math.round(openingBalance * 100) / 100).toFixed(2);
   }
   if (typeof onboardingBannerDismissed === 'boolean') update.onboardingBannerDismissed = onboardingBannerDismissed;
   if (autoLockMinutes === null || (typeof autoLockMinutes === 'number' && [0, 1, 5, 15].includes(autoLockMinutes))) {
@@ -830,7 +833,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
       DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: newUser.id, isDefault: true }))
     );
 
-    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: newUser.theme ?? 'dark', language: 'sk', trackingStartDate: null, onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false };
+    user = { ...newUser, passwordHash: null, googleId, emailVerified: true, verificationToken: null, verificationExpiresAt: null, resetToken: null, resetTokenExpiry: null, lastLoginAt: null, lastActiveAt: null, createdAt: new Date(), updatedAt: new Date(), monthlyEmailEnabled: false, monthlyEmailScope: 'personal', monthlyEmailHour: 9, monthlyEmailLastSent: null, onboardingComplete: false, currentStreak: 0, longestStreak: 0, lastActivityDate: null, badges: [], pinHash: null, defaultPage: 'dashboard', currencyFormat: 'sk', householdId: null, householdEnabled: false, savingsEnabled: false, theme: newUser.theme ?? 'dark', language: 'sk', trackingStartDate: null, openingBalance: '0', onboardingBannerDismissed: false, autoLockMinutes: null, isDeactivated: false };
   } else if (!user.googleId) {
     // Google just proved control of this mailbox. If the account was registered
     // with a password but never verified, whoever registered it may not be the

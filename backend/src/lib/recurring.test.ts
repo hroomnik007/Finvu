@@ -60,14 +60,18 @@ describe("recurringTotalsForMonth", () => {
     const rows = [row({ amount: "600", date: "2026-01-05" }), row({ amount: "650", date: "2026-06-05" })];
     expect(recurringTotalsForMonth(rows, 2026, 9, TODAY)).toEqual({ income: 0, expense: 650 });
   });
-  it("counts recurring income regardless of its day, expenses only once due", () => {
+  it("counts a recurring income from its payday and an expense from its due day", () => {
     const rows = [
-      row({ type: "income", description: "Plat", amount: "1500", date: "2026-10-28" }),
+      row({ type: "income", description: "Plat", amount: "1500", date: "2026-09-10" }),
+      row({ type: "income", description: "Brigáda", amount: "200", date: "2026-09-28" }),
       row({ description: "Netflix", amount: "10", date: "2026-01-01" }),
       row({ description: "Poistenie", amount: "50", date: "2026-01-20" }),
     ];
-    // 15 Oct: Netflix (day 1) is due, Poistenie (day 20) is not
+    // 15 Oct: Plat (10th) and Netflix (1st) have arrived, Brigáda (28th) and Poistenie (20th) not yet
     expect(recurringTotalsForMonth(rows, 2026, 10, TODAY)).toEqual({ income: 1500, expense: 10 });
+    // A finished month counts everything, a future one nothing
+    expect(recurringTotalsForMonth(rows, 2026, 9, TODAY)).toEqual({ income: 1700, expense: 60 });
+    expect(recurringTotalsForMonth(rows, 2026, 11, TODAY)).toEqual({ income: 0, expense: 0 });
   });
   it("keeps the same description of two users apart", () => {
     const rows = [row({ userId: "u1", amount: "100" }), row({ userId: "u2", amount: "200" })];

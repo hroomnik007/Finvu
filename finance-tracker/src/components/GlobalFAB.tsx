@@ -213,8 +213,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       // Deleting a recurring income removes its whole series (matched by name),
       // so undo is offered only for one-off incomes.
       feedback.saved(incRecurring ? undefined : () => deleteIncome(id))
-    } catch {
-      feedback.failed()
+    } catch (err) {
+      feedback.failed(err)
     }
   }
 
@@ -241,8 +241,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       const id = await addVariableExpense({ amount: amt, categoryId: catId, note: varNote, date: varDate })
       closeModal()
       feedback.saved(() => deleteVariableExpense(id))
-    } catch {
-      feedback.failed()
+    } catch (err) {
+      feedback.failed(err)
     }
   }
 
@@ -254,8 +254,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       await addFixedExpense({ label: fixLabel.trim(), amount: amt, dayOfMonth: day, categoryId: fixCatId || null, note: '' })
       closeModal()
       feedback.saved()
-    } catch {
-      feedback.failed()
+    } catch (err) {
+      feedback.failed(err)
     }
   }
 
@@ -272,8 +272,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       })
       closeModal()
       feedback.saved()
-    } catch {
-      feedback.failed()
+    } catch (err) {
+      feedback.failed(err)
     }
   }
 
@@ -291,8 +291,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       })
       closeModal()
       feedback.saved()
-    } catch {
-      feedback.failed()
+    } catch (err) {
+      feedback.failed(err)
     }
   }
 

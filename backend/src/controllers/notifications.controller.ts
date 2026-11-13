@@ -1,10 +1,11 @@
+import { appToday } from "../lib/localDate";
 import { Response } from "express";
 import { eq, and, gte, lte, desc, asc } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { notificationsDismissed, transactions, categories, savingsGoals } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
-import { isActiveInMonth } from "../lib/recurring";
+import { fixedDayOfMonth, isActiveInMonth } from "../lib/recurring";
 
 // ── Feed item types (translated client-side from kind + params) ─────────────
 type FeedItem =
@@ -27,7 +28,7 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
   if (/^\d{4}-\d{2}-\d{2}$/.test(todayParam)) {
     [y, m, d] = todayParam.split("-").map(Number);
   } else {
-    const now = new Date();
+    const now = appToday();
     y = now.getFullYear();
     m = now.getMonth() + 1;
     d = now.getDate();
@@ -52,7 +53,7 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
         gte(transactions.date, monthStart),
         lte(transactions.date, monthEnd),
       )),
-    db.select({ id: transactions.id, amount: transactions.amount, description: transactions.description, date: transactions.date, endedOn: transactions.endedOn })
+    db.select({ id: transactions.id, amount: transactions.amount, description: transactions.description, date: transactions.date, endedOn: transactions.endedOn, categoryId: transactions.categoryId })
       .from(transactions)
       .where(and(eq(transactions.userId, userId), eq(transactions.type, "expense"), eq(transactions.isFixed, true)))
       .orderBy(transactions.date),
@@ -73,6 +74,15 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
   const spentByCategory = new Map<string, number>();
   for (const tx of variableTxs) {
     if (!tx.categoryId) continue;
+    spentByCategory.set(tx.categoryId, (spentByCategory.get(tx.categoryId) ?? 0) + Number(tx.amount));
+  }
+  // Fixed expenses already due this month count as spent, like on the Categories
+  // page — an auto limit (fixed + reserve) would otherwise never be reached here.
+  const seriesNow = new Map<string, (typeof fixedTxs)[number]>();
+  for (const tx of fixedTxs) if (tx.date <= monthEnd) seriesNow.set(tx.description ?? "", tx);
+  for (const tx of seriesNow.values()) {
+    if (!tx.categoryId || !isActiveInMonth(tx.endedOn, y, m)) continue;
+    if (Math.min(fixedDayOfMonth(tx.description, tx.date), daysInMonth) > d) continue;
     spentByCategory.set(tx.categoryId, (spentByCategory.get(tx.categoryId) ?? 0) + Number(tx.amount));
   }
   for (const cat of cats) {
