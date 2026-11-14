@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zodDetails } from "../lib/validation";
 import { apiError } from "../lib/apiErrors";
 import { db } from "../db";
-import { transactions, categories, users, householdMembers } from "../db/schema";
+import { transactions, categories, users, householdMembers, savingsDeposits } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
 import { recalculateCategoryLimit } from "./categories.controller";
 import { evaluateAchievements } from "../services/achievements.service";
@@ -12,7 +12,7 @@ import { familyMemberIds } from "../lib/household";
 import { escapeLike } from "../lib/search";
 import { appToday, localDateISO } from "../lib/localDate";
 import { nextStreak } from "../lib/streak";
-import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows, recurringDay } from "../lib/recurring";
+import { fixedDayOfMonth, isFixedDue, isActiveInMonth, cumulativeBalanceFromRows, recurringDay, occursInMonth } from "../lib/recurring";
 import { earliestStart, isTrackedMonth, type StartMonths } from "../lib/trackingStart";
 import { loadStartMonths } from "../lib/loadStartMonths";
 
@@ -121,7 +121,7 @@ function buildFilters(
     // Recurring expenses keep label, note and due day as JSON in the description:
     // the key names are stripped so searching "l" or "n" does not match every one.
     filters.push(or(
-      sql`regexp_replace(${transactions.description}, '"[lnd]":', ' ', 'g') ilike ${pattern}`,
+      sql`regexp_replace(${transactions.description}, '"[lndpm]":', ' ', 'g') ilike ${pattern}`,
       sql`${categories.name} ilike ${pattern}`,
     )!);
   }
@@ -776,8 +776,21 @@ async function cumulativeBalance(
     .filter((u) => isTrackedMonth(starts, u.id, targetYM))
     .reduce((sum, u) => sum + (parseFloat(u.openingBalance ?? "0") || 0), 0);
 
+  // Deposits into savings goals are transfers out of the account: they lower the
+  // balance, but are neither an expense nor part of the savings rate. A deposit
+  // counts in the month it was made (app time zone), within the tracked months;
+  // removing it (or its goal) brings the money back.
+  const deposits = await db
+    .select({ userId: savingsDeposits.userId, amount: savingsDeposits.amount, createdAt: savingsDeposits.createdAt })
+    .from(savingsDeposits)
+    .where(inArray(savingsDeposits.userId, ids));
+  const saved = deposits.reduce((sum, d) => {
+    const ym = localDateISO(d.createdAt).slice(0, 7);
+    return ym <= targetYM && isTrackedMonth(starts, d.userId, ym) ? sum + (parseFloat(d.amount) || 0) : sum;
+  }, 0);
+
   const flow = cumulativeBalanceFromRows(oneOffByMonth, fixedRows, firstMonth, target, appToday(), starts);
-  return Math.round((opening + flow) * 100) / 100;
+  return Math.round((opening + flow - saved) * 100) / 100;
 }
 
 export async function getBalanceAtMonth(req: AuthRequest, res: Response): Promise<void> {
@@ -921,7 +934,7 @@ export async function getSummaryCards(req: AuthRequest, res: Response): Promise<
   // A fixed expense only becomes "spent" once its due day in the requested
   // month has actually arrived — mirrors the frontend's isFixedExpenseDue
   // (useFixedExpenses.ts). Months fully in the past always count in full.
-  const fixedExpenses = latestFixedRows.filter(r => isActiveInMonth(r.endedOn, year, month)).reduce(
+  const fixedExpenses = latestFixedRows.filter(r => isActiveInMonth(r.endedOn, year, month) && occursInMonth(r.description, month)).reduce(
     (acc, r) => isFixedDue(fixedDayOfMonth(r.description, r.date), year, month, today) ? acc + parseFloat(r.amount) : acc,
     0,
   );

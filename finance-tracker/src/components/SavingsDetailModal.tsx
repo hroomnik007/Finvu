@@ -125,6 +125,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
   const glassInputStyle = { flex: 1, padding: '11px 14px', borderRadius: 14, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-hi)', fontSize: 14, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' as const }
 
   const depositInputEl = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
     <div style={{ display: 'flex', gap: 8 }}>
       <AmountInput
         placeholder={t.savings.depositPlaceholder}
@@ -141,6 +142,8 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
         style={{ width: 44, height: 44, borderRadius: 14, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-lo)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <X size={16} />
       </button>
+    </div>
+    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.savings.depositHint}</p>
     </div>
   )
 

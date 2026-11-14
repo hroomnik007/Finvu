@@ -120,7 +120,7 @@ function App() {
   const { incomes: allIncomes } = useIncomes(now.getMonth() + 1, now.getFullYear())
   // Native OS reminders for fixed expenses due today. Reads the Settings toggle
   // (getNotificationsEnabled → localStorage); fires at most once per expense per day.
-  const { fixedExpenses: allFixedExpensesForNotif } = useFixedExpenses()
+  const { fixedExpenses: allFixedExpensesForNotif } = useFixedExpenses(now.getMonth() + 1, now.getFullYear())
   useFixedExpenseNotifications(allFixedExpensesForNotif, isAuthenticated)
   const [page, setPage] = useState<Page>(getPageFromHash)
   // Mobile add buttons step aside while scrolling down and come back on a

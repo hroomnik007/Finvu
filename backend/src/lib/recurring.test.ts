@@ -3,6 +3,9 @@ import {
   activeSeriesTotal,
   cumulativeBalanceFromRows,
   fixedDayOfMonth,
+  hasRunningSeries,
+  occursInMonth,
+  recurrenceOf,
   isActiveInMonth,
   isFixedDue,
   recurringTotalsForMonth,
@@ -206,5 +209,48 @@ describe("cumulativeBalanceFromRows with tracking starts", () => {
     const starts = new Map([["a", "2026-03"], ["b", "2026-02"]]);
     // a: Mar+Apr = 2000; b: Feb..Apr = −300
     expect(cumulativeBalanceFromRows(new Map(), rows, idx(2026, 1), idx(2026, 4), TODAY, starts)).toBe(1700);
+  });
+});
+
+describe("quarterly and yearly fixed expenses", () => {
+  const yearly = JSON.stringify({ l: "Poistka", n: "", d: 10, p: 12, m: 3 });
+  const quarterly = JSON.stringify({ l: "Daň", n: "", d: 5, p: 3, m: 2 });
+
+  it("reads the recurrence from the description; anything else is monthly", () => {
+    expect(recurrenceOf(yearly)).toEqual({ every: 12, anchorMonth: 3 });
+    expect(recurrenceOf(JSON.stringify({ l: "Nájom", n: "", d: 1 }))).toBeNull();
+    expect(recurrenceOf(JSON.stringify({ l: "X", d: 1, p: 6, m: 1 }))).toBeNull();
+    expect(recurrenceOf("Výplata")).toBeNull();
+    expect(recurrenceOf(null)).toBeNull();
+  });
+
+  it("charges only in its own months", () => {
+    expect([1, 2, 3, 4, 12].map((m) => occursInMonth(yearly, m))).toEqual([false, false, true, false, false]);
+    // every third month from February: Feb, May, Aug, Nov
+    expect([1, 2, 3, 4, 5, 8, 11, 12].map((m) => occursInMonth(quarterly, m))).toEqual([false, true, false, false, true, true, true, false]);
+    expect(occursInMonth("Nájom", 7)).toBe(true);
+  });
+
+  it("counts in full in the month it is paid and not in between", () => {
+    const rows = [
+      row({ description: yearly, amount: "600", date: "2025-03-10" }),
+      row({ description: quarterly, amount: "90", date: "2025-02-05" }),
+      row({ description: "Nájom", amount: "650", date: "2025-01-01" }),
+    ];
+    // TODAY is 15 Oct 2026: finished months count everything that occurs in them
+    expect(recurringTotalsForMonth(rows, 2026, 3, TODAY)).toEqual({ income: 0, expense: 1250 });
+    expect(recurringTotalsForMonth(rows, 2026, 5, TODAY)).toEqual({ income: 0, expense: 740 });
+    expect(recurringTotalsForMonth(rows, 2026, 4, TODAY)).toEqual({ income: 0, expense: 650 });
+    expect(activeSeriesTotal(rows, 2026, 3)).toBe(1250);
+    expect(activeSeriesTotal(rows, 2026, 4)).toBe(650);
+    // A yearly item is still "running" in the months it is not charged
+    expect(hasRunningSeries([rows[0]], 2026, 4)).toBe(true);
+    expect(activeSeriesTotal([rows[0]], 2026, 4)).toBe(0);
+  });
+
+  it("adds up the same way in the cumulative balance", () => {
+    const rows = [row({ description: yearly, amount: "600", date: "2026-01-10" }), row({ description: quarterly, amount: "90", date: "2026-01-05" })];
+    // Jan–Sep 2026: Poistka once (March), Daň in Feb, May, Aug
+    expect(cumulativeBalanceFromRows(new Map(), rows, idx(2026, 1), idx(2026, 9), TODAY)).toBe(-(600 + 3 * 90));
   });
 });

@@ -14,7 +14,7 @@ import { peekFixedPrefill, clearFixedPrefill } from '../utils/fixedPrefill'
 import { GlassCard } from '../components/GlassCard'
 import { ListSkeleton, QueryError } from '../components/QueryState'
 import { HeroCard } from '../components/HeroCard'
-import { useFixedExpenses, isEndedInMonth } from '../hooks/useFixedExpenses'
+import { useFixedExpenses, isEndedInMonth, occursInMonth, monthlyEquivalent } from '../hooks/useFixedExpenses'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { useFormatters } from '../hooks/useFormatters'
@@ -119,6 +119,9 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     defaultId: suggestedStart ? undefined : expenseCategories[0]?.id,
   })
   const [note, setNote] = useState('')
+  // Monthly by default; a quarterly / yearly item also needs a month it is charged in
+  const [period, setPeriod] = useState<1 | 3 | 12>(1)
+  const [anchorMonth, setAnchorMonth] = useState(new Date().getMonth() + 1)
   // Editing an existing item: a changed amount is a price change from `priceFrom`
   // (YYYY-MM) unless it is ticked as a correction of a typo
   const [priceFrom, setPriceFrom] = useState(nowYM)
@@ -126,9 +129,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const [endOpen, setEndOpen] = useState(false)
   const [endMonth, setEndMonth] = useState(nowYM)
 
-  const total = useMemo(() => fixedExpenses.reduce((s, e) => s + e.amount, 0), [fixedExpenses])
+  // Per month on average: a yearly 600 € counts as 50 € here (and 600 € in the year)
+  const total = useMemo(() => fixedExpenses.reduce((s, e) => s + monthlyEquivalent(e), 0), [fixedExpenses])
   const filteredTotal = useMemo(() =>
-    activeCat === null ? total : fixedExpenses.filter(e => (e.categoryId ?? '') === activeCat).reduce((s, e) => s + e.amount, 0)
+    activeCat === null ? total : fixedExpenses.filter(e => (e.categoryId ?? '') === activeCat).reduce((s, e) => s + monthlyEquivalent(e), 0)
   , [fixedExpenses, activeCat, total])
   const variableTotal = useMemo(() => variableExpenses.reduce((s, e) => s + e.amount, 0), [variableExpenses])
   const animatedFilteredTotal = useCountUp(filteredTotal, 800)
@@ -144,7 +148,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     const map = new Map<string, number>()
     for (const e of fixedExpenses) {
       const key = e.categoryId ?? ''
-      map.set(key, (map.get(key) ?? 0) + e.amount)
+      map.set(key, (map.get(key) ?? 0) + monthlyEquivalent(e))
     }
     return Array.from(map.entries())
       .filter(([, amt]) => amt > 0)
@@ -190,6 +194,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     setLabel(''); setAmount(''); setDayOfMonth('1')
     setCategoryId(expenseCategories[0]?.id ?? '')
     setNote('')
+    setPeriod(1); setAnchorMonth(new Date().getMonth() + 1)
     setSuggestedStart(null)
     setSheetOpen(true)
   }
@@ -199,6 +204,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     setLabel(s.name); setAmount(formatAmountInput(s.amount, decimalSeparator(locale))); setDayOfMonth(String(s.dayOfMonth))
     setCategoryId(s.categoryId && expenseCategories.some(c => c.id === s.categoryId) ? s.categoryId : '')
     setNote('')
+    setPeriod(1); setAnchorMonth(new Date().getMonth() + 1)
     setSuggestedStart(s.nextDate); setStartMonth(s.nextDate.slice(0, 7))
     setSheetOpen(true)
   }
@@ -207,6 +213,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     if (!rowActions(e, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(e); setLabel(e.label); setAmount(formatAmountInput(e.amount, decimalSeparator(locale)))
     setDayOfMonth(String(e.dayOfMonth)); setCategoryId(e.categoryId ?? ''); setNote(e.note)
+    setPeriod(e.period ?? 1); setAnchorMonth(e.anchorMonth ?? new Date().getMonth() + 1)
     setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
     setSheetOpen(true)
   }
@@ -227,14 +234,14 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     const catId = categoryId || null
     try {
       if (editing?.id != null) {
-        await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, isCorrection ? undefined : priceFrom)
+        await updateFixedExpense(editing.id, { label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note, period, anchorMonth: period === 1 ? undefined : anchorMonth }, isCorrection ? undefined : priceFrom)
       } else {
         // From a subscription card: start at its next charge, or the first of the month picked instead
         const start = suggestedStart
           ? (startMonth === suggestedStart.slice(0, 7) ? suggestedStart : `${startMonth}-01`)
           : undefined
         // No undo: deleting a fixed expense removes its whole series by name.
-        await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note }, start)
+        await addFixedExpense({ label: label.trim(), amount: amt, dayOfMonth: day, categoryId: catId, note, period, anchorMonth: period === 1 ? undefined : anchorMonth }, start)
       }
       closeSheet()
       feedback.saved()
@@ -422,7 +429,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
                 {calendarCells.map((day, i) => {
                   if (day === null) return <div key={`empty-${i}`} />
-                  const dayFixed = fixedExpenses.filter(f => f.dayOfMonth === day)
+                  const dayFixed = fixedExpenses.filter(f => f.dayOfMonth === day && occursInMonth(f, month))
                   const hasPayment = dayFixed.length > 0
                   const isToday = day === calendarToday
                   const isPast = calendarToday > 0 && day < calendarToday
@@ -457,7 +464,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
             {/* Inline expansion — payments due on the selected day */}
             {selectedCalendarDay !== null && (() => {
-              const dayPayments = fixedExpenses.filter(f => f.dayOfMonth === selectedCalendarDay)
+              const dayPayments = fixedExpenses.filter(f => f.dayOfMonth === selectedCalendarDay && occursInMonth(f, month))
               return (
                 <GlassCard radius={16} style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {dayPayments.length === 0 ? (
@@ -491,7 +498,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(31, 1fr)', gap: 2, marginBottom: 8 }}>
               {Array.from({ length: daysInCurrentMonth }, (_, i) => {
                 const day = i + 1
-                const dayFixed = fixedExpenses.filter(f => f.dayOfMonth === day)
+                const dayFixed = fixedExpenses.filter(f => f.dayOfMonth === day && occursInMonth(f, month))
                 const sum = dayFixed.reduce((s, f) => s + f.amount, 0)
                 const isToday = day === calendarToday
                 const isPast = calendarToday > 0 && day < calendarToday
@@ -583,8 +590,15 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.fixed.filteredEmpty}</p>
             </GlassCard>
           ) : (() => {
-            const upcomingList = filtered.filter(e => !isPastMonth && (calendarToday === -1 || e.dayOfMonth >= calendarToday)).sort((a, b) => a.dayOfMonth - b.dayOfMonth)
-            const pastList = isPastMonth ? filtered.slice().sort((a, b) => a.dayOfMonth - b.dayOfMonth) : calendarToday === -1 ? [] : filtered.filter(e => e.dayOfMonth < calendarToday).sort((a, b) => b.dayOfMonth - a.dayOfMonth)
+            // Quarterly / yearly items not charged in the viewed month get their own section
+            const inMonth = filtered.filter(e => occursInMonth(e, month))
+            const otherMonths = filtered.filter(e => !occursInMonth(e, month))
+            const nextChargeMonth = (e: FixedExpense) => {
+              for (let step = 1; step <= 12; step++) { const m = ((month - 1 + step) % 12) + 1; if (occursInMonth(e, m)) return m }
+              return month
+            }
+            const upcomingList = inMonth.filter(e => !isPastMonth && (calendarToday === -1 || e.dayOfMonth >= calendarToday)).sort((a, b) => a.dayOfMonth - b.dayOfMonth)
+            const pastList = isPastMonth ? inMonth.slice().sort((a, b) => a.dayOfMonth - b.dayOfMonth) : calendarToday === -1 ? [] : inMonth.filter(e => e.dayOfMonth < calendarToday).sort((a, b) => b.dayOfMonth - a.dayOfMonth)
 
             const renderCard = (expense: typeof filtered[0], isPast = false) => {
               const cat = getCat(expense.categoryId)
@@ -612,7 +626,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 500, color: isPast ? 'var(--aurora-lo)' : 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{expense.label}</div>
-                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat?.name ?? '—'}</div>
+                      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat?.name ?? '—'}{expense.period === 12 ? ` · ${t.expenses.fixed.periodYearly}` : expense.period === 3 ? ` · ${t.expenses.fixed.periodQuarterly}` : ''}</div>
                       <PendingBadge state={expense.pending} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
@@ -651,6 +665,26 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       {t.expenses.paidThisMonth}
                     </div>
                     <DenseCard>{pastList.map(e => renderCard(e, true))}</DenseCard>
+                  </>
+                )}
+                {otherMonths.length > 0 && (
+                  <>
+                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', marginBottom: 2, marginTop: 8 }}>
+                      {t.expenses.fixed.otherMonths}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {otherMonths.map(e => (
+                        <GlassCard key={e.id} radius={14} onClick={() => openEdit(e)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13.5, fontWeight: 500, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.label}</div>
+                            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>
+                              {e.period === 12 ? t.expenses.fixed.periodYearly : t.expenses.fixed.periodQuarterly} · {t.expenses.fixed.nextCharge.replace('{month}', t.months[nextChargeMonth(e) - 1])}
+                            </div>
+                          </div>
+                          <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: 'var(--aurora-lo)', flexShrink: 0 }}>{formatAmount(e.amount)}</span>
+                        </GlassCard>
+                      ))}
+                    </div>
                   </>
                 )}
               </div>
@@ -729,6 +763,27 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         )}
         <SuggestedCategoryHint name={expenseCategories.find(c => c.id === suggestion.suggestedId)?.name} />
 
+        <div role="group" aria-label={t.expenses.fixed.periodLabel} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          {([[1, t.expenses.fixed.periodMonthly], [3, t.expenses.fixed.periodQuarterly], [12, t.expenses.fixed.periodYearly]] as const).map(([value, text]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={period === value}
+              onClick={() => setPeriod(value)}
+              style={{ padding: '7px 12px', borderRadius: 99, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${period === value ? 'var(--aurora-violet)' : 'var(--aurora-gline)'}`, background: period === value ? 'color-mix(in srgb, var(--aurora-violet) 18%, transparent)' : 'var(--aurora-glass)', color: period === value ? 'var(--aurora-hi)' : 'var(--aurora-lo)' }}
+            >{text}</button>
+          ))}
+          {period !== 1 && (
+            <select
+              aria-label={t.expenses.fixed.anchorLabel}
+              value={anchorMonth}
+              onChange={e => setAnchorMonth(Number(e.target.value))}
+              style={{ padding: '7px 10px', borderRadius: 12, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 12, colorScheme: 'var(--aurora-color-scheme)' }}
+            >
+              {t.months.map((name, i) => <option key={name} value={i + 1}>{t.expenses.fixed.anchorLabel}: {name}</option>)}
+            </select>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div role="group" aria-label={t.expenses.fixed.dueDay} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '6px 10px' }}>
             <button
@@ -758,7 +813,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
             >+</button>
           </div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg,#FBBF24,#f59e0b)', border: '1px solid transparent', borderRadius: 12, padding: '8px 11px', fontSize: 12, color: '#fff', fontWeight: 600, fontFamily: "'Manrope', sans-serif" }}>
-            <Repeat size={12} aria-hidden="true" /> {t.expenses.fixed.recurringShort}
+            <Repeat size={12} aria-hidden="true" /> {period === 12 ? t.expenses.fixed.periodYearly : period === 3 ? t.expenses.fixed.periodQuarterly : t.expenses.fixed.recurringShort}
           </div>
         </div>
         {/* A new fixed expense is dated today and counts from this month on. */}

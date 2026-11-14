@@ -15,7 +15,7 @@ import { setFixedPrefill } from '../utils/fixedPrefill'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { SAVINGS_ICON_MAP } from '../utils/savingsIcons'
 import { useIncomes } from '../hooks/useIncomes'
-import { useFixedExpenses, isFixedExpenseDue, isEndedInMonth } from '../hooks/useFixedExpenses'
+import { useFixedExpenses, isFixedExpenseDue, isEndedInMonth, occursInMonth } from '../hooks/useFixedExpenses'
 import { monthForecast } from '../utils/monthForecast'
 import { cashFlowOutlook } from '../utils/cashFlow'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
@@ -230,8 +230,11 @@ const upcomingFixed = useMemo(() => {
         // The real next due date: this month when the day is still ahead, otherwise
         // next month — each clamped to its own month's length (31st → 30th / 28th).
         const dueIn = (y: number, m0: number) => new Date(y, m0, Math.min(e.dayOfMonth, new Date(y, m0 + 1, 0).getDate()))
+        // (for a quarterly / yearly item: the next month it is charged in)
         let due = dueIn(today.getFullYear(), today.getMonth())
-        if (due < today) due = dueIn(today.getFullYear(), today.getMonth() + 1)
+        for (let step = 1; step <= 12 && (due < today || !occursInMonth(e, due.getMonth() + 1)); step++) {
+          due = dueIn(today.getFullYear(), today.getMonth() + step)
+        }
         const dueYM = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}`
         // The price valid in the month it falls due (a change may start next month)
         const price = [...(e.history ?? [])].reverse().find(h => h.from <= dueYM)?.amount ?? e.amount

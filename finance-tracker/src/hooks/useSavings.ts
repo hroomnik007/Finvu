@@ -38,8 +38,13 @@ export function useSavings() {
     queryFn: fetchSavingsData,
   })
 
-  const invalidate = useCallback(() =>
-    qc.invalidateQueries({ queryKey: ['savings'] }), [qc])
+  // Deposits are transfers out of the account, so the total balance moves too
+  const invalidate = useCallback(async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['savings'] }),
+      qc.invalidateQueries({ queryKey: ['summaryCards'] }),
+    ])
+  }, [qc])
 
   const addGoal = useCallback(async (goal: Omit<SavingsGoal, 'id'>): Promise<void> => {
     await createSavingsGoal({

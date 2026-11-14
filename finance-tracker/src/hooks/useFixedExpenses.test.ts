@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isFixedExpenseDue, isNewerRow, parseDescription } from './useFixedExpenses'
+import { isFixedExpenseDue, isNewerRow, monthlyEquivalent, occursInMonth, parseDescription } from './useFixedExpenses'
 
 // 15 Oct 2026, local noon
 const TODAY = new Date(2026, 9, 15, 12)
@@ -57,5 +57,28 @@ describe('isNewerRow', () => {
     const newer = { date: '2026-10-01', createdAt: '2026-10-01T09:00:00Z' }
     expect(isNewerRow(newer, older)).toBe(true)
     expect(isNewerRow(older, newer)).toBe(false)
+  })
+})
+
+describe('quarterly and yearly items', () => {
+  it('reads the period and its month; a monthly item has neither', () => {
+    expect(parseDescription(JSON.stringify({ l: 'Poistka', n: '', d: 10, p: 12, m: 3 }), 1))
+      .toEqual({ label: 'Poistka', note: '', dayOfMonth: 10, period: 12, anchorMonth: 3 })
+    expect(parseDescription(JSON.stringify({ l: 'X', n: '', d: 1, p: 6, m: 1 }), 1)).toEqual({ label: 'X', note: '', dayOfMonth: 1 })
+  })
+
+  it('is charged only in its own months', () => {
+    const yearly = { period: 12 as const, anchorMonth: 3 }
+    const quarterly = { period: 3 as const, anchorMonth: 2 }
+    expect([2, 3, 4].map(m => occursInMonth(yearly, m))).toEqual([false, true, false])
+    expect([1, 2, 5, 8, 11, 12].map(m => occursInMonth(quarterly, m))).toEqual([false, true, true, true, true, false])
+    expect(occursInMonth({}, 7)).toBe(true)
+    expect(occursInMonth({ period: 1 }, 7)).toBe(true)
+  })
+
+  it('spreads the amount for the per-month average', () => {
+    expect(monthlyEquivalent({ amount: 600, period: 12 })).toBe(50)
+    expect(monthlyEquivalent({ amount: 90, period: 3 })).toBe(30)
+    expect(monthlyEquivalent({ amount: 650 })).toBe(650)
   })
 })

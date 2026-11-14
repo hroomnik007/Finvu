@@ -13,7 +13,7 @@ import { familyMemberIds } from "../lib/household";
 import { loadStartMonths } from "../lib/loadStartMonths";
 import { isTrackedMonth } from "../lib/trackingStart";
 import { recalcSharedForHousehold, syncSharedToNewMember, unshareAllFor } from "../lib/sharedCategories";
-import { isFixedDue, isActiveInMonth, recurringDay } from "../lib/recurring";
+import { isFixedDue, isActiveInMonth, occursInMonth, recurringDay } from "../lib/recurring";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -360,7 +360,7 @@ export async function getMonthlyStats(req: AuthRequest, res: Response): Promise<
     else m.income += amount;
   }
   for (const r of latest.values()) {
-    if (!isActiveInMonth(r.endedOn, year, monthNum)) continue;
+    if (!isActiveInMonth(r.endedOn, year, monthNum) || !occursInMonth(r.description, monthNum)) continue;
     const amount = parseFloat(r.amount);
     const m = memberOf(r.userId);
     // Same rule as the cards: a recurring item counts once its day has arrived

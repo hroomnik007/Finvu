@@ -6,7 +6,7 @@ import { zodDetails } from "../lib/validation";
 import { db } from "../db";
 import { categories, transactions } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
-import { activeSeriesTotal } from "../lib/recurring";
+import { activeSeriesTotal, hasRunningSeries } from "../lib/recurring";
 import { appToday, localDateISO } from "../lib/localDate";
 import { NotSharingError, propagateSharedLimit, propagateSharedReserve, recalcSharedLimit, shareCategories, sharedFixedInfo, unshareCategories } from "../lib/sharedCategories";
 
@@ -70,6 +70,14 @@ export async function recalculateCategoryLimit(categoryId: string, userId: strin
     await db
       .update(categories)
       .set({ budgetLimit: String(newLimit) })
+      .where(eq(categories.id, categoryId));
+  } else if (hasRunningSeries(fixedRows, today.getFullYear(), today.getMonth() + 1)) {
+    // Only quarterly / yearly items, none charged this month: the auto limit stays
+    // on and this month's limit is just the reserve (no limit without one).
+    const reserve = parseFloat(cat.limitReserve ?? "0") || 0;
+    await db
+      .update(categories)
+      .set({ budgetLimit: reserve > 0 ? String(Math.round(reserve * 100) / 100) : null })
       .where(eq(categories.id, categoryId));
   } else {
     // All fixed expenses removed — disable auto_limit so category returns to manual mode

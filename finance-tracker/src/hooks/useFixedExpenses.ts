@@ -11,7 +11,7 @@ import { createOrQueue, isQueuedId, removeQueued } from '../lib/offlineQueue'
 import { useOfflineQueue } from './useOfflineQueue'
 import { queuedFixedRows } from '../utils/queuedRows'
 
-export function parseDescription(desc: string | null, fallbackDay: number): { label: string; note: string; dayOfMonth: number } {
+export function parseDescription(desc: string | null, fallbackDay: number): { label: string; note: string; dayOfMonth: number; period?: 3 | 12; anchorMonth?: number } {
   if (!desc) return { label: '', note: '', dayOfMonth: fallbackDay }
   try {
     const obj = JSON.parse(desc)
@@ -20,14 +20,34 @@ export function parseDescription(desc: string | null, fallbackDay: number): { la
         label: String(obj.l ?? ''),
         note: String(obj.n ?? ''),
         dayOfMonth: typeof obj.d === 'number' && obj.d >= 1 && obj.d <= 31 ? obj.d : fallbackDay,
+        // Quarterly / yearly: { p, m } — same reading as the backend's recurrenceOf
+        ...((obj.p === 3 || obj.p === 12) && Number.isInteger(obj.m) && obj.m >= 1 && obj.m <= 12
+          ? { period: obj.p as 3 | 12, anchorMonth: obj.m as number }
+          : {}),
       }
     }
   } catch { /* not JSON — legacy plain text */ }
   return { label: desc, note: '', dayOfMonth: fallbackDay }
 }
 
-function encodeDescription(label: string, note: string, dayOfMonth: number): string {
-  return JSON.stringify({ l: label, n: note, d: dayOfMonth })
+// A monthly item is stored exactly as before ({ l, n, d }): the description is the
+// identity of the series, so existing items must keep theirs.
+function encodeDescription(label: string, note: string, dayOfMonth: number, period?: number, anchorMonth?: number): string {
+  const periodic = (period === 3 || period === 12) && anchorMonth !== undefined && anchorMonth >= 1 && anchorMonth <= 12
+  return JSON.stringify(periodic ? { l: label, n: note, d: dayOfMonth, p: period, m: anchorMonth } : { l: label, n: note, d: dayOfMonth })
+}
+
+// Whether the item is charged in the given calendar month (1–12) at all: a
+// quarterly / yearly one counts in full in its months and not in between.
+export function occursInMonth(item: Pick<FixedExpense, 'period' | 'anchorMonth'>, month: number): boolean {
+  const every = item.period ?? 1
+  if (every === 1 || !item.anchorMonth) return true
+  return (((month - item.anchorMonth) % every) + every) % every === 0
+}
+
+// What the item costs per month on average (a yearly 600 € is 50 € a month)
+export function monthlyEquivalent(item: Pick<FixedExpense, 'amount' | 'period'>): number {
+  return item.amount / (item.period ?? 1)
 }
 
 // A fixed expense only becomes "spent" once its due day in the viewed month
@@ -53,6 +73,8 @@ function toFixedExpense(t: ApiTransaction): FixedExpense {
     dayOfMonth: parsed.dayOfMonth,
     categoryId: t.categoryId ?? null,
     note: parsed.note,
+    period: parsed.period ?? 1,
+    anchorMonth: parsed.anchorMonth,
     ownerId: t.userId,
     categoryName: t.categoryName,
     categoryColor: t.categoryColor,
@@ -138,7 +160,10 @@ export async function fetchFixedExpenses(
     const existing = latestByIdentity.get(key)
     if (!existing || isNewerRow(t, existing)) latestByIdentity.set(key, t)
   }
-  return [...latestByIdentity.values()].filter(t => !isEndedInMonth(t.endedOn, monthStr)).map(toFixedExpense)
+  return [...latestByIdentity.values()]
+    .filter(t => !isEndedInMonth(t.endedOn, monthStr))
+    .map(toFixedExpense)
+    .filter(f => occursInMonth(f, month!))
 }
 
 export function useFixedExpenses(month?: number, year?: number, scope: DataScope = 'personal', includeEnded = false) {
@@ -173,7 +198,7 @@ export function useFixedExpenses(month?: number, year?: number, scope: DataScope
     const { queued } = await createOrQueue({
       type: 'expense',
       amount: expense.amount,
-      description: encodeDescription(expense.label, expense.note, expense.dayOfMonth),
+      description: encodeDescription(expense.label, expense.note, expense.dayOfMonth, expense.period, expense.anchorMonth),
       date: today,
       isFixed: true,
       categoryId: expense.categoryId ?? null,
@@ -190,10 +215,12 @@ export function useFixedExpenses(month?: number, year?: number, scope: DataScope
     const label = changes.label ?? existing?.label ?? ''
     const note = changes.note ?? existing?.note ?? ''
     const dayOfMonth = changes.dayOfMonth ?? existing?.dayOfMonth ?? 1
+    const period = changes.period ?? existing?.period
+    const anchorMonth = changes.anchorMonth ?? existing?.anchorMonth
     const priceChange = priceFrom !== undefined && changes.amount !== undefined && changes.amount !== existing?.amount
     await updateTransaction(id, {
       amount: priceChange ? undefined : changes.amount,
-      description: encodeDescription(label, note, dayOfMonth),
+      description: encodeDescription(label, note, dayOfMonth, period, anchorMonth),
       categoryId: changes.categoryId !== undefined ? changes.categoryId : existing?.categoryId,
     })
     if (priceChange) await changeFixedPrice(id, changes.amount!, priceFrom)

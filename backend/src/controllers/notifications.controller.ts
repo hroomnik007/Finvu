@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "../db";
 import { notificationsDismissed, transactions, categories, savingsGoals } from "../db/schema";
 import { AuthRequest } from "../middleware/authenticate";
-import { fixedDayOfMonth, isActiveInMonth } from "../lib/recurring";
+import { fixedDayOfMonth, isActiveInMonth, occursInMonth } from "../lib/recurring";
 
 // ── Feed item types (translated client-side from kind + params) ─────────────
 type FeedItem =
@@ -81,7 +81,7 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
   const seriesNow = new Map<string, (typeof fixedTxs)[number]>();
   for (const tx of fixedTxs) if (tx.date <= monthEnd) seriesNow.set(tx.description ?? "", tx);
   for (const tx of seriesNow.values()) {
-    if (!tx.categoryId || !isActiveInMonth(tx.endedOn, y, m)) continue;
+    if (!tx.categoryId || !isActiveInMonth(tx.endedOn, y, m) || !occursInMonth(tx.description, m)) continue;
     if (Math.min(fixedDayOfMonth(tx.description, tx.date), daysInMonth) > d) continue;
     spentByCategory.set(tx.categoryId, (spentByCategory.get(tx.categoryId) ?? 0) + Number(tx.amount));
   }
@@ -110,10 +110,13 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
         }
       } catch { /* plain text description */ }
       const dueDay = Math.min(dayOfMonth, daysInMonth); // the 31st falls on the last day of a shorter month
-      const daysUntil = dueDay >= d ? dueDay - d : daysInMonth - d + dayOfMonth;
-      return { tx, dayOfMonth, label, daysUntil };
+      const thisMonth = dueDay >= d;
+      const daysUntil = thisMonth ? dueDay - d : daysInMonth - d + dayOfMonth;
+      // A quarterly / yearly item is only due in the months it is charged
+      const dueMonth = thisMonth ? m : (m % 12) + 1;
+      return { tx, dayOfMonth, label, daysUntil, occurs: occursInMonth(tx.description, dueMonth) };
     })
-    .filter((f) => f.daysUntil <= 7)
+    .filter((f) => f.occurs && f.daysUntil <= 7)
     .sort((a, b) => a.daysUntil - b.daysUntil)
     .slice(0, 2);
   for (const { tx, dayOfMonth, label, daysUntil } of upcoming) {

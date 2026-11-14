@@ -322,12 +322,13 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const saveGuard = useSubmitGuard()
   const now = new Date()
   const { variableExpenses } = useVariableExpenses(now.getMonth() + 1, now.getFullYear())
-  const { fixedExpenses } = useFixedExpenses()
+  // This month's list: a quarterly / yearly item is only in it when charged this month
+  const { fixedExpenses } = useFixedExpenses(now.getMonth() + 1, now.getFullYear())
 
   const { user } = useAuth()
   const sharingOn = !!user?.household_enabled
   const { variableExpenses: familyVariable } = useVariableExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
-  const { fixedExpenses: familyFixed } = useFixedExpenses(undefined, undefined, 'family')
+  const { fixedExpenses: familyFixed } = useFixedExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
 
   const personalStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month: now.getMonth() + 1, year: now.getFullYear() })
   // A shared category's limit is common, so it is measured against what the whole family spent in it

@@ -147,6 +147,9 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
   const [fixAmt, setFixAmt] = useState('')
   const [fixDay, setFixDay] = useState('1')
   const [fixCatId, setFixCatId] = useState('')
+  // Monthly by default; tapping the chip cycles to quarterly / yearly, which also need a payment month
+  const [fixPeriod, setFixPeriod] = useState<1 | 3 | 12>(1)
+  const [fixAnchor, setFixAnchor] = useState(new Date().getMonth() + 1)
 
   // ── Category suggestions from the typed note / label ──────────────────────
   const quickIds = quickCategories.map(c => c.id ?? '')
@@ -181,7 +184,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         setVarAmt(prefill?.amount ?? ''); setVarCatId(''); setVarNote(prefill?.note ?? ''); setVarDate(defaultEntryDate(month, year))
         setVarNewCatMode(false); setVarNewCatName('')
       } else if (type === 'fixed') {
-        setFixLabel(''); setFixAmt(''); setFixDay('1'); setFixCatId('')
+        setFixLabel(''); setFixAmt(''); setFixDay('1'); setFixCatId(''); setFixPeriod(1); setFixAnchor(new Date().getMonth() + 1)
       } else if (type === 'category') {
         setCatName(''); setCatColor(PRESET_COLORS[6]); setCatIcon('🛒'); setCatBudgetLimit('')
       } else if (type === 'savings') {
@@ -251,7 +254,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
     const day = parseInt(fixDay)
     if (!fixLabel.trim() || isNaN(amt) || amt <= 0 || isNaN(day) || day < 1 || day > 31) return
     try {
-      await addFixedExpense({ label: fixLabel.trim(), amount: amt, dayOfMonth: day, categoryId: fixCatId || null, note: '' })
+      await addFixedExpense({ label: fixLabel.trim(), amount: amt, dayOfMonth: day, categoryId: fixCatId || null, note: '', period: fixPeriod, anchorMonth: fixPeriod === 1 ? undefined : fixAnchor })
       closeModal()
       feedback.saved()
     } catch (err) {
@@ -548,12 +551,31 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
               style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--aurora-gline)', border: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >+</button>
           </div>
-          <div style={pillChipStyle(true, '#FBBF24', '#f59e0b')} title={t.expenses.fixed.recurringMonthly}>
-            <Repeat size={12} aria-hidden="true" /> {t.expenses.fixed.recurringShort}
-          </div>
+          <button
+            type="button"
+            onClick={() => setFixPeriod(p => (p === 1 ? 3 : p === 3 ? 12 : 1))}
+            aria-label={`${t.expenses.fixed.periodLabel}: ${fixPeriod === 12 ? t.expenses.fixed.periodYearly : fixPeriod === 3 ? t.expenses.fixed.periodQuarterly : t.expenses.fixed.periodMonthly}`}
+            title={t.expenses.fixed.periodLabel}
+            style={{ ...pillChipStyle(true, '#FBBF24', '#f59e0b'), cursor: 'pointer' }}
+          >
+            <Repeat size={12} aria-hidden="true" /> {fixPeriod === 12 ? t.expenses.fixed.periodYearly : fixPeriod === 3 ? t.expenses.fixed.periodQuarterly : t.expenses.fixed.periodMonthly}
+          </button>
+          {fixPeriod !== 1 && (
+            <select
+              aria-label={t.expenses.fixed.anchorLabel}
+              value={fixAnchor}
+              onChange={e => setFixAnchor(Number(e.target.value))}
+              style={{ minWidth: 0, padding: '8px 8px', borderRadius: 12, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', color: 'var(--aurora-hi)', fontFamily: "'Manrope', sans-serif", fontSize: 12, colorScheme: 'var(--aurora-color-scheme)' }}
+            >
+              {t.months.map((name, i) => <option key={name} value={i + 1}>{name}</option>)}
+            </select>
+          )}
         </div>
-        {/* A new fixed expense is dated today and counts from this month on. */}
-        <ValidFromHint date={todayISO()} />
+        {/* A new fixed expense is dated today and counts from this month on;
+            a quarterly / yearly one counts in its payment months. */}
+        {fixPeriod === 1
+          ? <ValidFromHint date={todayISO()} />
+          : <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.fixed.anchorLabel}: {t.months[fixAnchor - 1]}</p>}
       </CompactModal>
 
       {/* ── ADD CATEGORY modal ────────────────────────────────────────────── */}

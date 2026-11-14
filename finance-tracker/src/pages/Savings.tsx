@@ -162,6 +162,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
     const updated = await deleteDeposit(selectedGoal.id, depositId)
     setDeposits(prev => prev.filter(d => d.id !== depositId))
     setSelectedGoal(prev => prev ? { ...prev, savedAmount: updated.savedAmount } : null)
+    void reloadGoals()
   }
 
   function openEdit(goal: SavingsGoal) {

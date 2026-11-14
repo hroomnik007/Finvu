@@ -127,6 +127,8 @@ docker exec finance-tracker-repo-backend-1 node dist/scripts/migrate.js
 - **Celkový zostatok** = `users.opening_balance` (Nastavenia → Financie) + kumulatívny tok od začiatku sledovania. Začiatok sledovania smie byť aj pred registráciou (import starších výpisov ho sám posunie); odznak „Veterán“ sa počíta z `created_at`
 - **`updateSchema` transakcie nesmie dediť `default` z `createSchema`** (zod 4 aplikuje default aj vo voliteľnom poli; úprava bez `isFixed` vtedy menila fixný výdavok na jednorazový, opravené migráciou 039)
 - Automatický limit kategórie sa prepočíta aj pri prvom načítaní kategórií v novom mesiaci (`refreshLimitsForNewMonth`)
+- **Štvrťročné / ročné fixné výdavky**: v JSON popise navyše `p` (3 alebo 12) a `m` (mesiac platby 1–12); mesačná položka sa ukladá bez nich (popis = identita série, nesmie sa zmeniť). Počítajú sa celé v mesiaci platby a medzi tým vôbec (`occursInMonth` v `backend/src/lib/recurring.ts` aj `hooks/useFixedExpenses.ts`); stránka Fixné ukazuje mesačný priemer (`monthlyEquivalent`). Zoznam „teraz“ (`useFixedExpenses()` bez mesiaca) obsahuje aj položky mimo mesiaca platby, mesačný zoznam nie
+- **Vklad do sporenia je prevod**: `savings_deposits` znižujú Celkový zostatok (v mesiaci vkladu, len v sledovaných mesiacoch), ale nie sú výdavok ani súčasť miery úspory; zmazaním vkladu alebo cieľa sa suma vráti
 
 ## Modul Profil
 

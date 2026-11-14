@@ -47,6 +47,10 @@ export interface FixedExpense {
   categoryIcon?: string | null
   /** First day of the first month the item no longer applies (null/absent = running). */
   endedOn?: string | null
+  /** Charged every `period` months (absent / 1 = monthly, 3 = quarterly, 12 = yearly). */
+  period?: 1 | 3 | 12
+  /** For a quarterly / yearly item: a month (1–12) it is charged in. */
+  anchorMonth?: number
   /** Price history of the item, oldest first (`from` = YYYY-MM). */
   history?: { from: string; amount: number }[]
   /** Set while the row is only in the offline queue (not yet on the server). */
