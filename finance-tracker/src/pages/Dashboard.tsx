@@ -97,16 +97,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   const fixedExpenses = useMemo(() =>
     allMonthFixedExpenses.filter(f => isFixedExpenseDue(f.dayOfMonth, month, year)),
   [allMonthFixedExpenses, month, year])
-  const budgetStatuses = useBudgetStatus({ categories, variableExpenses: allVariableExpenses, fixedExpenses, month, year })
-  const sortedBudgetStatuses = useMemo(() =>
-    budgetStatuses
-      .filter(b => b.limit > 0)
-      // Closest to (or furthest over) its limit first: an exceeded category must
-      // never drop out of the five just because it has few transactions.
-      .sort((a, b) => b.percentage - a.percentage || b.spent - a.spent)
-      .slice(0, 5),
-    [budgetStatuses]
-  )
   const { goals: savingsGoals } = useSavings()
   const { formatAmount, formatAmountParts, formatLongDate } = useFormatters()
   const { t, locale } = useTranslation()
@@ -119,6 +109,18 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   // offer 'show all' (the Výdavky module only lists the user's own).
   const familyView = householdEnabled && dashView === 'family'
   const ownerOf = (ownerId?: string) => members.find(m => m.id === ownerId)
+  // Same figures as the Categories page: family view measures a shared category
+  // against everything the family spent in it.
+  const budgetStatuses = useBudgetStatus({ categories, variableExpenses: allVariableExpenses, fixedExpenses, month, year, family: familyView })
+  const sortedBudgetStatuses = useMemo(() =>
+    budgetStatuses
+      .filter(b => b.limit > 0)
+      // Closest to (or furthest over) its limit first: an exceeded category must
+      // never drop out of the five just because it has few transactions.
+      .sort((a, b) => b.percentage - a.percentage || b.spent - a.spent)
+      .slice(0, 5),
+    [budgetStatuses]
+  )
   const greeting = getGreeting(displayName, t)
 
   const incomes = useMemo(() =>

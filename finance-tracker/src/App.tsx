@@ -574,7 +574,7 @@ function App() {
           {page === 'fixed-expenses' && (
             <FixedExpensesPage month={month} year={year} />
           )}
-          {page === 'categories' && <CategoriesPage showToast={showToast} />}
+          {page === 'categories' && <CategoriesPage showToast={showToast} dashView={dashView} />}
           {page === 'search' && <SearchPage scope={dashView} />}
           {page === 'annual' && <AnnualPage scope={dashView} />}
           {(page === 'settings' || page === 'household') && (

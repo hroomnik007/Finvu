@@ -312,7 +312,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
   )
 }
 
-export function CategoriesPage({ showToast }: { showToast: (msg: string) => void }) {
+export function CategoriesPage({ showToast, dashView = 'personal' }: { showToast: (msg: string) => void; dashView?: 'personal' | 'family' }) {
   const { categories, isLoading: listLoading, isError: listError, refetch: listRetry, addCategory, updateCategory, deleteCategory, reload } = useCategories()
   const listFailed = listError && categories.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
@@ -330,25 +330,17 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const { variableExpenses: familyVariable } = useVariableExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
   const { fixedExpenses: familyFixed } = useFixedExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
 
-  const personalStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month: now.getMonth() + 1, year: now.getFullYear() })
-  // A shared category's limit is common, so it is measured against what the whole family spent in it
-  const budgetStatuses = useMemo(() => {
-    if (!sharingOn) return personalStatuses
-    const key = (n?: string | null) => (n ?? '').trim().toLowerCase()
-    const month = now.getMonth() + 1
-    const year = now.getFullYear()
-    const sharedNames = new Map(categories.filter(c => c.shared).map(c => [c.id!, key(c.name)]))
-    return personalStatuses.map(s => {
-      const name = sharedNames.get(s.categoryId)
-      if (!name) return s
-      const spent =
-        familyVariable.filter(e => key(e.categoryName) === name).reduce((sum, e) => sum + e.amount, 0) +
-        familyFixed.filter(f => key(f.categoryName) === name && isFixedExpenseDue(f.dayOfMonth, month, year, new Date())).reduce((sum, f) => sum + f.amount, 0)
-      const percentage = (spent / s.limit) * 100
-      return { ...s, spent, percentage, isWarning: percentage >= 70 && percentage < 90, isOver: percentage > 100 }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [personalStatuses, sharingOn, categories, familyVariable, familyFixed])
+  // Same rule as the Dashboard budget card: personal view = own spending, family
+  // view = a shared category's limit is measured against the whole family's.
+  const familyView = sharingOn && dashView === 'family'
+  const budgetStatuses = useBudgetStatus({
+    categories,
+    variableExpenses: familyView ? familyVariable : variableExpenses,
+    fixedExpenses: familyView ? familyFixed : fixedExpenses,
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+    family: familyView,
+  })
 
   // What the cards show: the budget status of a category with a limit, or — for an
   // expense category without one — just what was spent in it this month (own
