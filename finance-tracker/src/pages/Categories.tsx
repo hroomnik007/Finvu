@@ -82,9 +82,21 @@ function limitBreakdown(cat: Category, formatAmount: (n: number) => string, t: R
 
 type BudgetStatus = { categoryId: string; spent: number; percentage: number; limit: number }
 
+function FamilyShareLine({ cat, familyStatus, formatAmount, t }: Pick<CardProps, 'cat' | 'familyStatus' | 'formatAmount' | 't'>) {
+  if (!cat.shared || cat.budgetLimit == null || !familyStatus) return null
+  const color = familyStatus.percentage >= 100 ? 'var(--aurora-rose)' : familyStatus.percentage >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-faint)'
+  return (
+    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color, marginTop: 4 }}>
+      {t.expenses.categories.familyShare.replace('{spent}', formatAmount(familyStatus.spent)).replace('{pct}', String(Math.round(familyStatus.percentage)))}
+    </div>
+  )
+}
+
 interface CardProps {
   cat: Category
   status: BudgetStatus | undefined
+  /** Shared category only: what the whole family spent in it. */
+  familyStatus?: BudgetStatus
   formatAmount: (n: number) => string
   t: ReturnType<typeof useTranslation>['t']
   onEdit: (cat: Category) => void
@@ -95,7 +107,7 @@ interface CardProps {
   selected?: boolean
 }
 
-function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, severity, selected }: CardProps) {
+function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, onDelete, severity, selected }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
@@ -158,6 +170,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
             <span>{t.expenses.categories.spent}</span>
             <span style={{ fontWeight: 700, color: barColor }}>{Math.round(status?.percentage ?? 0)}%</span>
           </div>
+          <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
         </>
       )}
       {/* No limit: still say what went through the category this month */}
@@ -174,7 +187,7 @@ function SortableGridCard({ cat, status, formatAmount, t, onEdit, onDelete, seve
 }
 
 function SortableListCard(props: CardProps) {
-  const { cat, status, formatAmount, t, onEdit, onDelete, severity, selected } = props
+  const { cat, status, familyStatus, formatAmount, t, onEdit, onDelete, severity, selected } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
@@ -222,6 +235,7 @@ function SortableListCard(props: CardProps) {
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : '—'}</span>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
           </div>
+          <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
         </div>
       )}
       {cat.budgetLimit == null && status && status.spent > 0 && (
@@ -235,7 +249,7 @@ function SortableListCard(props: CardProps) {
   )
 }
 
-function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected }: CardProps) {
+function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const rawPct = status?.percentage ?? 0
@@ -301,6 +315,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
                 <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : '—'}</span>
                 <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
               </div>
+              <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
             </div>
           )}
           {cat.budgetLimit == null && status && status.spent > 0 && (
@@ -312,7 +327,7 @@ function SortableMobileCard({ cat, status, formatAmount, t, onEdit, onDelete, is
   )
 }
 
-export function CategoriesPage({ showToast, dashView = 'personal' }: { showToast: (msg: string) => void; dashView?: 'personal' | 'family' }) {
+export function CategoriesPage({ showToast }: { showToast: (msg: string) => void }) {
   const { categories, isLoading: listLoading, isError: listError, refetch: listRetry, addCategory, updateCategory, deleteCategory, reload } = useCategories()
   const listFailed = listError && categories.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
@@ -330,17 +345,12 @@ export function CategoriesPage({ showToast, dashView = 'personal' }: { showToast
   const { variableExpenses: familyVariable } = useVariableExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
   const { fixedExpenses: familyFixed } = useFixedExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
 
-  // Same rule as the Dashboard budget card: personal view = own spending, family
-  // view = a shared category's limit is measured against the whole family's.
-  const familyView = sharingOn && dashView === 'family'
-  const budgetStatuses = useBudgetStatus({
-    categories,
-    variableExpenses: familyView ? familyVariable : variableExpenses,
-    fixedExpenses: familyView ? familyFixed : fixedExpenses,
-    month: now.getMonth() + 1,
-    year: now.getFullYear(),
-    family: familyView,
-  })
+  // The cards list your own spending, like the Variabilné / Fixné tabs. A shared
+  // category's limit is common, so it also gets a family line: what the whole
+  // family spent in it (the same figure the Dashboard shows in the family view).
+  const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month: now.getMonth() + 1, year: now.getFullYear() })
+  const sharedCategories = useMemo(() => (sharingOn ? categories.filter(c => c.shared) : []), [sharingOn, categories])
+  const familyStatuses = useBudgetStatus({ categories: sharedCategories, variableExpenses: familyVariable, fixedExpenses: familyFixed, month: now.getMonth() + 1, year: now.getFullYear(), family: true })
 
   // What the cards show: the budget status of a category with a limit, or — for an
   // expense category without one — just what was spent in it this month (own
@@ -730,11 +740,12 @@ export function CategoriesPage({ showToast, dashView = 'personal' }: { showToast
                     }}>
                       {sortedCategories.map(cat => {
                         const status = cardStatuses.find(b => b.categoryId === cat.id)
+                        const familyStatus = familyStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
                         if (view === 'list') {
-                          return <SortableListCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
+                          return <SortableListCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
                         }
-                        return <SortableGridCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
+                        return <SortableGridCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
                       })}
                     </div>
                   </SortableContext>
@@ -755,8 +766,9 @@ export function CategoriesPage({ showToast, dashView = 'personal' }: { showToast
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 'var(--page-pad-bottom)' }}>
                       {sortedCategories.map(cat => {
                         const status = cardStatuses.find(b => b.categoryId === cat.id)
+                        const familyStatus = familyStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
-                        return <SortableMobileCard key={cat.id} cat={cat} status={status} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={(id) => setDeleteId(id)} selected={selectedIds.has(cat.id!)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
+                        return <SortableMobileCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={(id) => setDeleteId(id)} selected={selectedIds.has(cat.id!)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
                       })}
                     </div>
                   </SortableContext>

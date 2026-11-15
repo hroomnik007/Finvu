@@ -314,6 +314,7 @@ export const en: Translations = {
       bulkDeleted: 'Categories deleted: {n}',
       shareConfirm: 'The category will be added for every household member and its limit becomes common (members\' fixed expenses added up, otherwise the highest limit). Their current limits will be replaced. Continue?',
       limitBreakdown: 'fixed {fixed} + variable {reserve}',
+      familyShare: 'Family: {spent} · {pct}%',
       selectMode: 'Select',
       selectHint: 'Select categories',
       selectDone: 'Done',

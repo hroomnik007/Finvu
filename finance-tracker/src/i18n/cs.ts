@@ -314,6 +314,7 @@ export const cs: Translations = {
       bulkDeleted: 'Smazáno kategorií: {n}',
       shareConfirm: 'Kategorie se přidá všem členům domácnosti a její limit se nastaví společně (součet fixních výdajů členů, jinak nejvyšší limit). Dosavadní limity členů se přepíšou. Pokračovat?',
       limitBreakdown: 'fixní {fixed} + variabilní {reserve}',
+      familyShare: 'Rodina: {spent} · {pct} %',
       selectMode: 'Vybrat',
       selectHint: 'Vyber kategorie',
       selectDone: 'Hotovo',

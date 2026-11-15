@@ -312,6 +312,7 @@ export const sk = {
       bulkDeleted: 'Zmazaných kategórií: {n}',
       shareConfirm: 'Kategória sa pridá všetkým členom domácnosti a jej limit sa nastaví spoločne (súčet fixných výdavkov členov, inak najvyšší limit). Doterajšie limity členov sa prepíšu. Pokračovať?',
       limitBreakdown: 'fixné {fixed} + variabilné {reserve}',
+      familyShare: 'Rodina: {spent} · {pct} %',
       selectMode: 'Vybrať',
       selectHint: 'Vyber kategórie',
       selectDone: 'Hotovo',

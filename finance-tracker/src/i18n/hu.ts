@@ -314,6 +314,7 @@ export const hu: Translations = {
       bulkDeleted: 'Törölt kategóriák: {n}',
       shareConfirm: 'A kategória minden háztartástag számára létrejön, és a korlátja közös lesz (a tagok fix kiadásainak összege, egyébként a legmagasabb korlát). A tagok jelenlegi korlátjai felülíródnak. Folytatod?',
       limitBreakdown: 'fix {fixed} + változó {reserve}',
+      familyShare: 'Család: {spent} · {pct}%',
       selectMode: 'Kijelölés',
       selectHint: 'Válassz kategóriákat',
       selectDone: 'Kész',

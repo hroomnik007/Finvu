@@ -314,6 +314,7 @@ export const pl: Translations = {
       bulkDeleted: 'Usunięto kategorii: {n}',
       shareConfirm: 'Kategoria zostanie dodana wszystkim członkom gospodarstwa, a jej limit będzie wspólny (suma stałych wydatków członków, w przeciwnym razie najwyższy limit). Dotychczasowe limity członków zostaną zastąpione. Kontynuować?',
       limitBreakdown: 'stałe {fixed} + zmienne {reserve}',
+      familyShare: 'Rodzina: {spent} · {pct}%',
       selectMode: 'Wybierz',
       selectHint: 'Wybierz kategorie',
       selectDone: 'Gotowe',
