@@ -1176,3 +1176,16 @@ html.fab-hidden .fab-auto-hide {
   transform: translate(-50%, -50%);
   border-radius: inherit;
 }
+
+/* Login: on desktop an aside with the pitch and an example card sits left of the form */
+.auth-split { display: flex; flex: 1; min-height: 100svh; position: relative; z-index: 1; }
+.auth-aside { display: none; }
+.auth-form-col { display: flex; flex: 1; min-width: 0; }
+@media (min-width: 1024px) {
+  .auth-aside {
+    display: flex; flex-direction: column; justify-content: center; gap: 48px;
+    flex: 1 1 50%; padding: 64px clamp(48px, 7vw, 100px);
+    border-right: 1px solid var(--aurora-gline);
+  }
+  .auth-form-col { flex: 1 1 50%; }
+}
