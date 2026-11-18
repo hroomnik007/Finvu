@@ -47,7 +47,7 @@ export function ForecastCard({
           </div>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-lo)', margin: '0 0 6px' }}>{predictedBalanceLabel}</p>
+          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-lo)', margin: '0 0 6px' }}>{predictedBalanceLabel}</p>
           <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 18, color: predictedBalanceColor, margin: '0 0 4px', letterSpacing: '-0.3px' }}>{predictedBalanceText}</p>
           <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{paceText}</p>
         </div>

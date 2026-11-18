@@ -114,7 +114,7 @@ function SectionHeader({ icon: Icon, label }: { icon: LucideIcon; label: string 
   return (
     <div style={{ borderBottom: '1px solid var(--aurora-gline)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
       <Icon size={13} color="var(--aurora-hi)" />
-      <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--aurora-hi)', fontWeight: 700, margin: 0 }}>
+      <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, color: 'var(--aurora-hi)', fontWeight: 600, margin: 0 }}>
         {label}
       </p>
     </div>
@@ -141,12 +141,12 @@ function SettingRow({ label, sublabel, children }: { label: string; sublabel?: R
   )
 }
 
-// Desktop-only cell for the 2-column settings grids — uppercase label above,
+// Desktop-only cell for the 2-column settings grids — label above,
 // control sits inside a darker sunken box so cells read as compact, aligned units.
 function CompactSettingCell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--aurora-faint)', margin: 0 }}>{label}</p>
+      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', margin: 0 }}>{label}</p>
       <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '10px 12px' }}>{children}</div>
     </div>
   )
@@ -1195,7 +1195,7 @@ export function SettingsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Vytvor domácnosť */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: 16 }}>
-                        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif" }}>{t.settings.householdCreate}</p>
+                        <p className="text-xs font-semibold" style={{ color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif" }}>{t.settings.householdCreate}</p>
                         <input
                           type="text"
                           placeholder={t.settings.householdCreatePlaceholder}
@@ -1214,7 +1214,7 @@ export function SettingsPage() {
 
                       {/* Pripoj sa */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: 16 }}>
-                        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif" }}>{t.settings.householdJoin}</p>
+                        <p className="text-xs font-semibold" style={{ color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif" }}>{t.settings.householdJoin}</p>
                         <input
                           type="text"
                           placeholder={t.settings.householdJoinPlaceholder}
@@ -1530,7 +1530,7 @@ export function SettingsPage() {
             )}
             {dangerAction === 'reset' && (
               <div className="mb-4">
-                <label className="text-[12px] font-semibold uppercase tracking-wider text-red-400 mb-2 block">
+                <label className="text-[12px] font-semibold text-red-400 mb-2 block">
                   {t.settings.dangerResetConfirmLabel}
                 </label>
                 <input
@@ -1610,7 +1610,7 @@ export function SettingsPage() {
             </div>
 
             {/* Sekcia 1: Aktívne relácie (userSessions / refreshTokens) */}
-            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', margin: '0 0 10px' }}>{t.settings.activeSessions}</h3>
+            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-faint)', margin: '0 0 10px' }}>{t.settings.activeSessions}</h3>
             {sessionsLoading ? (
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>{t.common.loading}</p>
             ) : sessions.length === 0 ? (
@@ -1664,7 +1664,7 @@ export function SettingsPage() {
             {hasPin && (
               <>
                 <div style={{ borderTop: '1px solid var(--aurora-gline)', margin: '20px 0 16px' }} />
-                <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', margin: '0 0 10px' }}>{t.settings.pinDevicesTitle}</h3>
+                <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-faint)', margin: '0 0 10px' }}>{t.settings.pinDevicesTitle}</h3>
                 {pinDevicesLoading ? (
                   <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>{t.common.loading}</p>
                 ) : pinDevices.length === 0 ? (
@@ -1813,7 +1813,7 @@ export function SettingsPage() {
               {t.settings.trackingStartDesc}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)' }}>
                 {t.settings.trackingFromShort}
               </label>
               <input

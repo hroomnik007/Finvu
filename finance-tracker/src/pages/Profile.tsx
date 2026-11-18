@@ -60,7 +60,7 @@ function AchievementsTab() {
 
   return (
     <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{t.profile.achievementsUnlocked} ({countLabel})</div>
+      <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-faint)' }}>{t.profile.achievementsUnlocked} ({countLabel})</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, opacity: loaded ? 1 : 0.5, transition: 'opacity 0.2s' }}>
         {items.map((a, i) => {
           const Icon = ACHIEVEMENT_ICONS[a.key] ?? Target
@@ -371,7 +371,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: stat.color, marginBottom: 2 }}>
                   {stat.value}{stat.icon && <stat.icon size={11} color={stat.color} fill={stat.color} />}
                 </div>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{stat.label}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -414,7 +414,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
             <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* OSOBNÉ ÚDAJE section */}
               <div>
-                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 8, textTransform: 'uppercase' }}>{t.profile.personalData}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-faint)', marginBottom: 8 }}>{t.profile.personalData}</div>
                 <GlassCard radius={14} style={{ padding: 0, overflow: 'hidden' }}>
                   {/* Meno row */}
                   <div style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', borderBottom: '1px solid var(--aurora-gline)' }}>
@@ -466,7 +466,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
 
               {/* PREDVOLENÁ STRÁNKA */}
               <div>
-                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 8, textTransform: 'uppercase' }}>{t.profile.defaultPage}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-faint)', marginBottom: 8 }}>{t.profile.defaultPage}</div>
                 <select
                   value={defaultPageDraft}
                   onChange={e => setDefaultPageDraft(e.target.value)}
@@ -531,7 +531,7 @@ export function ProfileModal({ onClose, onLogout }: { onClose: () => void; onLog
 
               {/* BEZPEČNOSŤ */}
               <div>
-                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', letterSpacing: '0.12em', marginBottom: 10, textTransform: 'uppercase' }}>{t.profile.security}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-faint)', marginBottom: 10 }}>{t.profile.security}</div>
                 <GlassCard radius={14} style={{ padding: 0, overflow: 'hidden' }}>
                   {/* Single entry point — password & PIN live in Nastavenia → Bezpečnosť */}
                   <button

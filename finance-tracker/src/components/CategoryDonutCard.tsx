@@ -102,7 +102,7 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
         style={{ position: 'relative', zIndex: clickedIndex !== null ? 11 : 'auto' }}
         onClick={resetPie}
       >
-        <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px', textAlign: 'center' }} className="lg:text-left">{title}</h3>
+        <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px', textAlign: 'center' }} className="lg:text-left">{title}</h3>
         {pieData.length === 0 ? (
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ position: 'relative', width: 190, height: 190, minHeight: 190 }}>

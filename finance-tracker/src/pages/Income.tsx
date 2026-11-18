@@ -213,7 +213,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
 
           {/* Hero wallet card */}
           <HeroCard variant="income">
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 8 }}>
               {t.income.title} · {MONTH_NAME} {year}
             </div>
             {listLoading || listFailed ? <HeroAmountPlaceholder error={listFailed} /> : (
@@ -232,11 +232,11 @@ export function IncomePage({ month, year }: IncomePageProps) {
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.income.recurringLabel}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.income.recurringLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(recurringTotal)}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.income.oneTimeLabel}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.income.oneTimeLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(oneTimeTotal)}</div>
               </div>
             </div>
@@ -244,7 +244,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
 
           {/* Ročný príjem */}
           <GlassCard radius={18}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Manrope', sans-serif", fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', fontWeight: 700, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 10 }}>
               <CalendarDays size={12} /> {t.income.yearlyIncomeTitle} {year}
             </div>
             <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 22, color: 'var(--aurora-emerald)', marginBottom: 4 }}>{formatAmount(yearlyIncome)}</div>

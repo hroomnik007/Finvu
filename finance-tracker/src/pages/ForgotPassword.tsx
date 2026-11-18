@@ -45,8 +45,6 @@ export function ForgotPasswordPage({ onNavigateLogin }: ForgotPasswordPageProps)
   const labelStyle: React.CSSProperties = {
     fontSize: 12,
     fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
     color: 'var(--aurora-lo)',
     fontFamily: "'Manrope', sans-serif",
   }

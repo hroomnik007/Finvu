@@ -8,12 +8,12 @@ import { annualCsv, annualRows, monthsUpTo, savingsRatePct, yearCategories, year
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 
-const th: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--aurora-faint)', padding: '6px 6px', textAlign: 'right' }
+const th: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', padding: '6px 6px', textAlign: 'right' }
 const td: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap' }
 // The card is translucent glass like the other cards, so the first column can't be sticky (it would show the scrolled cells through it).
 const stickyCol: React.CSSProperties = { textAlign: 'left' }
-const statLabel: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--aurora-faint)', marginBottom: 4 }
-const sectionTitle: React.CSSProperties = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: 0 }
+const statLabel: React.CSSProperties = { fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', marginBottom: 4 }
+const sectionTitle: React.CSSProperties = { fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }
 
 function downloadCsv(content: string, filename: string) {
   const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8;' }))
@@ -176,7 +176,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
 
           {categories.length > 0 && (
             <GlassCard radius={18} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: 0 }}>{t.annual.categories}</p>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.annual.categories}</p>
               {categories.map(c => (
                 <div key={c.name}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)' }}>

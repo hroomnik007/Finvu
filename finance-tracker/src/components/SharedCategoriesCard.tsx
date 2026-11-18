@@ -24,7 +24,7 @@ interface Props {
   onUnshare: (id: string) => void
 }
 
-const heading = { fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: 0 } as const
+const heading = { fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 } as const
 const small = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' } as const
 
 /**

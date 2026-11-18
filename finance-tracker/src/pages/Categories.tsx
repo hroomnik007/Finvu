@@ -631,7 +631,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
 
           {/* Hero wallet card */}
           <HeroCard variant="neutral">
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 8 }}>
               {t.expenses.categories.title} · {t.expenses.activeCount.replace('{n}', String(heroCatCount))}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
@@ -664,15 +664,15 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.totalLimit}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.expenses.categories.totalLimit}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(heroTotalLimit)}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.expenses.categories.remaining}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.expenses.categories.remaining}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(Math.max(0, heroTotalLimit - heroTotalSpent))}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{heroOverLimitCount > 0 ? t.expenses.categories.overLimit : t.expenses.categories.nearLimit}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{heroOverLimitCount > 0 ? t.expenses.categories.overLimit : t.expenses.categories.nearLimit}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: heroOverLimitCount > 0 ? 'var(--aurora-rose)' : heroNearLimitCount > 0 ? 'var(--aurora-amber)' : 'var(--aurora-hi)' }}>{heroOverLimitCount > 0 ? heroOverLimitCount : heroNearLimitCount}</div>
               </div>
             </div>
@@ -834,7 +834,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
           style={{ width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '11px 14px', color: 'var(--aurora-hi)', fontSize: 13, fontFamily: "'Manrope', sans-serif", outline: 'none', boxSizing: 'border-box' }}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
           {PRESET_COLORS.map(c => (
             <button
               key={c}
@@ -951,7 +951,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
           {PRESET_COLORS.map(c => (
             <button
               key={c}

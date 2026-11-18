@@ -280,8 +280,6 @@ body {
 .label-mono {
   font-family: 'DM Mono', monospace;
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
   color: var(--text3);
 }
 
@@ -310,16 +308,12 @@ body {
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--text3);
 }
 .t-label-mono {
   font-family: 'DM Mono', monospace;
   font-size: 12px;
   font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 2px;
   color: var(--text3);
 }
 .t-body {
@@ -649,8 +643,6 @@ input[type=number] { -moz-appearance: textfield; }
   display: block;
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   color: var(--text3);
   margin-bottom: 8px;
   line-height: 1.4;

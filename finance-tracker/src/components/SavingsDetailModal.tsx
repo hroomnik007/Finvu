@@ -153,7 +153,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
     { icon: Bell, label: t.savings.reminder, sub: t.savings.reminderSub, val: '—' },
   ]
 
-  const sectionLabelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase' as const, fontWeight: 700, letterSpacing: '0.06em', margin: '0 0 10px 2px' }
+  const sectionLabelStyle = { fontFamily: "'Outfit', sans-serif", fontSize: 14, color: 'var(--aurora-faint)', fontWeight: 600, margin: '0 0 10px 2px' }
 
   const depositsEl = deposits.length === 0 ? (
     <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '24px 0', textAlign: 'center' }}>
@@ -257,7 +257,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
             </svg>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 20, color: 'var(--aurora-hi)' }}>{pctStr}</span>
-              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700 }}>{t.savings.filled}</span>
+              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700 }}>{t.savings.filled}</span>
             </div>
           </div>
           <div style={{ minWidth: 0 }}>
@@ -275,7 +275,7 @@ export function SavingsDetailModal({ goal, deposits = [], onClose, onEdit, onDel
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 18 }}>
           {stats.map(s => (
             <div key={s.label} style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 12px' }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, marginBottom: 4 }}>{s.label}</div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: s.green ? 'var(--aurora-emerald)' : 'var(--aurora-hi)' }}>{s.value}</div>
             </div>
           ))}

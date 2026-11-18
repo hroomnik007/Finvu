@@ -10,7 +10,7 @@ import type { DeleteAccountProof } from '../api/auth'
 type Method = 'password' | 'pin' | 'google'
 
 const inputStyle = { height: 44, width: '100%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, color: 'var(--aurora-hi)', fontSize: 14, padding: '0 14px', outline: 'none', fontFamily: "'Manrope', sans-serif", boxSizing: 'border-box' } as const
-const labelStyle = { fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--aurora-rose)' } as const
+const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--aurora-rose)' } as const
 
 /**
  * Account deletion (and deactivation, `mode="deactivate"`) needs a fresh proof of identity, not just the session:

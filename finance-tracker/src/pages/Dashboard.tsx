@@ -351,7 +351,7 @@ const upcomingFixed = useMemo(() => {
         <StreakBadge count={user?.currentStreak ?? 0} size="lg" variant="aurora" onClick={() => setStreakModalOpen(true)} />
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-faint)', marginBottom: 4 }}>{t.dashboard.today}</p>
+        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', marginBottom: 4 }}>{t.dashboard.today}</p>
         <p style={{ fontSize: 13, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", margin: 0 }}>{todayStr}</p>
       </div>
     </div>
@@ -400,7 +400,7 @@ const upcomingFixed = useMemo(() => {
   const heroSection = (
     <HeroCard variant="neutral">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, minWidth: 0 }}>
+        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, minWidth: 0 }}>
           {t.dashboard.totalBalance}
         </div>
         {/* Quiet link to the yearly overview (was a second primary button under the card) */}
@@ -449,7 +449,7 @@ const upcomingFixed = useMemo(() => {
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--aurora-glass)' }}
           style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         >
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.income}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.income}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedIncome))}</div>
         </div>
         <div
@@ -458,11 +458,11 @@ const upcomingFixed = useMemo(() => {
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--aurora-glass)' }}
           style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         >
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.expenses}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.expenses}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedExpenses))}</div>
         </div>
         <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>{t.dashboard.savingsRate}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.savingsRate}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{heroValue(`${savRate}%`)}</div>
         </div>
       </div>
@@ -479,7 +479,7 @@ const upcomingFixed = useMemo(() => {
     dashLoading || dashFailed ? (
       <GlassCard radius={20} style={{ padding: 20 }}>
         <div role={dashLoading ? 'status' : undefined} aria-busy={dashLoading || undefined} aria-label={dashLoading ? t.common.loading : undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, letterSpacing: '0.08em', color: 'var(--aurora-hi)', textTransform: 'uppercase', fontWeight: 700 }}>{t.dashboard.expensesByCategory}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600 }}>{t.dashboard.expensesByCategory}</div>
           {dashLoading
             ? <Skeleton width={180} height={180} radius={90} />
             : <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: '40px 0' }}>{t.common.loadFailed}</p>}
@@ -504,7 +504,7 @@ const upcomingFixed = useMemo(() => {
     <>
       <GlassCard radius={20}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-          <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-hi)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>{t.dashboard.upcomingPayments}</h3>
+          <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.dashboard.upcomingPayments}</h3>
           {upcomingFixed.length > 0 && !familyView && (
             <button
               onClick={() => onNavigate('fixed-expenses')}
@@ -552,7 +552,7 @@ const upcomingFixed = useMemo(() => {
       </GlassCard>
 
       <div style={auroraSeverityStyle(budgetSeverity)}>
-        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.dashboard.budget}</p>
+        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.dashboard.budget}</p>
         {sortedBudgetStatuses.map(b => {
           const bCat = categories.find(c => c.id === b.categoryId)
           const barColor = (bCat?.autoLimit && !bCat.limitReserve) ? 'var(--aurora-emerald)' : b.percentage >= 100 ? 'var(--aurora-rose)' : b.percentage >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
@@ -593,7 +593,7 @@ const upcomingFixed = useMemo(() => {
 
       {(insightMainText || monthChallengeTarget > 0) && (
         <GlassCard radius={20}>
-          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.dashboard.howYouAreDoing}</p>
+          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.dashboard.howYouAreDoing}</p>
           {insightMainText && (
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, color: insightMainColor, margin: monthChallengeTarget > 0 ? '0 0 12px' : 0 }}>{insightMainText}</p>
           )}
@@ -634,7 +634,7 @@ const upcomingFixed = useMemo(() => {
       {(user?.savings_enabled && savingsGoals.length > 0) && (
         <GlassCard radius={20}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--aurora-hi)', margin: 0 }}>{t.savings.dashboardTitle}</p>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.savings.dashboardTitle}</p>
             <button
               onClick={() => onNavigate('savings')}
               style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', cursor: 'pointer', background: 'transparent', border: 'none' }}
@@ -700,7 +700,7 @@ const upcomingFixed = useMemo(() => {
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.trackingFromNote}</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-lo)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t.onboarding.trackingLabel}</label>
+              <label style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-lo)' }}>{t.onboarding.trackingLabel}</label>
               <input
                 type="date"
                 value={trackingDate}

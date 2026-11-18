@@ -280,7 +280,7 @@ export function ExportDataModal({ open, onClose, onGenerate, generating }: Expor
                 cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
               }}
             >
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.settings.exportFrom}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)' }}>{t.settings.exportFrom}</span>
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)' }}>{formatMonthLabel(fromYear, fromMonth)}</span>
             </button>
             <button
@@ -293,7 +293,7 @@ export function ExportDataModal({ open, onClose, onGenerate, generating }: Expor
                 cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
               }}
             >
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.settings.exportTo}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)' }}>{t.settings.exportTo}</span>
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)' }}>{formatMonthLabel(toYear, toMonth)}</span>
             </button>
           </div>

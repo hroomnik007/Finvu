@@ -72,8 +72,6 @@ export function ResetPasswordPage({ token, onNavigateLogin }: ResetPasswordPageP
     fontSize: 12,
     fontWeight: 600,
     color: LABEL_COLOR,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
   }
 
   return (

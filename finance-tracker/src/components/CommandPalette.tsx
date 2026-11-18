@@ -116,7 +116,7 @@ export function CommandPalette({ open, onClose, onNavigate, onAdd, onToggleTheme
   if (!open) return null
 
   const sectionTitle = (label: string) => (
-    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)', padding: '10px 16px 4px' }}>{label}</div>
+    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', padding: '10px 16px 4px' }}>{label}</div>
   )
 
   let curSection: string | null = null

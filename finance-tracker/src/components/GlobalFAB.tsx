@@ -621,7 +621,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, textTransform: 'uppercase', fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, fontFamily: "'Manrope', sans-serif", marginRight: 2 }}>{t.expenses.categories.colorLabel}</span>
           {PRESET_COLORS.map(c => (
             <button
               key={c}

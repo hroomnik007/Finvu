@@ -165,8 +165,6 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
   const labelStyle: React.CSSProperties = {
     fontSize: 12,
     fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
     color: 'var(--aurora-lo)',
     fontFamily: "'Manrope', sans-serif",
   }
@@ -306,7 +304,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         </button>
 
         {/* Alt sign-in methods */}
-        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, margin: '24px 0 10px' }}>{t.auth.continueWithLabel}</p>
+        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 700, margin: '24px 0 10px' }}>{t.auth.continueWithLabel}</p>
 
         {pinOnThisDevice ? (
           <div style={{ display: 'flex', gap: 10 }}>

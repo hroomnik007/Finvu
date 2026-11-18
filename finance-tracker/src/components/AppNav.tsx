@@ -125,7 +125,7 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
           {isExpanded && (
             <div>
               <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Finvu</span>
-              <div style={{ fontSize: 12, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>{t.nav.appTagline}</div>
+              <div style={{ fontSize: 12, color: 'var(--aurora-faint)', fontFamily: "'Manrope', sans-serif", marginTop: 1 }}>{t.nav.appTagline}</div>
             </div>
           )}
         </div>
@@ -245,7 +245,7 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
               onMouseEnter={openSubmenu}
               onMouseLeave={closeSubmenu}
             >
-              <div style={{ padding: '6px 16px 4px', fontSize: '12px', color: 'var(--aurora-faint)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+              <div style={{ padding: '6px 16px 4px', fontSize: '12px', color: 'var(--aurora-faint)' }}>
                 {t.nav.expenses}
               </div>
               {([
