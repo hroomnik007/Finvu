@@ -1,3 +1,4 @@
+import { describeError } from "./lib/safeErrorLog";
 import path from "node:path";
 import express from "express";
 import helmet from "helmet";
@@ -23,7 +24,7 @@ import notificationsRouter from "./routes/notifications";
 import achievementsRouter from "./routes/achievements";
 import backupRouter from "./routes/backup";
 import { authenticateToken, AuthRequest } from "./middleware/authenticate";
-import { db, pool } from "./db";
+import { db, pool, warnIfSuperuser } from "./db";
 import { checkDatabase } from "./lib/health";
 import { createShutdown } from "./lib/shutdown";
 
@@ -106,7 +107,7 @@ app.use("/api/backup", backupRouter);
 app.use(errorHandler);
 
 process.on("unhandledRejection", (reason) => {
-  console.error("[process] unhandledRejection:", reason);
+  console.error("[process] unhandledRejection:", describeError(reason));
 });
 
 const server = app.listen(env.PORT, () => {
@@ -114,6 +115,7 @@ const server = app.listen(env.PORT, () => {
   startWeeklyReportJob();
   startMonthlyReportJob();
   startCleanupJob();
+  if (env.NODE_ENV === "production") void warnIfSuperuser();
 });
 
 const shutdown = createShutdown({

@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import { Response } from "express";
 import { apiError } from "../lib/apiErrors";
 import { and, eq, inArray, isNotNull, sql, asc } from "drizzle-orm";
@@ -120,7 +121,7 @@ async function refreshLimitsForNewMonth(userId: string, rows: CategoryRow[]): Pr
   limitsRefreshedFor.set(userId, ym);
   const follow = rows.filter((r) => r.type === "expense" && (r.autoLimit || r.shared));
   for (const cat of follow) {
-    try { await recalculateCategoryLimit(cat.id, userId); } catch (err) { console.error("monthly limit refresh failed:", err); }
+    try { await recalculateCategoryLimit(cat.id, userId); } catch (err) { console.error("monthly limit refresh failed:", describeError(err)); }
   }
   return follow.length > 0;
 }

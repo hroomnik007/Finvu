@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import { appToday } from "../lib/localDate";
 import { Response } from "express";
 import { apiError } from "../lib/apiErrors";
@@ -141,7 +142,7 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
   try {
     await syncSharedToNewMember(userId, household.id);
   } catch (err) {
-    console.error('shared categories sync failed:', err);
+    console.error('shared categories sync failed:', describeError(err));
   }
 
   const members = await db
@@ -160,10 +161,10 @@ export async function joinHousehold(req: AuthRequest, res: Response): Promise<vo
       try {
         ({ newlyUnlocked: newlyUnlockedAchievements } = await evaluateAchievements(m.userId));
       } catch (err) {
-        console.error('achievement eval failed:', err);
+        console.error('achievement eval failed:', describeError(err));
       }
     } else {
-      evaluateAchievements(m.userId).catch(err => console.error('achievement eval failed:', err));
+      evaluateAchievements(m.userId).catch(err => console.error('achievement eval failed:', describeError(err)));
     }
   }
 
@@ -503,7 +504,7 @@ export async function toggleHousehold(req: AuthRequest, res: Response): Promise<
 
   // Whose fixed expenses and limits count towards shared categories just changed
   const [u] = await db.select({ householdId: users.householdId }).from(users).where(eq(users.id, userId)).limit(1);
-  if (u?.householdId) await recalcSharedForHousehold(u.householdId).catch(err => console.error('shared limit recalc failed:', err));
+  if (u?.householdId) await recalcSharedForHousehold(u.householdId).catch(err => console.error('shared limit recalc failed:', describeError(err)));
 
   res.json({ household_enabled: enabled });
 }

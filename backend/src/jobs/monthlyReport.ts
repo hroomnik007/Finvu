@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import cron from "node-cron";
 import { and, asc, eq, inArray, lt, or, gte } from "drizzle-orm";
 import { db } from "../db";
@@ -137,7 +138,7 @@ async function sendMonthlyReports(): Promise<void> {
       await sendEmail(user.email, subject, renderSummaryHtml({ ...data, settingsUrl }), undefined, { "List-Unsubscribe": `<${settingsUrl}>` });
       await db.update(users).set({ monthlyEmailLastSent: ym }).where(eq(users.id, user.id));
     } catch (err) {
-      console.error(`[monthlyReport] send failed for ${user.id}:`, err);
+      console.error(`[monthlyReport] send failed for ${user.id}:`, describeError(err));
     }
   }
 }
@@ -146,7 +147,7 @@ export function startMonthlyReportJob(): void {
   // Every hour on the candidate days 28–31 (node-cron has no "last day" token);
   // each subscriber picks their own hour and the last-sent month stops repeats.
   cron.schedule("0 * 28-31 * *", () => {
-    sendMonthlyReports().catch((err) => console.error("[monthlyReport] Error:", err));
+    sendMonthlyReports().catch((err) => console.error("[monthlyReport] Error:", describeError(err)));
   }, { timezone: TZ });
   console.log("[monthlyReport] Scheduled: last day of month, at each subscriber's hour");
 }

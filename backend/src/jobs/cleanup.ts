@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import cron from "node-cron";
 import { and, isNotNull, lt, notExists, eq, gt } from "drizzle-orm";
 import { db } from "../db";
@@ -59,7 +60,7 @@ export function startCleanupJob(): void {
   cron.schedule("30 3 * * *", () => {
     runCleanup()
       .then((removed) => console.log("[cleanup] Removed:", JSON.stringify(removed)))
-      .catch((err) => console.error("[cleanup] Error:", err));
+      .catch((err) => console.error("[cleanup] Error:", describeError(err)));
   }, { timezone: "Europe/Bratislava" });
   console.log("[cleanup] Scheduled: daily 03:30");
 }

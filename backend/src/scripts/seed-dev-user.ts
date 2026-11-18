@@ -58,12 +58,17 @@ async function main(): Promise<void> {
   assertLocalOnly();
 
   // Loaded only after the guard: these import the env config and open the pool.
-  const [{ default: bcrypt }, { eq }, { db }, schema] = await Promise.all([
+  // Its own pool, not the app's (src/db), so the app's statement and
+  // idle-in-transaction timeouts do not apply to this script.
+  const [{ default: bcrypt }, { eq }, { env }, { Pool }, { drizzle }, schema] = await Promise.all([
     import("bcrypt"),
     import("drizzle-orm"),
-    import("../db"),
+    import("../config/env"),
+    import("pg"),
+    import("drizzle-orm/node-postgres"),
     import("../db/schema"),
   ]);
+  const db = drizzle(new Pool({ connectionString: env.DATABASE_URL }), { schema });
   const { users, categories, transactions } = schema;
 
   console.log("=== Seeding local dev user ===");

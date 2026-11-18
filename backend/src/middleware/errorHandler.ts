@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { zodDetails } from "../lib/validation";
+import { describeError } from "../lib/safeErrorLog";
 
 export function errorHandler(
   err: unknown,
@@ -16,9 +17,13 @@ export function errorHandler(
   const status = err instanceof Error ? (err as Error & { status?: number }).status ?? 500 : 500;
 
   if (status >= 500) {
-    // Log the real cause, but never hand it to the client: Drizzle/pg messages
-    // contain the SQL text and sometimes parameter values.
-    console.error(`[error] ${req.method} ${req.originalUrl}:`, err);
+    // Never hand the cause to the client, and never log it whole either:
+    // Drizzle/pg errors carry the SQL text, bound parameters and `detail`
+    // (e.g. the e-mail address on a unique violation). describeError keeps
+    // only name, pg code/constraint/table/routine, a redacted message and the
+    // stack frames. The query string is left out of the logged URL for the
+    // same reason (search terms).
+    console.error(`[error] ${req.method} ${req.originalUrl.split("?")[0]}: ${describeError(err)}`);
     res.status(status).json({ error: "Internal server error" });
     return;
   }

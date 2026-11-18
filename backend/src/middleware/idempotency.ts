@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import { createHash } from "crypto";
 import type { NextFunction, Response } from "express";
 import { and, eq, lt, sql } from "drizzle-orm";
@@ -96,7 +97,7 @@ export async function idempotent(req: AuthRequest, res: Response, next: NextFunc
       ? db.update(idempotencyKeys).set({ responseStatus: status, responseBody: sql`${JSON.stringify(body ?? null)}::jsonb` }).where(where)
       : db.delete(idempotencyKeys).where(where);
     persist.then(() => json(body), (err) => {
-      console.error("idempotency: storing the response failed:", err);
+      console.error("idempotency: storing the response failed:", describeError(err));
       json(body);
     });
     return res;

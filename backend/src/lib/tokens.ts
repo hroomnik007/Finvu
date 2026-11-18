@@ -23,28 +23,34 @@ export interface AdminTokenPayload {
   sub: "admin";
 }
 
+// Every token is HS256 (also the library default, so tokens issued before the
+// algorithm was pinned keep verifying). verify accepts HS256 only, so a token
+// with "none" or another HMAC/RSA algorithm is rejected outright.
+const JWT_ALGORITHM = "HS256" as const;
+const VERIFY_OPTIONS = { algorithms: [JWT_ALGORITHM] };
+
 export function signAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
+  return jwt.sign(payload, env.JWT_ACCESS_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: "15m" });
 }
 
 export function signRefreshToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: "30d" });
+  return jwt.sign(payload, env.JWT_REFRESH_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: "30d" });
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
-  return jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload;
+  return jwt.verify(token, env.JWT_ACCESS_SECRET, VERIFY_OPTIONS) as AccessTokenPayload;
 }
 
 export function verifyRefreshToken(token: string): AccessTokenPayload {
-  return jwt.verify(token, env.JWT_REFRESH_SECRET) as AccessTokenPayload;
+  return jwt.verify(token, env.JWT_REFRESH_SECRET, VERIFY_OPTIONS) as AccessTokenPayload;
 }
 
 export function signAdminToken(): string {
-  return jwt.sign({ role: "admin", sub: "admin" }, env.JWT_ADMIN_SECRET, { expiresIn: "4h" });
+  return jwt.sign({ role: "admin", sub: "admin" }, env.JWT_ADMIN_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: "4h" });
 }
 
 export function verifyAdminToken(token: string): AdminTokenPayload {
-  const payload = jwt.verify(token, env.JWT_ADMIN_SECRET) as AdminTokenPayload;
+  const payload = jwt.verify(token, env.JWT_ADMIN_SECRET, VERIFY_OPTIONS) as AdminTokenPayload;
   if (payload.role !== "admin" || payload.sub !== "admin") throw new Error("Not an admin token");
   return payload;
 }

@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import { Response } from "express";
 import { and, eq, gte, lt, lte, or, inArray, isNull, sql, count, type SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -250,10 +251,10 @@ export async function createTransaction(req: AuthRequest, res: Response): Promis
     await updateStreakAndBadges(req.userId!, todayServer);
     ({ newlyUnlocked: newlyUnlockedAchievements } = await evaluateAchievements(req.userId!));
   } catch (err) {
-    console.error('streak/achievement update failed:', err);
+    console.error('streak/achievement update failed:', describeError(err));
   }
   if (row.isFixed && row.categoryId) {
-    recalculateCategoryLimit(row.categoryId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+    recalculateCategoryLimit(row.categoryId, req.userId!).catch(err => console.error('auto-limit recalc failed:', describeError(err)));
   }
   res.status(201).json({ data: normalizeAmount(withCategory), newBadges: [], newlyUnlockedAchievements });
 }
@@ -305,7 +306,7 @@ export async function createTransactionsBulk(req: AuthRequest, res: Response): P
     await updateStreakAndBadges(req.userId!, localDateISO(rows[0].createdAt));
     ({ newlyUnlocked: newlyUnlockedAchievements } = await evaluateAchievements(req.userId!));
   } catch (err) {
-    console.error('streak/achievement update failed:', err);
+    console.error('streak/achievement update failed:', describeError(err));
   }
   res.status(201).json({ created: rows.length, newlyUnlockedAchievements });
 }
@@ -480,7 +481,7 @@ export async function updateTransaction(req: AuthRequest, res: Response): Promis
     if (oldCatId) toRecalc.add(oldCatId);
     if (newCatId) toRecalc.add(newCatId);
     for (const catId of toRecalc) {
-      recalculateCategoryLimit(catId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+      recalculateCategoryLimit(catId, req.userId!).catch(err => console.error('auto-limit recalc failed:', describeError(err)));
     }
   }
 
@@ -515,7 +516,7 @@ export async function deleteTransaction(req: AuthRequest, res: Response): Promis
     const cats = new Set(removed.map((r) => r.categoryId).filter((c): c is string => !!c));
     if (existing.categoryId) cats.add(existing.categoryId);
     for (const catId of cats) {
-      recalculateCategoryLimit(catId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+      recalculateCategoryLimit(catId, req.userId!).catch(err => console.error('auto-limit recalc failed:', describeError(err)));
     }
   }
 
@@ -596,7 +597,7 @@ export async function changeFixedPrice(req: AuthRequest, res: Response): Promise
   }
 
   const withCategory = await fetchWithCategory(rowId);
-  if (latest.categoryId) recalculateCategoryLimit(latest.categoryId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+  if (latest.categoryId) recalculateCategoryLimit(latest.categoryId, req.userId!).catch(err => console.error('auto-limit recalc failed:', describeError(err)));
   res.json({ data: normalizeAmount(withCategory) });
 }
 
@@ -620,7 +621,7 @@ export async function endFixedSeries(req: AuthRequest, res: Response): Promise<v
     .returning({ categoryId: transactions.categoryId });
 
   for (const catId of new Set(rows.map((r) => r.categoryId).filter((c): c is string => !!c))) {
-    recalculateCategoryLimit(catId, req.userId!).catch(err => console.error('auto-limit recalc failed:', err));
+    recalculateCategoryLimit(catId, req.userId!).catch(err => console.error('auto-limit recalc failed:', describeError(err)));
   }
   res.json({ success: true, endedOn });
 }

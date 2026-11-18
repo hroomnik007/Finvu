@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import { randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { apiError } from "../lib/apiErrors";
 import { lookupLocation } from "../lib/geoip";
@@ -621,7 +622,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
   // The lookup, the token and the e-mail run afterwards; a failure there is only
   // logged (it must never become an unhandled rejection that takes the process down).
   res.json({ message: OK_MSG });
-  void sendPasswordResetMail(email).catch((err) => console.error("[forgotPassword] failed:", err));
+  void sendPasswordResetMail(email).catch((err) => console.error("[forgotPassword] failed:", describeError(err)));
 }
 
 async function sendPasswordResetMail(email: string): Promise<void> {

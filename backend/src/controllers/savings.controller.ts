@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import { Response } from "express";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -68,7 +69,7 @@ export async function createSavingsGoal(req: AuthRequest, res: Response): Promis
   try {
     ({ newlyUnlocked: newlyUnlockedAchievements } = await evaluateAchievements(req.userId!));
   } catch (err) {
-    console.error('achievement eval failed:', err);
+    console.error('achievement eval failed:', describeError(err));
   }
   res.status(201).json({ data: normalizeGoal(row), newlyUnlockedAchievements });
 }

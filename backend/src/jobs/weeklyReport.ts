@@ -1,3 +1,4 @@
+import { describeError } from "../lib/safeErrorLog";
 import { appToday } from "../lib/localDate";
 import cron from "node-cron";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
@@ -123,7 +124,7 @@ async function sendMidMonthReports(): Promise<void> {
     const html = renderMidMonthHtml({ income: totalIncome, expense: totalExpense, month, year, language: user.language, settingsUrl });
 
     await sendEmail(user.email, subject, html, undefined, { "List-Unsubscribe": `<${settingsUrl}>` }).catch((err) =>
-      console.error(`[midMonthReport] send failed for ${user.id}:`, err)
+      console.error(`[midMonthReport] send failed for ${user.id}:`, describeError(err))
     );
   }
 }
@@ -132,7 +133,7 @@ export function startWeeklyReportJob(): void {
   // 15th of each month at 08:00
   cron.schedule("0 8 15 * *", () => {
     sendMidMonthReports().catch((err) =>
-      console.error("[midMonthReport] Error:", err)
+      console.error("[midMonthReport] Error:", describeError(err))
     );
   });
   console.log("[midMonthReport] Scheduled: 15th of month 08:00");
