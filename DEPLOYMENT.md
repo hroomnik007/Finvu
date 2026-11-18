@@ -20,7 +20,7 @@ Every push to `main` runs `.github/workflows/deploy.yml`:
    `npm run db:migrate` (role from the `DATABASE_URL` secret), `docker compose build backend`, then
    `docker compose up -d --no-deps --wait backend` — the container is replaced and the step waits for its healthcheck.
 
-GitHub secrets used: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, `DATABASE_URL`, `VITE_VAPID_PUBLIC_KEY`.
+GitHub secrets used: `SERVER_HOST`, `SERVER_HOST_FINGERPRINT`, `SERVER_USER`, `SERVER_SSH_KEY`, `DATABASE_URL`, `VITE_VAPID_PUBLIC_KEY`.
 
 **nginx configuration is not deployed by CI.** After changing `nginx/*.conf`, copy the file to
 `/etc/nginx/sites-enabled/` (and `nginx/snippets/*.conf` to `/etc/nginx/snippets/`) on the server

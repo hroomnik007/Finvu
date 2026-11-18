@@ -19,13 +19,19 @@
 
 ## Features
 
-- **Dashboard** — overview of income, expenses and balance with a heatmap and donut chart
-- **Variable expenses** — categorisation, bank import (Revolut, Tatra banka, SLSP, mBank, 365.bank)
-- **Fixed expenses** — recurring payments with due-date reminders
-- **Savings** — goals with progress tracking, pause/resume, deep link
-- **Household** — shared finances, per-member breakdown
-- **Budget** — category limits, auto-limit from fixed expenses, visual progress
-- **5 languages** — SK, CS, PL, HU, EN with automatic browser language detection
+- **Dashboard** — total balance (with an optional opening balance), forecast and cash-flow outlook, weekday heatmap, category donut
+- **Variable expenses** — categorisation, bank import (Revolut, Tatra banka, SLSP, mBank, 365.bank; CSV and CAMT.053), category suggestions
+- **Fixed expenses** — monthly, quarterly and yearly recurring payments with due-date reminders; subscription suggestions detected from your expenses
+- **Savings** — goals with progress tracking, pause/resume, deep link; deposits lower the total balance
+- **Household** — shared finances, per-member breakdown, shared categories with your own spending and a family line
+- **Budget** — category limits, auto-limit from fixed expenses, visual progress (same percentage on Dashboard and Categories)
+- **Annual overview, search and command palette**
+- **Streaks and achievements**, a first-run checklist for new users
+- **E-mail reports** — mid-month and end-of-month summaries in your language, with an unsubscribe link in settings
+- **Backup** — export and restore your data, optionally encrypted
+- **Mobile-first** — own number pad for amounts, bottom sheets, pull to refresh, swipeable rows
+- **PIN lock**
+- **5 languages** — SK, CS, PL, HU, EN with automatic browser language detection (non-English languages load on demand)
 - **PWA** — installable on mobile and desktop, offline support
 - **Dark / Light mode**
 - **Export** — PDF, XLSX, CSV
@@ -35,23 +41,24 @@
 ## Tech stack
 
 ### Frontend
-- **React 19** + **TypeScript 5.9** + **Vite 8**
+- **React 19** + **TypeScript 6** + **Vite 8**
 - **Tailwind CSS 4**
-- **i18n** — custom typed system (5 languages, ~1100 keys); server errors are translated by code
+- **i18n** — custom typed system (5 languages, ~1200 keys); server errors are translated by code
 - **Recharts** — charts
 - **PWA** — Vite PWA Plugin + Workbox (Service Worker)
 - **Export** — jsPDF, xlsx, papaparse
 
 ### Backend
-- **Node.js** + **Express 5** + **TypeScript 5.9**
+- **Node.js** + **Express 5** + **TypeScript 7**
 - **PostgreSQL 17** + **Drizzle ORM**
-- **JWT** (access token in memory) + **httpOnly cookie** (refresh token)
+- **JWT** pinned to HS256 (access token in memory) + **httpOnly cookie** (refresh token)
 - E-mail + password, **Google OAuth**, **PIN** (passkeys/WebAuthn are implemented but off by default, `PASSKEYS_ENABLED`)
 
 ### Infrastructure
-- **Docker** + **Docker Compose** (backend; PostgreSQL runs in its own container)
+- **Docker** + **Docker Compose** (backend runs with dropped capabilities, `no-new-privileges` and log rotation; PostgreSQL runs in its own container)
 - **GitHub Actions** — automatic CI/CD deploy on every push to `main`
-- **VPS server** (backend API)
+- **VPS server** (Hetzner; backend API and static frontend behind nginx)
+- Scheduled database backups (`scripts/backup.sh`)
 - Frontend: https://finvu.pedani.eu
 
 ---
@@ -208,7 +215,7 @@ certbot --nginx -d api.yourdomain.com -d yourdomain.com
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string (`postgresql://user:pass@postgres:5432/db` in Docker, `@localhost` locally) |
-| `JWT_ACCESS_SECRET` | ✅ | Secret key for access tokens (min. 32 characters) |
+| `JWT_ACCESS_SECRET` | ✅ | Secret key for access tokens (min. 32 characters). In production the three JWT secrets must be distinct and not placeholder values, or the backend refuses to start |
 | `JWT_REFRESH_SECRET` | ✅ | Secret key for refresh tokens (min. 32 characters) |
 | `JWT_ADMIN_SECRET` | ✅ | Secret key for admin tokens (min. 32 characters) |
 | `ADMIN_USERNAME` | — | Admin area username (default `admin`) |
@@ -237,7 +244,7 @@ certbot --nginx -d api.yourdomain.com -d yourdomain.com
 
 ### Automated deployment (CI/CD)
 
-`.github/workflows/deploy.yml` runs the checks and deploys to the original server on every push to `main`. In a fork it needs the secrets `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`, `DATABASE_URL` and `VITE_VAPID_PUBLIC_KEY`, and the paths and API URL in the workflow changed to yours. See [DEPLOYMENT.md](DEPLOYMENT.md).
+`.github/workflows/deploy.yml` runs the checks and deploys to the original server on every push to `main`. In a fork it needs the secrets `SERVER_HOST`, `SERVER_HOST_FINGERPRINT` (the pinned SSH host key), `SERVER_USER`, `SERVER_SSH_KEY`, `DATABASE_URL` and `VITE_VAPID_PUBLIC_KEY`, and the paths and API URL in the workflow changed to yours. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
@@ -249,7 +256,7 @@ Supported methods:
 |---|---|
 | Email + password | Standard registration |
 | Google OAuth | Sign in with Google account |
-| PIN | Quick PIN login |
+| PIN | Quick PIN login / app lock |
 
 ---
 
