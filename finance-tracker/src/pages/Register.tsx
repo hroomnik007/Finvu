@@ -3,8 +3,8 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { apiErrorMessage } from '../utils/apiError'
 import { useAuth } from '../context/AuthContext'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
-import { AuthThemeToggle } from '../components/AuthThemeToggle'
+import { AuthShell } from '../components/AuthShell'
+import { authLabelStyle, authInputStyle, authButtonStyle, authErrorStyle, authFooterStyle, authLinkButtonStyle, authSpinnerStyle } from '../components/authStyles'
 
 interface RegisterPageProps {
   onNavigateLogin: () => void
@@ -46,248 +46,124 @@ export function RegisterPage({ onNavigateLogin, onNavigatePrivacyPolicy }: Regis
     }
   }
 
-  const inp = (name: string, hasRight = false): React.CSSProperties => ({
-    width: '100%',
-    background: 'var(--aurora-glass)',
-    color: 'var(--aurora-hi)',
-    borderRadius: 13,
-    padding: hasRight ? '0 44px 0 16px' : '0 16px',
-    height: 50,
-    fontSize: 15,
-    fontFamily: "'Manrope', sans-serif",
-    border: `1.5px solid ${focused === name ? 'var(--aurora-violet)' : 'var(--aurora-gline)'}`,
-    outline: 'none',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-    boxShadow: focused === name ? '0 0 0 3px rgba(139,92,246,0.15)' : 'none',
-    boxSizing: 'border-box' as const,
-  })
+  const eyeStyle: React.CSSProperties = {
+    position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-lo)',
+    display: 'flex', alignItems: 'center', padding: 2,
+  }
+  const fieldBox: React.CSSProperties = { marginBottom: 14 }
+  const lbl: React.CSSProperties = { ...authLabelStyle, display: 'block', marginBottom: 8 }
 
   if (verificationSent) {
     return (
-      <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', background: 'var(--aurora-bg-image)' }}>
-        <div className="fu" style={{ width: '100%', maxWidth: 392, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16,
-          background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 24, padding: 32,
-          boxShadow: 'var(--shadow-elevated)',
-        }}>
-          <p style={{ fontSize: 48, margin: 0 }}>📧</p>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{t.auth.verifyEmailTitle}</h2>
-          <p style={{ fontSize: 14, color: 'var(--text3)', lineHeight: 1.6, maxWidth: 320, margin: 0 }}>{t.auth.verificationSent}</p>
-          <button
-            type="button"
-            onClick={onNavigateLogin}
-            style={{ fontSize: 14, fontWeight: 500, color: 'var(--violet)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            {t.auth.backToLogin}
-          </button>
-        </div>
-      </div>
+      <AuthShell title={t.auth.verifyEmailTitle}>
+        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, color: 'var(--aurora-lo)', lineHeight: 1.6, margin: 0 }}>{t.auth.verificationSent}</p>
+        <p style={{ ...authFooterStyle, textAlign: 'left', marginTop: 20 }}>
+          <button type="button" onClick={onNavigateLogin} style={authLinkButtonStyle}>{t.auth.backToLogin}</button>
+        </p>
+      </AuthShell>
     )
   }
 
+  const busy = isLoading
+  const blocked = !gdprConsent
+
   return (
-    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', background: 'var(--aurora-bg-image)', position: 'relative', overflow: 'hidden' }}>
+    <AuthShell title={t.auth.registerTitle} subtitle={t.auth.registerSubtitle}>
+      {error && <div role="alert" style={authErrorStyle}>{error}</div>}
 
-      {/* Atmospheric blob */}
-      <div style={{
-        position: 'fixed', top: '10%', left: '50%', transform: 'translateX(-50%)',
-        width: 600, height: 400, borderRadius: '50%', pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(circle,rgba(139,92,246,0.1) 0%,transparent 70%)',
-        filter: 'blur(40px)',
-      }} />
-
-      {/* Top controls: language switcher + theme toggle */}
-      <div style={{ position: 'fixed', top: 16, right: 16, display: 'flex', alignItems: 'center', gap: 8, zIndex: 100 }}>
-        <LanguageSwitcher />
-        <AuthThemeToggle />
+      <div style={fieldBox}>
+        <label htmlFor="register-name" style={lbl}>{t.auth.nameLabel}</label>
+        <input
+          id="register-name" name="name" type="text" autoComplete="name" autoCapitalize="words"
+          placeholder={t.auth.namePlaceholder} value={name}
+          onChange={e => setName(e.target.value)}
+          onFocus={() => setFocused('name')} onBlur={() => setFocused(null)}
+          style={authInputStyle(focused === 'name')}
+        />
       </div>
 
-      <div className="fade-up" style={{ width: '100%', maxWidth: 392, display: 'flex', flexDirection: 'column', alignItems: 'stretch', position: 'relative', zIndex: 1 }}>
+      <div style={fieldBox}>
+        <label htmlFor="register-email" style={lbl}>{t.auth.email}</label>
+        <input
+          id="register-email" name="email" type="email" inputMode="email" autoComplete="email"
+          autoCapitalize="none" autoCorrect="off" spellCheck={false}
+          placeholder={t.auth.emailPlaceholder} value={email}
+          onChange={e => setEmail(e.target.value)}
+          onFocus={() => setFocused('email')} onBlur={() => setFocused(null)}
+          style={authInputStyle(focused === 'email')}
+        />
+      </div>
 
-        {/* Brand row — logo beside title, unified with Login */}
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 32 }}>
-          <img src="/logo.svg" alt="Finvu" style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0 }} />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 27, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>Finvu</h1>
-            <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', margin: 0 }}>{t.nav.appTagline}</p>
-          </div>
-        </div>
-
-        {/* Form fields */}
-        <div className="fu" style={{
-          width: '100%',
-          display: 'flex', flexDirection: 'column', gap: 16,
-        }}>
-
-          {error && (
-            <div style={{ borderRadius: 12, padding: '12px 16px', fontSize: 14, background: 'rgba(248,113,113,0.12)', color: '#F87171', border: '1px solid rgba(248,113,113,0.3)' }}>
-              {error}
-            </div>
-          )}
-
-          {/* Name */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label htmlFor="register-name" className="form-label">{t.auth.nameLabel}</label>
-            <input
-              id="register-name"
-              name="name"
-              type="text"
-              autoComplete="name"
-              autoCapitalize="words"
-              placeholder={t.auth.namePlaceholder}
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onFocus={() => setFocused('name')}
-              onBlur={() => setFocused(null)}
-              style={inp('name')}
-            />
-          </div>
-
-          {/* Email */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label htmlFor="register-email" className="form-label">{t.auth.email}</label>
-            <input
-              id="register-email"
-              name="email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder={t.auth.emailPlaceholder}
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              onFocus={() => setFocused('email')}
-              onBlur={() => setFocused(null)}
-              style={inp('email')}
-            />
-          </div>
-
-          {/* Password */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label htmlFor="register-password" className="form-label">{t.auth.password}</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                id="register-password"
-                name="new-password"
-                autoComplete="new-password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder={t.auth.minChars}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onFocus={() => setFocused('password')}
-                onBlur={() => setFocused(null)}
-                style={inp('password', true)}
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={() => setShowPassword(v => !v)}
-                aria-label={showPassword ? t.auth.hidePasswordLabel : t.auth.showPasswordLabel}
-                style={{
-                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--text3)', display: 'flex', alignItems: 'center', padding: 2,
-                }}
-              >
-                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm password */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label htmlFor="register-confirm" className="form-label">{t.auth.confirmPassword}</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                id="register-confirm"
-                name="confirm-password"
-                autoComplete="new-password"
-                type={showConfirm ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                onFocus={() => setFocused('confirm')}
-                onBlur={() => setFocused(null)}
-                onKeyDown={e => e.key === 'Enter' && handleRegister()}
-                style={inp('confirm', true)}
-              />
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={() => setShowConfirm(v => !v)}
-                aria-label={showConfirm ? t.auth.hidePasswordLabel : t.auth.showPasswordLabel}
-                style={{
-                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--text3)', display: 'flex', alignItems: 'center', padding: 2,
-                }}
-              >
-                {showConfirm ? <EyeOff size={17} /> : <Eye size={17} />}
-              </button>
-            </div>
-          </div>
-
-          {/* GDPR */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            <input
-              type="checkbox"
-              id="gdpr"
-              checked={gdprConsent}
-              onChange={e => setGdprConsent(e.target.checked)}
-              style={{ width: 18, height: 18, accentColor: 'var(--violet)', colorScheme: 'var(--aurora-color-scheme)', cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
-            />
-            <label htmlFor="gdpr" style={{ fontSize: 13, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1.5 }}>
-              {t.auth.gdprConsent}{' '}
-              <button
-                type="button"
-                onClick={onNavigatePrivacyPolicy}
-                style={{ color: 'var(--violet)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0, fontFamily: 'inherit' }}
-              >
-                ({t.auth.privacyPolicy})
-              </button>
-            </label>
-          </div>
-
-          {/* Register button */}
+      <div style={fieldBox}>
+        <label htmlFor="register-password" style={lbl}>{t.auth.password}</label>
+        <div style={{ position: 'relative' }}>
+          <input
+            id="register-password" name="new-password" autoComplete="new-password"
+            type={showPassword ? 'text' : 'password'} placeholder={t.auth.minChars} value={password}
+            onChange={e => setPassword(e.target.value)}
+            onFocus={() => setFocused('password')} onBlur={() => setFocused(null)}
+            style={authInputStyle(focused === 'password', true)}
+          />
           <button
-            type="button"
-            onClick={handleRegister}
-            disabled={isLoading || !gdprConsent}
-            style={{
-              marginTop: 4, height: 50,
-              background: 'linear-gradient(135deg, var(--aurora-violet), var(--aurora-fuchsia))',
-              border: 'none', borderRadius: 13,
-              width: '100%', fontSize: 15, fontWeight: 700,
-              color: 'white', cursor: (isLoading || !gdprConsent) ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit',
-              opacity: (isLoading || !gdprConsent) ? 0.55 : 1,
-              transition: 'opacity 0.15s',
-              boxShadow: (!isLoading && gdprConsent) ? '0 4px 20px rgba(139,92,246,0.4)' : 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
+            type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)}
+            aria-label={showPassword ? t.auth.hidePasswordLabel : t.auth.showPasswordLabel}
+            style={eyeStyle}
           >
-            {isLoading ? (
-              <>
-                <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', animation: 'spin 0.7s linear infinite' }} />
-                {t.common.saving}
-              </>
-            ) : t.auth.registerArrow}
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
-
-          {/* Login link */}
-          <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text3)', margin: 0 }}>
-            {t.auth.hasAccount}{' '}
-            <button
-              type="button"
-              onClick={onNavigateLogin}
-              style={{ color: 'var(--violet)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}
-            >
-              {t.auth.login} →
-            </button>
-          </p>
-
         </div>
       </div>
-    </div>
+
+      <div style={fieldBox}>
+        <label htmlFor="register-confirm" style={lbl}>{t.auth.confirmPassword}</label>
+        <div style={{ position: 'relative' }}>
+          <input
+            id="register-confirm" name="confirm-password" autoComplete="new-password"
+            type={showConfirm ? 'text' : 'password'} value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            onFocus={() => setFocused('confirm')} onBlur={() => setFocused(null)}
+            onKeyDown={e => e.key === 'Enter' && handleRegister()}
+            style={authInputStyle(focused === 'confirm', true)}
+          />
+          <button
+            type="button" tabIndex={-1} onClick={() => setShowConfirm(v => !v)}
+            aria-label={showConfirm ? t.auth.hidePasswordLabel : t.auth.showPasswordLabel}
+            style={eyeStyle}
+          >
+            {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 4 }}>
+        <input
+          type="checkbox" id="gdpr" checked={gdprConsent}
+          onChange={e => setGdprConsent(e.target.checked)}
+          style={{ width: 18, height: 18, accentColor: 'var(--aurora-violet)', colorScheme: 'var(--aurora-color-scheme)', cursor: 'pointer', marginTop: 2, flexShrink: 0 }}
+        />
+        <label htmlFor="gdpr" style={{ fontSize: 13, color: 'var(--aurora-lo)', cursor: 'pointer', lineHeight: 1.5, fontFamily: "'Manrope', sans-serif" }}>
+          {t.auth.gdprConsent}{' '}
+          <button
+            type="button" onClick={onNavigatePrivacyPolicy}
+            style={{ color: 'var(--aurora-violet-text)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0, fontFamily: 'inherit' }}
+          >
+            ({t.auth.privacyPolicy})
+          </button>
+        </label>
+      </div>
+
+      <button
+        type="button" onClick={handleRegister} disabled={busy || blocked}
+        style={{ ...authButtonStyle(busy ? 'busy' : blocked ? 'disabled' : 'idle'), marginTop: 20 }}
+      >
+        {busy ? (<><div style={authSpinnerStyle} />{t.common.saving}</>) : t.auth.createAccount}
+      </button>
+
+      <p style={authFooterStyle}>
+        {t.auth.hasAccount}{' '}
+        <button type="button" onClick={onNavigateLogin} style={authLinkButtonStyle}>{t.auth.login}</button>
+      </p>
+    </AuthShell>
   )
 }

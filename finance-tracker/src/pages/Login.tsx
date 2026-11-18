@@ -5,12 +5,10 @@ import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useGoogleLogin } from '@react-oauth/google'
 import { getPinDeviceStatus, resendVerification } from '../api/auth'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
-import { AuthThemeToggle } from '../components/AuthThemeToggle'
+import { AuthShell } from '../components/AuthShell'
+import { authLabelStyle, authInputStyle, authButtonStyle, authErrorStyle, authFooterStyle, authLinkButtonStyle, authSpinnerStyle } from '../components/authStyles'
 import { PinKeypad } from '../components/PinKeypad'
 import { authErrorMessage } from '../utils/authError'
-import { formatMoneyParts } from '../utils/format'
-import { GlassCard } from '../components/GlassCard'
 
 interface LoginPageProps {
   onNavigateRegister: () => void
@@ -18,7 +16,7 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: LoginPageProps) {
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const { login, loginWithGoogle, loginWithPin } = useAuth()
 
   const [email, setEmail] = useState('')
@@ -149,30 +147,6 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
     return () => { cancelled = true }
   }, [pinModalOpen])
 
-  const demoBalance = formatMoneyParts(1011.2, locale)
-
-  const pillInput = (name: string): React.CSSProperties => ({
-    width: '100%',
-    background: 'var(--aurora-glass)',
-    color: 'var(--aurora-hi)',
-    borderRadius: 16,
-    padding: name === 'password' ? '14px 44px 14px 16px' : '14px 16px',
-    fontSize: 14,
-    fontFamily: "'Manrope', sans-serif",
-    border: `1px solid ${focused === name ? 'var(--aurora-violet)' : 'var(--aurora-gline)'}`,
-    outline: 'none',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-    boxShadow: focused === name ? '0 0 0 3px rgba(139,92,246,0.15)' : 'none',
-    boxSizing: 'border-box' as const,
-  })
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 12,
-    fontWeight: 700,
-    color: 'var(--aurora-lo)',
-    fontFamily: "'Manrope', sans-serif",
-  }
-
   const altPillStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
     background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)',
@@ -181,60 +155,71 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
     fontWeight: 600, fontSize: 12.5, cursor: 'pointer',
   }
 
-  return (
-    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', background: 'var(--aurora-bg-image)', position: 'relative', overflow: 'hidden' }}>
-
-      {/* Atmospheric blob */}
-      <div style={{ position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle,rgba(139,92,246,0.12) 0%,transparent 70%)', pointerEvents: 'none' }} />
-
-      {/* Top controls: language switcher + theme toggle */}
-      <div style={{ position: 'fixed', top: 16, right: 16, display: 'flex', alignItems: 'center', gap: 8, zIndex: 100 }}>
-        <LanguageSwitcher />
-        <AuthThemeToggle />
-      </div>
-
-      <div className="auth-split">
-      {/* Desktop only: what the app does, with an example card */}
-      <aside className="auth-aside" aria-hidden="true">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <img src="/logo.svg" alt="" style={{ width: 46, height: 46, borderRadius: 14 }} />
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 30, fontWeight: 600, color: 'var(--aurora-hi)' }}>Finvu</span>
-        </div>
-        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(34px, 3.6vw, 52px)', lineHeight: 1.1, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0, maxWidth: '14ch', textWrap: 'balance' }}>{t.auth.asideHeadline}</p>
-        <GlassCard radius={24} style={{ padding: 28, maxWidth: 480 }}>
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 16, fontWeight: 600, color: 'var(--aurora-lo)' }}>{t.auth.demoBalance}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 600, color: 'var(--aurora-hi)', lineHeight: 1.15, margin: '6px 0 4px', fontVariantNumeric: 'tabular-nums' }}>
-            <span style={{ fontSize: 64 }}>+{demoBalance.main}</span><span style={{ fontSize: 34 }}>{demoBalance.rest}</span>
-          </div>
-          {[{ name: t.auth.demoCat1, pct: 48 }, { name: t.auth.demoCat2, pct: 26 }].map(c => (
-            <div key={c.name} style={{ marginTop: 16, fontFamily: "'Manrope', sans-serif", fontSize: 15 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--aurora-hi)' }}>
-                <span>{c.name}</span><b style={{ color: 'var(--aurora-emerald)', fontVariantNumeric: 'tabular-nums' }}>{c.pct} %</b>
+  const pinOverlay = (
+    <>
+      {pinModalOpen && (
+        <div
+          className="fade-in"
+          style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'var(--aurora-bg-image)', zIndex: 200 }}
+          onClick={() => setPinModalOpen(false)}
+        >
+          <div
+            ref={pinModalRef} {...pinModalProps}
+            className="modal-in"
+            style={{ outline: 'none', width: '100%', maxWidth: 340, padding: 24, borderRadius: 26, background: 'var(--aurora-bg-image)', border: '1px solid var(--aurora-gline)', boxShadow: '0 30px 70px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: 20 }}>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <h2 id={pinModalTitleId} tabIndex={-1} style={{ outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.auth.enterPinTitle}</h2>
+                <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', margin: '4px 0 0' }}>{t.auth.pin4Digit}</p>
               </div>
-              <div style={{ height: 8, borderRadius: 4, background: 'var(--aurora-glass)', marginTop: 6, overflow: 'hidden' }}>
-                <div style={{ width: `${c.pct}%`, height: '100%', background: 'var(--aurora-emerald)' }} />
-              </div>
+              <button
+                type="button"
+                onClick={() => setPinModalOpen(false)}
+                aria-label={t.common.close}
+                style={{ position: 'absolute', top: 24, right: 24, width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer' }}
+              >
+                <X size={14} />
+              </button>
             </div>
-          ))}
-          <div style={{ marginTop: 20, fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)' }}>{t.auth.demoNote}</div>
-        </GlassCard>
-      </aside>
 
-      <div className="auth-form-col">
-      <div style={{ width: '100%', maxWidth: 440, margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 24px 28px', position: 'relative', zIndex: 1 }}>
+            {pinDeviceRegistered === false ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, width: '100%' }}>
+                <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--aurora-lo)', margin: 0, fontFamily: "'Manrope', sans-serif", lineHeight: 1.5 }}>
+                  {t.auth.pinDeviceNotRegistered}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPinModalOpen(false)}
+                  style={{
+                    width: '100%', height: 44,
+                    background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
+                    color: 'white', border: 'none', borderRadius: 14,
+                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    fontFamily: "'Outfit', sans-serif",
+                  }}
+                >
+                  {t.auth.pinDeviceNotRegisteredCta}
+                </button>
+              </div>
+            ) : (
+              <>
+                <PinKeypad length={4} digits={pinValue.length} disabled={pinLoading || pinDeviceRegistered === null} onKey={handlePinKey} />
+                {pinError && <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--aurora-rose)', margin: '16px 0 0', fontFamily: "'Manrope', sans-serif" }}>{pinError}</p>}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
 
-        {/* Brand row (mobile; on desktop the brand sits in the aside) */}
-        <div className="mb-only fade-up" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-          <img src="/logo.svg" alt="" style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0 }} />
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 600, color: 'var(--aurora-hi)' }}>Finvu</span>
-        </div>
-        <div className="fade-up" style={{ marginBottom: 28 }}>
-          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 28, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>{t.auth.loginTitle}</h1>
-          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, color: 'var(--aurora-lo)', margin: 0 }}>{t.auth.loginSubtitle}</p>
-        </div>
+  return (
+    <AuthShell title={t.auth.loginTitle} subtitle={t.auth.loginSubtitle} overlay={pinOverlay}>
 
         {error && (
-          <div style={{ borderRadius: 14, padding: '10px 14px', fontSize: 13, background: 'rgba(251,113,133,0.12)', color: 'var(--aurora-rose)', border: '1px solid rgba(251,113,133,0.3)', marginBottom: 14, fontFamily: "'Manrope', sans-serif" }}>
+          <div role="alert" style={authErrorStyle}>
             {error}
             {needsVerification && (
               resendSent ? (
@@ -254,7 +239,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
 
         {/* Email */}
         <div style={{ marginBottom: 14 }}>
-          <label htmlFor="login-email" style={{ ...labelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
+          <label htmlFor="login-email" style={{ ...authLabelStyle, display: 'block', marginBottom: 8 }}>{t.auth.email}</label>
           <input
             id="login-email"
             type="email"
@@ -270,14 +255,14 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
             onFocus={() => setFocused('email')}
             onBlur={() => setFocused(null)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
-            style={pillInput('email')}
+            style={authInputStyle(focused === 'email')}
           />
         </div>
 
         {/* Password */}
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <label htmlFor="login-password" style={labelStyle}>{t.auth.password}</label>
+            <label htmlFor="login-password" style={authLabelStyle}>{t.auth.password}</label>
             <button
               type="button"
               onClick={onNavigateForgotPassword}
@@ -297,7 +282,7 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
               onFocus={() => setFocused('password')}
               onBlur={() => setFocused(null)}
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              style={pillInput('password')}
+              style={authInputStyle(focused === 'password', true)}
             />
             <button
               type="button"
@@ -315,20 +300,11 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         <button
           onClick={handleLogin}
           disabled={isLoading}
-          style={{
-            height: 48, width: '100%', marginTop: 8,
-            background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
-            color: 'white', border: 'none', borderRadius: 16,
-            fontSize: 14, fontWeight: 700, cursor: isLoading ? 'wait' : 'pointer',
-            boxShadow: isLoading ? 'none' : '0 4px 20px rgba(139,92,246,0.4)',
-            opacity: isLoading ? 0.7 : 1,
-            transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            fontFamily: "'Outfit', sans-serif",
-          }}
+          style={authButtonStyle(isLoading ? 'busy' : 'idle')}
         >
           {isLoading ? (
             <>
-              <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', animation: 'spin 0.7s linear infinite' }} />
+              <div style={authSpinnerStyle} />
               {t.auth.loggingInDots}
             </>
           ) : (
@@ -393,77 +369,17 @@ export function LoginPage({ onNavigateRegister, onNavigateForgotPassword }: Logi
         )}
 
         {/* Register link */}
-        <p style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--aurora-lo)', margin: '28px 0 0', fontFamily: "'Manrope', sans-serif" }}>
+        <p style={authFooterStyle}>
           {t.auth.noAccount}{' '}
           <button
             type="button"
             onClick={onNavigateRegister}
-            style={{ color: 'var(--aurora-violet-text)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5 }}
+            style={authLinkButtonStyle}
           >
             {t.auth.registerLink}
           </button>
         </p>
 
-      </div>
-      </div>
-      </div>
-
-      {/* PIN modal */}
-      {pinModalOpen && (
-        <div
-          className="fade-in"
-          style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'var(--aurora-bg-image)', zIndex: 200 }}
-          onClick={() => setPinModalOpen(false)}
-        >
-          <div
-            ref={pinModalRef} {...pinModalProps}
-            className="modal-in"
-            style={{ outline: 'none', width: '100%', maxWidth: 340, padding: 24, borderRadius: 26, background: 'var(--aurora-bg-image)', border: '1px solid var(--aurora-gline)', boxShadow: '0 30px 70px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: 20 }}>
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <h2 id={pinModalTitleId} tabIndex={-1} style={{ outline: 'none', fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.auth.enterPinTitle}</h2>
-                <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', margin: '4px 0 0' }}>{t.auth.pin4Digit}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPinModalOpen(false)}
-                aria-label={t.common.close}
-                style={{ position: 'absolute', top: 24, right: 24, width: 28, height: 28, borderRadius: '50%', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-lo)', cursor: 'pointer' }}
-              >
-                <X size={14} />
-              </button>
-            </div>
-
-            {pinDeviceRegistered === false ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, width: '100%' }}>
-                <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--aurora-lo)', margin: 0, fontFamily: "'Manrope', sans-serif", lineHeight: 1.5 }}>
-                  {t.auth.pinDeviceNotRegistered}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setPinModalOpen(false)}
-                  style={{
-                    width: '100%', height: 44,
-                    background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
-                    color: 'white', border: 'none', borderRadius: 14,
-                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                    fontFamily: "'Outfit', sans-serif",
-                  }}
-                >
-                  {t.auth.pinDeviceNotRegisteredCta}
-                </button>
-              </div>
-            ) : (
-              <>
-                <PinKeypad length={4} digits={pinValue.length} disabled={pinLoading || pinDeviceRegistered === null} onKey={handlePinKey} />
-                {pinError && <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--aurora-rose)', margin: '16px 0 0', fontFamily: "'Manrope', sans-serif" }}>{pinError}</p>}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+    </AuthShell>
   )
 }
