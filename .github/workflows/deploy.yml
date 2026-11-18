@@ -10,6 +10,10 @@ on:
 concurrency:
   group: hetzner-deploy
   cancel-in-progress: false
+# Least privilege for GITHUB_TOKEN: checkout, paths-filter and the reused ci.yml
+# only read the repository; the deploy jobs use secrets, not the token.
+permissions:
+  contents: read
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -17,8 +21,8 @@ jobs:
       changed_frontend: ${{ steps.filter.outputs.frontend }}
       changed_backend: ${{ steps.filter.outputs.backend }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
         id: filter
         with:
           filters: |
@@ -35,12 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy frontend via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 (v1.2.5)
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
+          # SHA256 of the server's ECDSA host key: drone-ssh (Go x/crypto) prefers
+          # ecdsa-sha2-nistp256 over ssh-ed25519, so ECDSA is the key it is shown.
+          fingerprint: ${{ secrets.SERVER_HOST_FINGERPRINT }}
           script: |
             set -euo pipefail
             cd /var/www/finance-tracker-repo
@@ -49,7 +56,7 @@ jobs:
             cd /var/www/finance-tracker-repo/finance-tracker
             rm -rf ~/.npm/_cacache || true
             rm -rf node_modules && npm cache clean --force
-            npm ci --legacy-peer-deps
+            npm ci --legacy-peer-deps --ignore-scripts
             export PATH="$PATH:$(pwd)/node_modules/.bin"
             git log --pretty=format:'{"hash":"%h","date":"%ad","message":"%s"}' --date=short -50 2>/dev/null | grep -v '^$' | awk 'NR==1{print "["} NR>1{print ","} {print} END{print "]"}' > public/changelog.json || echo "[]" > public/changelog.json
             VITE_API_URL=https://api.pedani.eu VITE_BASE_URL=/ VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }} VITE_BUILD_DATE=$(date +'%Y.%m.%d') npm run build
@@ -73,12 +80,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy backend via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1 (v1.2.5)
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
+          # SHA256 of the server's ECDSA host key: drone-ssh (Go x/crypto) prefers
+          # ecdsa-sha2-nistp256 over ssh-ed25519, so ECDSA is the key it is shown.
+          fingerprint: ${{ secrets.SERVER_HOST_FINGERPRINT }}
           script: |
             set -euo pipefail
             cd /var/www/finance-tracker-repo
@@ -87,7 +97,7 @@ jobs:
             cd /var/www/finance-tracker-repo/backend
             rm -rf ~/.npm/_cacache || true
             rm -rf node_modules && npm cache clean --force
-            npm ci --prefer-offline
+            npm ci --prefer-offline --ignore-scripts
             # Add DATABASE_URL to GitHub repo Settings → Secrets and variables → Actions
             DATABASE_URL=${{ secrets.DATABASE_URL }} npm run db:migrate
             cd /var/www/finance-tracker-repo

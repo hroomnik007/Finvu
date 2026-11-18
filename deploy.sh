@@ -40,7 +40,7 @@ deploy_frontend() {
     log "Building frontend..."
     cd "${FRONTEND_SRC}"
     rm -rf node_modules && npm cache clean --force
-    npm ci --legacy-peer-deps
+    npm ci --legacy-peer-deps --ignore-scripts
     npm run build
     ok "Frontend built → ${FRONTEND_SRC}/dist"
 
@@ -71,7 +71,7 @@ deploy_backend() {
 
     log "Running database migrations..."
     cd "${BACKEND_SRC}"
-    npm ci --prefer-offline
+    npm ci --prefer-offline --ignore-scripts
     npm run db:migrate
     ok "Migrations applied"
 
