@@ -19,6 +19,23 @@ services:
       - finance-tracker_default
     external_links:
       - finance-tracker-postgres-1:postgres
+    # The entrypoint starts as root only to chown /app/uploads (CHOWN) and then drops to
+    # the node user through su-exec (SETGID for setgroups/setgid, SETUID for setuid);
+    # the app itself runs with no effective capabilities. Each of the three was
+    # tested: without it the container does not start.
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   finance-tracker_default:
