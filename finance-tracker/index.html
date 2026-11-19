@@ -2,7 +2,7 @@
 <html lang="sk">
   <head>
     <meta charset="UTF-8" />
-    <script src="/theme-init.js?v=1"></script>
+    <script src="/theme-init.js?v=2"></script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -12,7 +12,21 @@
     <title>Finvu</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static shell: painted from the HTML alone, replaced by React on first render. -->
+      <div class="boot-shell" aria-hidden="true">
+        <div class="boot-new">
+          <img src="/favicon.svg" alt="" width="56" height="56" />
+          <span class="boot-name">Finvu</span>
+        </div>
+        <div class="boot-user">
+          <div class="boot-bar"><i class="boot-sk" style="width:96px;height:22px"></i><i class="boot-sk" style="width:34px;height:34px;border-radius:50%"></i></div>
+          <div class="boot-sk boot-hero"></div>
+          <div class="boot-row"><div class="boot-sk boot-card"></div><div class="boot-sk boot-card"></div></div>
+          <div class="boot-sk boot-card boot-wide"></div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

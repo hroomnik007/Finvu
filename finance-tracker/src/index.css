@@ -1189,3 +1189,20 @@ html.fab-hidden .fab-auto-hide {
   }
   .auth-form-col { flex: 1 1 50%; }
 }
+
+/* === STATIC BOOT SHELL (index.html) ===
+   Shown until React renders; React replaces the whole #root content. */
+.boot-shell { min-height: 100svh; background: var(--aurora-bg-image); background-color: var(--aurora-bg); display: flex; justify-content: center; }
+.boot-new { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.boot-name { font-family: 'Outfit', system-ui, sans-serif; font-weight: 600; font-size: 24px; color: var(--aurora-hi); }
+.boot-user { display: none; width: 100%; max-width: 960px; padding: 20px 16px; flex-direction: column; gap: 14px; }
+html.has-session .boot-new { display: none; }
+html.has-session .boot-user { display: flex; }
+.boot-bar { display: flex; align-items: center; justify-content: space-between; }
+.boot-sk { display: block; border-radius: 20px; background: var(--aurora-glass, rgba(255,255,255,.06)); border: 1px solid var(--aurora-gline, rgba(255,255,255,.08)); animation: boot-pulse 1.6s ease-in-out infinite; }
+.boot-hero { height: 168px; }
+.boot-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.boot-card { height: 110px; }
+.boot-wide { height: 220px; }
+@keyframes boot-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .boot-sk { animation: none; } }
