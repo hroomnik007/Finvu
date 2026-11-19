@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { Plus, Pencil, Trash2, Tag, GripVertical } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
@@ -116,6 +116,7 @@ function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, 
   return (
     <div
       ref={setNodeRef}
+      data-cat-id={cat.id}
       {...attributes}
       onClick={() => onEdit(cat)}
       style={{
@@ -196,6 +197,7 @@ function SortableListCard(props: CardProps) {
   return (
     <div
       ref={setNodeRef}
+      data-cat-id={cat.id}
       {...attributes}
       onClick={() => onEdit(cat)}
       style={{
@@ -263,6 +265,7 @@ function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit
   return (
     <div
       ref={setNodeRef}
+      data-cat-id={cat.id}
       {...attributes}
       style={{
         transform: outerTransform, transition,
@@ -344,6 +347,22 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const sharingOn = !!user?.household_enabled
   const { variableExpenses: familyVariable } = useVariableExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
   const { fixedExpenses: familyFixed } = useFixedExpenses(now.getMonth() + 1, now.getFullYear(), 'family')
+
+  // Deep link from the Variabilné budget panel: scroll to the category and flash it
+  useEffect(() => {
+    if (listLoading || categories.length === 0) return
+    let id: string | null = null
+    try { id = sessionStorage.getItem('finvu_focus_category') } catch { /* private mode */ }
+    if (!id) return
+    const timer = window.setTimeout(() => {
+      try { sessionStorage.removeItem('finvu_focus_category') } catch { /* private mode */ }
+      const el = Array.from(document.querySelectorAll<HTMLElement>(`[data-cat-id="${id}"]`)).find(e => e.offsetParent !== null)
+      if (!el) return
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      el.animate([{ boxShadow: '0 0 0 3px var(--aurora-violet)' }, { boxShadow: '0 0 0 3px transparent' }], { duration: 1800, easing: 'ease-out' })
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [listLoading, categories.length])
 
   // The cards list your own spending, like the Variabilné / Fixné tabs. A shared
   // category's limit is common, so it also gets a family line: what the whole

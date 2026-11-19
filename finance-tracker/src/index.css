@@ -1206,3 +1206,6 @@ html.has-session .boot-user { display: flex; }
 .boot-wide { height: 220px; }
 @keyframes boot-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .boot-sk { animation: none; } }
+
+@media (hover: hover) { .budget-row:hover { background: var(--aurora-hover); } }
+.budget-row:focus-visible { outline: 2px solid var(--aurora-violet); outline-offset: -2px; }

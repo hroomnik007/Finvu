@@ -84,7 +84,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
   const legendBorder = '1px solid var(--aurora-gline)'
 
   return (
-    <GlassCard radius={20} style={{ height: '100%', boxSizing: 'border-box' }}>
+    <GlassCard radius={20} style={{ height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
       <h3 className="text-center lg:text-left" style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', marginBottom: 4 }}>
         {t.dashboard.heatmapTitle}
       </h3>
@@ -98,7 +98,8 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
           <div key={d} style={{ textAlign: 'center', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)' }}>{d}</div>
         ))}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 5 }}>
+      {/* Day grid grows with the card (next to a tall donut legend) instead of leaving a gap below */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridAutoRows: 'minmax(30px, 1fr)', gap: 5, flex: 1 }}>
         {Array.from({ length: leadingBlanks }, (_, i) => <div key={`blank-${i}`} />)}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const day = i + 1
@@ -113,7 +114,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
             <div
               key={day}
               style={{
-                height: 30,
+                minHeight: 30,
                 borderRadius: 8,
                 background: hasSpend ? severityColor(amount) : 'var(--aurora-glass)',
                 cursor: hasSpend ? 'pointer' : 'default',
