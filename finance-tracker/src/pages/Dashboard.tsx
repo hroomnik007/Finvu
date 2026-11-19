@@ -510,7 +510,7 @@ const upcomingFixed = useMemo(() => {
               onClick={() => onNavigate('fixed-expenses')}
               style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-cyan)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
             >
-              {t.dashboard.showAll} →
+              {t.dashboard.showAll}
             </button>
           )}
         </div>
@@ -639,7 +639,7 @@ const upcomingFixed = useMemo(() => {
               onClick={() => onNavigate('savings')}
               style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', cursor: 'pointer', background: 'transparent', border: 'none' }}
             >
-              {t.savings.viewAll} →
+              {t.savings.viewAll}
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
