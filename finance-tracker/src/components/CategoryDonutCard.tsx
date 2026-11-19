@@ -99,7 +99,7 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
     <>
       <GlassCard
         radius={20}
-        style={{ position: 'relative', zIndex: clickedIndex !== null ? 11 : 'auto' }}
+        style={{ position: 'relative', zIndex: clickedIndex !== null ? 11 : 'auto', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}
         onClick={resetPie}
       >
         <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px', textAlign: 'center' }} className="lg:text-left">{title}</h3>
@@ -134,13 +134,13 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
           // wrap-reverse: when the card is too narrow for both side by side
           // (phones), the donut goes on top and the legend gets the full width
           // instead of truncating the category names.
-          <div style={{ display: 'flex', flexWrap: 'wrap-reverse', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', justifyContent: 'center', gap: 20, flex: 1 }}>
             {/* Legend */}
             {/* alignContent must stay 'start': with 'center' an overflowing list
                 (many categories) is centred inside the 190px box, pushing the
                 first rows above the scroll origin where they can't be reached —
                 on desktop too, not just the mobile "show more" case. */}
-            <div style={{ flex: '1 1 200px', minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(148px, 100%), 1fr))', rowGap: 6, columnGap: 12, alignContent: 'start', maxHeight: showAllPie ? 'none' : 190, overflowY: showAllPie ? 'visible' : 'auto' }}>
+            <div style={{ width: '100%', minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(148px, 100%), 1fr))', rowGap: 6, columnGap: 16, alignContent: 'start' }}>
               {sortedPieData.map((item, i) => {
                 const itemPieIdx = pieData.findIndex(d => d.name === item.name)
                 const isSelected = clickedIndex !== null && clickedIndex === itemPieIdx

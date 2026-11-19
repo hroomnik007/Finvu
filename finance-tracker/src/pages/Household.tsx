@@ -22,7 +22,7 @@ import { getSummaryCards } from '../api/transactions'
 import { shareCategories } from '../api/categories'
 import type { HouseholdData, MonthlyStats, ActivityItem } from '../api/households'
 import { parseDescription } from '../hooks/useFixedExpenses'
-import { activityMeta } from '../utils/householdMembers'
+import { DenseCard, DenseRow } from '../components/DenseList'
 
 const CAT_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#A78BFA', '#F97316']
 
@@ -447,40 +447,36 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
             </span>
           </div>
           {activityGroups.map((group, gi) => (
-            <div key={gi} style={{ marginBottom: 16 }}>
-              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', margin: '0 0 8px' }}>{group.label}</p>
-              <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 8 }}>
+            <div key={gi} style={{ marginBottom: 14 }}>
+              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', margin: '0 2px 8px' }}>{group.label}</p>
+              <DenseCard>
                 {group.items.map((a, i) => {
                   const member = householdData?.members.find(m => m.id === a.created_by)
                   const name = a.created_by_name ?? member?.name ?? '?'
                   const isIncome = a.type === 'income'
-                  const actionText = isIncome ? ht.addedIncome : ht.addedExpense
                   const description = parseDescription(a.description, 1).label || '—'
+                  // The day header already says which day; only today's rows need the time.
+                  const sameDay = new Date(a.created_at).toDateString() === new Date().toDateString()
+                  const meta = [name, a.category_name?.trim() || (isIncome ? '' : t.annual.noCategory), sameDay ? timeAgo(a.created_at, ht, locale) : ''].filter(Boolean).join(' · ')
                   return (
-                    <GlassCard key={`${gi}-${i}`} radius={16}>
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                        <MemberAvatar
-                          userId={a.created_by ?? 'unknown'}
-                          userName={name}
-                          size={28}
-                          avatarUrl={member?.avatar_url ?? null}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', marginBottom: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            <span style={{ fontWeight: 600 }}>{name}</span>
-                            <span style={{ color: 'var(--aurora-faint)' }}> {actionText} </span>
-                            <span style={{ fontWeight: 500 }}>{description}</span>
-                          </p>
-                          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activityMeta(a, timeAgo(a.created_at, ht, locale), t.annual.noCategory)}</p>
-                        </div>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', flexShrink: 0 }}>
-                          {isIncome ? '+' : '−'}{formatAmount(a.amount)}
-                        </span>
+                    <DenseRow key={`${gi}-${i}`}>
+                      <MemberAvatar
+                        userId={a.created_by ?? 'unknown'}
+                        userName={name}
+                        size={34}
+                        avatarUrl={member?.avatar_url ?? null}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{description}</div>
+                        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>
                       </div>
-                    </GlassCard>
+                      <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', flexShrink: 0 }}>
+                        {isIncome ? '+' : '−'}{formatAmount(a.amount)}
+                      </span>
+                    </DenseRow>
                   )
                 })}
-              </div>
+              </DenseCard>
             </div>
           ))}
           {activityFeed.length > ACTIVITY_INITIAL_LIMIT && (
