@@ -28,6 +28,7 @@ export const hu: Translations = {
   daysShort: ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'],
   dashboard: {
     heatmapTitle: 'Kiadások hőtérképe',
+    heatmapTopDay: 'Legdrágább nap: {date} · {amount}',
     heatmapLess: 'Kevesebb',
     heatmapMore: 'Több',
     greeting: 'Jó napot!',
@@ -250,6 +251,7 @@ export const hu: Translations = {
       thisMonthTitle: 'Fix kiadások ebben a hónapban',
       deleteConfirm: 'Biztosan törlöd ezt a fix kiadást?',
       total: 'Összesen',
+      nextPayment: 'Következő fizetés',
       countdown: {
         today: 'Ma!',
         overdue: 'Lejárt',
@@ -401,6 +403,9 @@ export const hu: Translations = {
     notificationsSection: 'Értesítések',
     theme: 'Téma',
     themeSubtitle: 'Az alkalmazás színsémája',
+    statusOn: 'Be',
+    statusOff: 'Ki',
+    securityStatus: 'PIN: {state}',
     themeDark: 'Sötét',
     themeLight: 'Világos',
     themeSystem: 'Rendszer',

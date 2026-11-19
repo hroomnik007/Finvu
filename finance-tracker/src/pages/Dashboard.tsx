@@ -749,12 +749,13 @@ const upcomingFixed = useMemo(() => {
         <div>{greetingRow}</div>
         {heroSection}
         {subscriptionHints}
+        {/* Daily-use order: balance → upcoming payments → budget → charts */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {rightPanelCards}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {pieChartCard}
           {heatmapCard}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {rightPanelCards}
         </div>
       </div>
 

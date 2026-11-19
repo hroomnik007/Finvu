@@ -181,6 +181,11 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
     return cells
   }, [monthStartWeekday, daysInCurrentMonth])
 
+  // Soonest charge still ahead in the viewed (current) month, for the side panel
+  const nextPayment = calendarToday > 0
+    ? fixedExpenses.filter(e => !e.endedOn && occursInMonth(e, month) && e.dayOfMonth >= calendarToday).sort((a, b) => a.dayOfMonth - b.dayOfMonth)[0]
+    : undefined
+
   function countdownBadge(daysUntil: number) {
     if (daysUntil === 0) return { text: t.expenses.fixed.countdown.today, color: 'var(--aurora-violet-text)', bg: 'rgba(139,92,246,0.15)' }
     const text = pluralText(daysUntil, t.expenses.fixed.countdown.days, locale)
@@ -360,8 +365,8 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         <div style={{ flex: 1, minWidth: 0, paddingTop: 20, paddingLeft: 20, paddingRight: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Hero wallet card */}
-          <HeroCard variant="fixed">
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 8 }}>
+          <HeroCard variant="fixed" compact>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 6 }}>
               {t.expenses.fixed.title} · {t.expenses.fixed.recurringMonthly}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
@@ -376,12 +381,12 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                 {formatAmountParts(animatedFilteredTotal).rest}{t.expenses.perMonthSuffix}
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '8px 12px', flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.expenses.fixed.yearlyLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(filteredTotal * 12)}</div>
               </div>
-              <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
+              <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '8px 12px', flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.expenses.fixed.installmentsLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{filtered.length}</div>
               </div>
@@ -717,6 +722,19 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
 
         {/* Right panel — desktop only */}
         <div className="hidden lg:flex" style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, maxHeight: 'calc(100vh - 64px)', overflowY: 'auto', padding: '20px 20px 20px 0', flexDirection: 'column', gap: 16 }}>
+          {nextPayment && (() => {
+            const badge = countdownBadge(nextPayment.dayOfMonth - calendarToday)
+            return (
+              <GlassCard radius={16}>
+                <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.nextPayment}</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nextPayment.label}</span>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', flexShrink: 0 }}>{formatAmount(nextPayment.amount)}</span>
+                </div>
+                <span style={{ display: 'inline-block', marginTop: 8, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, padding: '2px 9px', borderRadius: 99, color: badge.color, background: badge.bg }}>{badge.text}</span>
+              </GlassCard>
+            )
+          })()}
           <GlassCard radius={16}>
             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.yearly}</p>
             {yearlyContent}

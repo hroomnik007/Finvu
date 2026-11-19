@@ -283,8 +283,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         <div style={{ flex: 1, minWidth: 0, padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Hero wallet card */}
-          <HeroCard variant="expense">
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 8 }}>
+          <HeroCard variant="expense" compact>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 6 }}>
               {t.expenses.variable.title} · {MONTH_NAME_VAR} {year}
             </div>
             {listLoading || listFailed ? <HeroAmountPlaceholder error={listFailed} /> : (

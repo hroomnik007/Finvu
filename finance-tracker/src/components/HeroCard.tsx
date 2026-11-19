@@ -7,6 +7,8 @@ interface HeroCardProps {
   variant?: HeroCardVariant
   style?: CSSProperties
   className?: string
+  /** Sub-pages: tighter padding so the list starts higher; Dashboard keeps the full card. */
+  compact?: boolean
 }
 
 const BLOB_COLORS: Record<HeroCardVariant, { b1: string; b2: string }> = {
@@ -16,15 +18,15 @@ const BLOB_COLORS: Record<HeroCardVariant, { b1: string; b2: string }> = {
   fixed: { b1: 'var(--aurora-amber)', b2: '#f59e0b' },
 }
 
-export function HeroCard({ children, variant = 'neutral', style, className }: HeroCardProps) {
+export function HeroCard({ children, variant = 'neutral', style, className, compact }: HeroCardProps) {
   const { b1, b2 } = BLOB_COLORS[variant]
   return (
     <div
       className={className}
       style={{
         position: 'relative',
-        borderRadius: 28,
-        padding: 24,
+        borderRadius: compact ? 22 : 28,
+        padding: compact ? '16px 18px' : 24,
         overflow: 'hidden',
         flexShrink: 0,
         background: 'var(--aurora-hero-bg)',

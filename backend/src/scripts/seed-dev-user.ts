@@ -46,8 +46,8 @@ function d(year: number, month: number, day: number): string {
 
 const CATS = [
   { name: "Potraviny",   type: "expense" as const, color: "#10B981", icon: "🛒", budgetLimit: "400" },
-  { name: "Reštaurácie", type: "expense" as const, color: "#F97316", icon: "🍽️", budgetLimit: "150" },
-  { name: "Tankovanie",  type: "expense" as const, color: "#F59E0B", icon: "⛽", budgetLimit: "120" },
+  { name: "Reštaurácie", type: "expense" as const, color: "#F97316", icon: "🍔", budgetLimit: "150" },
+  { name: "Tankovanie",  type: "expense" as const, color: "#F59E0B", icon: "🚗", budgetLimit: "120" },
   { name: "Zábava",      type: "expense" as const, color: "#8B5CF6", icon: "🎉", budgetLimit: "80"  },
   { name: "Bývanie",     type: "expense" as const, color: "#3B82F6", icon: "🏠", budgetLimit: null  },
   { name: "Plat",        type: "income"  as const, color: "#34D399", icon: "💰", budgetLimit: null  },

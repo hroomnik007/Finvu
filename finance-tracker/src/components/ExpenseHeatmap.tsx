@@ -79,6 +79,8 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
   const weekdayLabels = sundayFirst ? [t.daysShort[6], ...t.daysShort.slice(0, 6)] : t.daysShort
   const firstWeekday = new Date(year, month - 1, 1).getDay() // 0 = Sunday
   const leadingBlanks = sundayFirst ? firstWeekday : (firstWeekday + 6) % 7
+  // The one sentence the calendar is for: which day cost the most
+  const topDay = Object.entries(dailyTotals).reduce<[string, number] | null>((best, e) => (!best || e[1] > best[1] ? e : best), null)
   const legendBorder = '1px solid var(--aurora-gline)'
 
   return (
@@ -172,6 +174,14 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
           )
         })}
       </div>
+
+      {topDay && (
+        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', margin: '12px 0 0' }}>
+          {t.dashboard.heatmapTopDay
+            .replace('{date}', formatLongDate(topDay[0], { weekday: 'long', day: 'numeric', month: 'long' }))
+            .replace('{amount}', formatAmount(topDay[1]))}
+        </p>
+      )}
 
       {/* Legend */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 12, flexWrap: 'wrap' }}>

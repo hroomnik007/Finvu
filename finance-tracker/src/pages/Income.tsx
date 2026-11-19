@@ -212,8 +212,8 @@ export function IncomePage({ month, year }: IncomePageProps) {
         <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: `20px calc(20px + var(--page-inset, 0px))`, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Hero wallet card */}
-          <HeroCard variant="income">
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 8 }}>
+          <HeroCard variant="income" compact>
+            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 6 }}>
               {t.income.title} · {MONTH_NAME} {year}
             </div>
             {listLoading || listFailed ? <HeroAmountPlaceholder error={listFailed} /> : (
@@ -230,12 +230,12 @@ export function IncomePage({ month, year }: IncomePageProps) {
               </span>
             </div>
             )}
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '8px 12px', flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.income.recurringLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(recurringTotal)}</div>
               </div>
-              <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
+              <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '8px 12px', flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.income.oneTimeLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(oneTimeTotal)}</div>
               </div>

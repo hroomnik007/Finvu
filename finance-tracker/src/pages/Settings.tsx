@@ -868,6 +868,14 @@ export function SettingsPage() {
     data: t.settings.sectionData,
   }
 
+  // Secondary text on the mobile level-1 list, so the current state shows without opening a section
+  const sectionStatus: Partial<Record<SettingsSection, string>> = {
+    appearance: theme === 'light' ? t.settings.themeLight : theme === 'system' ? t.settings.themeSystem : t.settings.themeDark,
+    finance: settings.currency || 'EUR',
+    notifications: notificationsEnabled ? t.settings.statusOn : t.settings.statusOff,
+    security: t.settings.securityStatus.replace('{state}', hasPin ? t.settings.statusOn : t.settings.statusOff),
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -940,6 +948,7 @@ export function SettingsPage() {
                       iconColor="var(--aurora-violet)"
                       iconBg="rgba(139,92,246,0.12)"
                       label={sectionLabels[s.id]}
+                      sublabel={sectionStatus[s.id]}
                       onClick={() => openMobileSection(s.id)}
                     />
                   ))}

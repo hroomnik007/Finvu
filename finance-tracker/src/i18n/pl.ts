@@ -28,6 +28,7 @@ export const pl: Translations = {
   daysShort: ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'],
   dashboard: {
     heatmapTitle: 'Mapa cieplna wydatków',
+    heatmapTopDay: 'Najdroższy dzień: {date} · {amount}',
     heatmapLess: 'Mniej',
     heatmapMore: 'Więcej',
     greeting: 'Dzień dobry!',
@@ -250,6 +251,7 @@ export const pl: Translations = {
       thisMonthTitle: 'Stałe wydatki tego miesiąca',
       deleteConfirm: 'Czy na pewno chcesz usunąć ten stały wydatek?',
       total: 'Razem',
+      nextPayment: 'Następna płatność',
       countdown: {
         today: 'Dziś!',
         overdue: 'Zaległe',
@@ -401,6 +403,9 @@ export const pl: Translations = {
     notificationsSection: 'Powiadomienia',
     theme: 'Motyw',
     themeSubtitle: 'Schemat kolorów aplikacji',
+    statusOn: 'Włączone',
+    statusOff: 'Wyłączone',
+    securityStatus: 'PIN: {state}',
     themeDark: 'Ciemny',
     themeLight: 'Jasny',
     themeSystem: 'System',

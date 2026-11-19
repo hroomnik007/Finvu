@@ -28,6 +28,7 @@ export const cs: Translations = {
   daysShort: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
   dashboard: {
     heatmapTitle: 'Heatmapa výdajů',
+    heatmapTopDay: 'Nejdražší den: {date} · {amount}',
     heatmapLess: 'Méně',
     heatmapMore: 'Více',
     greeting: 'Dobrý den!',
@@ -250,6 +251,7 @@ export const cs: Translations = {
       thisMonthTitle: 'Fixní výdaje tohoto měsíce',
       deleteConfirm: 'Opravdu chceš smazat tento fixní výdaj?',
       total: 'Celkem',
+      nextPayment: 'Další platba',
       countdown: {
         today: 'Dnes!',
         overdue: 'Po splatnosti',
@@ -401,6 +403,9 @@ export const cs: Translations = {
     notificationsSection: 'Oznámení',
     theme: 'Motiv',
     themeSubtitle: 'Barevné schéma aplikace',
+    statusOn: 'Zapnuto',
+    statusOff: 'Vypnuto',
+    securityStatus: 'PIN: {state}',
     themeDark: 'Tmavý',
     themeLight: 'Světlý',
     themeSystem: 'Systém',

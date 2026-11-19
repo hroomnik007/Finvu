@@ -26,6 +26,7 @@ export const sk = {
   daysShort: ['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'],
   dashboard: {
     heatmapTitle: 'Heatmapa výdavkov',
+    heatmapTopDay: 'Najdrahší deň: {date} · {amount}',
     heatmapLess: 'Menej',
     heatmapMore: 'Viac',
     greeting: 'Dobrý deň!',
@@ -248,6 +249,7 @@ export const sk = {
       thisMonthTitle: 'Fixné výdavky tohto mesiaca',
       deleteConfirm: 'Naozaj chceš vymazať tento fixný výdavok?',
       total: 'Spolu',
+      nextPayment: 'Ďalšia platba',
       countdown: {
         today: 'Dnes!',
         overdue: 'Po termíne',
@@ -399,6 +401,9 @@ export const sk = {
     notificationsSection: 'Notifikácie',
     theme: 'Téma',
     themeSubtitle: 'Farebné schéma aplikácie',
+    statusOn: 'Zapnuté',
+    statusOff: 'Vypnuté',
+    securityStatus: 'PIN: {state}',
     themeDark: 'Tmavá',
     themeLight: 'Svetlá',
     themeSystem: 'Systém',

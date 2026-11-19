@@ -28,6 +28,7 @@ export const en: Translations = {
   daysShort: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
   dashboard: {
     heatmapTitle: 'Expense heatmap',
+    heatmapTopDay: 'Most expensive day: {date} · {amount}',
     heatmapLess: 'Less',
     heatmapMore: 'More',
     greeting: 'Good day!',
@@ -250,6 +251,7 @@ export const en: Translations = {
       thisMonthTitle: 'Fixed expenses this month',
       deleteConfirm: 'Are you sure you want to delete this fixed expense?',
       total: 'Total',
+      nextPayment: 'Next payment',
       countdown: {
         today: 'Today!',
         overdue: 'Overdue',
@@ -401,6 +403,9 @@ export const en: Translations = {
     notificationsSection: 'Notifications',
     theme: 'Theme',
     themeSubtitle: 'App color scheme',
+    statusOn: 'On',
+    statusOff: 'Off',
+    securityStatus: 'PIN: {state}',
     themeDark: 'Dark',
     themeLight: 'Light',
     themeSystem: 'System',
