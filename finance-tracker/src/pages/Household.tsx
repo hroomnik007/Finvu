@@ -439,17 +439,24 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
       {/* ── Activity feed ── */}
       {activityFeed.length > 0 && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, maxWidth: 720 }}>
             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{ht.activityLabel}</p>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: 'rgba(52,211,153,0.13)', color: 'var(--aurora-emerald)' }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--aurora-emerald)', animation: 'pulse-glow 1.5s ease-in-out infinite', display: 'inline-block' }} />
               Live
             </span>
           </div>
+          {/* One card per day in a reading-width column, so a description and its amount stay close together */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 14, maxWidth: 720 }}>
           {activityGroups.map((group, gi) => (
-            <div key={gi} style={{ marginBottom: 14 }}>
-              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-faint)', margin: '0 2px 8px' }}>{group.label}</p>
+            <div key={gi}>
               <DenseCard>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '10px 14px' }}>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{group.label}</span>
+                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
+                    {group.items.some(x => x.type !== 'income') ? `−${formatAmount(group.items.filter(x => x.type !== 'income').reduce((n, x) => n + x.amount, 0))}` : ''}
+                  </span>
+                </div>
                 {group.items.map((a, i) => {
                   const member = householdData?.members.find(m => m.id === a.created_by)
                   const name = a.created_by_name ?? member?.name ?? '?'
@@ -479,6 +486,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
               </DenseCard>
             </div>
           ))}
+          </div>
           {activityFeed.length > ACTIVITY_INITIAL_LIMIT && (
             <button
               onClick={() => setActivityExpanded(prev => !prev)}
