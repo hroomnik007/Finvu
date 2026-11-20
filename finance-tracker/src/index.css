@@ -1209,3 +1209,7 @@ html.has-session .boot-user { display: flex; }
 
 @media (hover: hover) { .budget-row:hover { background: var(--aurora-hover); } }
 .budget-row:focus-visible { outline: 2px solid var(--aurora-violet); outline-offset: -2px; }
+
+/* Household activity: day cards flow into two columns on desktop, each card stays whole */
+.activity-day { margin-bottom: 16px; break-inside: avoid; }
+@media (min-width: 1024px) { .activity-columns { columns: 2; column-gap: 16px; } }
