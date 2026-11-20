@@ -28,7 +28,7 @@ export const cs: Translations = {
   daysShort: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
   dashboard: {
     heatmapTitle: 'Heatmapa výdajů',
-    heatmapTopDay: 'Nejdražší den: {date} · {amount}',
+    heatmapTopDays: 'Nejdražší dny',
     heatmapLess: 'Méně',
     heatmapMore: 'Více',
     greeting: 'Dobrý den!',

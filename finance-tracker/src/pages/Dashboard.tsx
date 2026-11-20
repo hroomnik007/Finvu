@@ -28,6 +28,7 @@ import { useAuth } from '../context/AuthContext'
 import { getMonthlySeries, getSummaryCards } from '../api/transactions'
 import { trackingStartOf } from '../utils/trackingStart'
 import { updateUserSettings } from '../api/auth'
+import { BudgetOverviewCard } from '../components/BudgetOverviewCard'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
 import { useHousehold } from '../hooks/useHousehold'
@@ -44,19 +45,6 @@ function catBg(color: string) {
   return color + '26'
 }
 
-type AuroraSeverity = 'red' | 'warning' | null
-
-function auroraSeverityStyle(severity: AuroraSeverity) {
-  const tint = severity === 'red' ? 'var(--aurora-rose)' : severity === 'warning' ? 'var(--aurora-amber)' : null
-  return {
-    background: tint ? `color-mix(in srgb, ${tint} 10%, var(--aurora-glass))` : 'var(--aurora-glass)',
-    border: tint ? `1px solid color-mix(in srgb, ${tint} 35%, var(--aurora-gline))` : '1px solid var(--aurora-gline)',
-    borderRadius: 20,
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
-    padding: 16,
-  }
-}
 
 function getGreeting(name: string, t: Translations): { text: string } {
   const hour = new Date().getHours()
@@ -274,11 +262,6 @@ const upcomingFixed = useMemo(() => {
   }
 
   // ── Right panel urgency + severity tinting ─────────────────────────────────
-  const budgetSeverity = sortedBudgetStatuses.some(b => b.percentage >= 100)
-    ? 'red'
-    : sortedBudgetStatuses.some(b => b.percentage >= 90)
-      ? 'warning'
-      : null
 
   // ── Forecast (end-of-month prediction) ──────────────────────────────────────
   const forecastProgressPct = daysInMonth > 0 ? (isFutureMonth ? 0 : (dayOfMonth / daysInMonth) * 100) : 0
@@ -551,26 +534,11 @@ const upcomingFixed = useMemo(() => {
         )}
       </GlassCard>
 
-      <div style={auroraSeverityStyle(budgetSeverity)}>
-        <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.dashboard.budget}</p>
-        {sortedBudgetStatuses.map(b => {
-          const bCat = categories.find(c => c.id === b.categoryId)
-          const barColor = (bCat?.autoLimit && !bCat.limitReserve) ? 'var(--aurora-emerald)' : b.percentage >= 100 ? 'var(--aurora-rose)' : b.percentage >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
-          return (
-            <div key={b.categoryId} style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {(() => { const Icon = CATEGORY_ICON_MAP[b.categoryIcon ?? ''] ?? Tag; return <Icon size={14} color={bCat?.color ?? FALLBACK_COLOR} strokeWidth={1.8} style={{ flexShrink: 0 }} /> })()} {b.categoryName}
-                </span>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor }}>{Math.round(b.percentage)}%</span>
-              </div>
-              <div style={{ height: 6, borderRadius: 99, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 99, width: `${Math.min(b.percentage, 100)}%`, background: barColor }} />
-              </div>
-            </div>
-          )
-        })}
-        {sortedBudgetStatuses.length === 0 && (
+      <BudgetOverviewCard
+        title={t.dashboard.budget}
+        items={sortedBudgetStatuses}
+        categories={categories}
+        empty={(
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.noLimits}</p>
             <button
@@ -581,7 +549,7 @@ const upcomingFixed = useMemo(() => {
             </button>
           </div>
         )}
-        {sortedBudgetStatuses.length > 0 && (
+        footer={(
           <button
             onClick={() => onNavigate('categories')}
             style={{ marginTop: 4, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}
@@ -589,7 +557,7 @@ const upcomingFixed = useMemo(() => {
             {t.dashboard.showMore}
           </button>
         )}
-      </div>
+      />
 
       {(insightMainText || monthChallengeTarget > 0) && (
         <GlassCard radius={20}>

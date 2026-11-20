@@ -28,7 +28,7 @@ export const pl: Translations = {
   daysShort: ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'],
   dashboard: {
     heatmapTitle: 'Mapa cieplna wydatków',
-    heatmapTopDay: 'Najdroższy dzień: {date} · {amount}',
+    heatmapTopDays: 'Najdroższe dni',
     heatmapLess: 'Mniej',
     heatmapMore: 'Więcej',
     greeting: 'Dzień dobry!',

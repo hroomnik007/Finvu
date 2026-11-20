@@ -28,7 +28,7 @@ export const hu: Translations = {
   daysShort: ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'],
   dashboard: {
     heatmapTitle: 'Kiadások hőtérképe',
-    heatmapTopDay: 'Legdrágább nap: {date} · {amount}',
+    heatmapTopDays: 'Legdrágább napok',
     heatmapLess: 'Kevesebb',
     heatmapMore: 'Több',
     greeting: 'Jó napot!',

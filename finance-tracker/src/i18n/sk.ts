@@ -26,7 +26,7 @@ export const sk = {
   daysShort: ['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'],
   dashboard: {
     heatmapTitle: 'Heatmapa výdavkov',
-    heatmapTopDay: 'Najdrahší deň: {date} · {amount}',
+    heatmapTopDays: 'Najdrahšie dni',
     heatmapLess: 'Menej',
     heatmapMore: 'Viac',
     greeting: 'Dobrý deň!',

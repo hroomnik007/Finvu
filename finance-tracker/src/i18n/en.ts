@@ -28,7 +28,7 @@ export const en: Translations = {
   daysShort: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
   dashboard: {
     heatmapTitle: 'Expense heatmap',
-    heatmapTopDay: 'Most expensive day: {date} · {amount}',
+    heatmapTopDays: 'Most expensive days',
     heatmapLess: 'Less',
     heatmapMore: 'More',
     greeting: 'Good day!',

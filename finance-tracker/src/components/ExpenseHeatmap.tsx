@@ -79,8 +79,8 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
   const weekdayLabels = sundayFirst ? [t.daysShort[6], ...t.daysShort.slice(0, 6)] : t.daysShort
   const firstWeekday = new Date(year, month - 1, 1).getDay() // 0 = Sunday
   const leadingBlanks = sundayFirst ? firstWeekday : (firstWeekday + 6) % 7
-  // The one sentence the calendar is for: which day cost the most
-  const topDay = Object.entries(dailyTotals).reduce<[string, number] | null>((best, e) => (!best || e[1] > best[1] ? e : best), null)
+  // What the calendar is for: the days that cost the most
+  const topDays = Object.entries(dailyTotals).sort((x, y) => y[1] - x[1]).slice(0, 3)
   const legendBorder = '1px solid var(--aurora-gline)'
 
   return (
@@ -98,8 +98,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
           <div key={d} style={{ textAlign: 'center', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)' }}>{d}</div>
         ))}
       </div>
-      {/* Day grid grows with the card (next to a tall donut legend) instead of leaving a gap below */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridAutoRows: 'minmax(30px, 1fr)', gap: 5, flex: 1 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 5 }}>
         {Array.from({ length: leadingBlanks }, (_, i) => <div key={`blank-${i}`} />)}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const day = i + 1
@@ -114,7 +113,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
             <div
               key={day}
               style={{
-                minHeight: 30,
+                height: 34,
                 borderRadius: 8,
                 background: hasSpend ? severityColor(amount) : 'var(--aurora-glass)',
                 cursor: hasSpend ? 'pointer' : 'default',
@@ -176,16 +175,21 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
         })}
       </div>
 
-      {topDay && (
-        <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', margin: '12px 0 0' }}>
-          {t.dashboard.heatmapTopDay
-            .replace('{date}', formatLongDate(topDay[0], { weekday: 'long', day: 'numeric', month: 'long' }))
-            .replace('{amount}', formatAmount(topDay[1]))}
-        </p>
+      {topDays.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 6px' }}>{t.dashboard.heatmapTopDays}</p>
+          {topDays.map(([date, amount]) => (
+            <div key={date} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontFamily: "'Manrope', sans-serif", fontSize: 12 }}>
+              <span style={{ width: 9, height: 9, borderRadius: 3, background: severityColor(amount), flexShrink: 0 }} />
+              <span style={{ flex: 1, color: 'var(--aurora-lo)' }}>{formatLongDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(amount)}</span>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 'auto', paddingTop: 14, flexWrap: 'wrap' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.75)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(100))}</span>

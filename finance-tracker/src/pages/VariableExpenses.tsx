@@ -16,6 +16,7 @@ import { HeroCard } from '../components/HeroCard'
 import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useFixedExpenses } from '../hooks/useFixedExpenses'
 import { useCategories } from '../hooks/useCategories'
+import { BudgetOverviewCard } from '../components/BudgetOverviewCard'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
@@ -421,46 +422,20 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
         </div>
 
-        {/* Right panel — desktop only. Same look as the Dashboard budget; a row opens that category. */}
-        <div className="hidden lg:flex" style={{ width: 280, flexShrink: 0, position: 'sticky', top: 20, maxHeight: 'calc(100vh - 130px)', margin: '20px 20px 20px 0', border: '1px solid var(--aurora-gline)', borderRadius: 16, overflowY: 'auto', padding: '16px 12px 12px', flexDirection: 'column', background: 'var(--aurora-glass)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', padding: '0 8px', marginBottom: 8 }}>{t.expenses.variable.categoriesAndBudget}</div>
-          {budgetStatuses.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px 8px', color: 'var(--aurora-faint)', fontSize: 13, fontFamily: "'Manrope', sans-serif" }}>
-              <div>{t.dashboard.noLimits}</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>{t.dashboard.setInCategories}</div>
-            </div>
-          ) : [...budgetStatuses].sort((a: BudgetStatus, b: BudgetStatus) => b.percentage - a.percentage).map((bs: BudgetStatus) => {
-            const bsCat = getCategoryById(bs.categoryId)
-            const barColor = getBudgetBarColor(bs.percentage, (bsCat?.autoLimit ?? false) && !bsCat?.limitReserve)
-            return (
-              <button
-                key={bs.categoryId}
-                type="button"
-                title={`${formatAmount(bs.spent)} / ${formatAmount(bs.limit)}`}
-                onClick={() => openCategory(bs.categoryId)}
-                className="budget-row"
-                style={{ display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer', padding: '7px 8px', borderRadius: 10, fontFamily: 'inherit', background: 'transparent', border: 'none' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                    {(() => { const Icon = CATEGORY_ICON_MAP[bs.categoryIcon ?? ''] ?? Tag; return <Icon size={14} color={bs.categoryColor} strokeWidth={1.8} style={{ flexShrink: 0 }} /> })()}
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bs.categoryName}</span>
-                  </span>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, flexShrink: 0, marginLeft: 8 }}>{Math.round(bs.percentage)}%</span>
-                </span>
-                <span style={{ display: 'block', height: 6, borderRadius: 99, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
-                  <span style={{ display: 'block', height: '100%', borderRadius: 99, width: `${Math.min(bs.percentage, 100)}%`, background: barColor }} />
-                </span>
-              </button>
-            )
-          })}
-          <button
-            type="button"
-            onClick={() => { window.location.hash = 'categories' }}
-            style={{ alignSelf: 'flex-start', margin: '6px 8px 0', padding: 0, background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)' }}
-          >
-            {t.nav.categories}
-          </button>
+        {/* Right panel — desktop only: the Dashboard budget card, every row opens that category */}
+        <div className="hidden lg:block" style={{ width: 280, flexShrink: 0, position: 'sticky', top: 20, maxHeight: 'calc(100vh - 130px)', overflowY: 'auto', margin: '20px 20px 20px 0', borderRadius: 20 }}>
+          <BudgetOverviewCard
+            title={t.expenses.variable.categoriesAndBudget}
+            items={[...budgetStatuses].sort((a: BudgetStatus, b: BudgetStatus) => b.percentage - a.percentage)}
+            categories={categories}
+            onRowClick={openCategory}
+            empty={(
+              <div style={{ textAlign: 'center', padding: '12px 0', color: 'var(--aurora-faint)', fontSize: 13, fontFamily: "'Manrope', sans-serif" }}>
+                <div>{t.dashboard.noLimits}</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>{t.dashboard.setInCategories}</div>
+              </div>
+            )}
+          />
         </div>
 
       </div>
