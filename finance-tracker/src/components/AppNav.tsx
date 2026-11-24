@@ -107,8 +107,11 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
           // reference where sidebar and content share one continuous glow.
           background: 'transparent',
           borderRight: '1px solid var(--aurora-gline)',
-          overflow: 'hidden',
+          // Visible, so the collapse handle on the edge is not cut in half; the
+          // logo row, the nav list and the bottom section clip their own text
+          overflow: 'visible',
           position: 'relative',
+          zIndex: 30,
         }}
       >
         {/* Logo */}
@@ -331,7 +334,7 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
         </div>
 
         {/* Bottom section: Nastavenia + Profile */}
-        <div style={{ borderTop: '1px solid var(--aurora-gline)', padding: '8px', flexShrink: 0 }}>
+        <div style={{ borderTop: '1px solid var(--aurora-gline)', padding: '8px', flexShrink: 0, overflow: 'hidden' }}>
           {/* Nastavenia */}
           <button
             onClick={() => handleChange('settings')}
@@ -346,30 +349,18 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
             {isExpanded && t.nav.settings}
           </button>
 
-          {/* Expand/collapse toggle — inside the panel (it used to hang half outside
-              the right edge, where the aside's overflow: hidden cut it in two) */}
-          <div style={{ display: 'flex', justifyContent: isExpanded ? 'flex-end' : 'center', padding: '4px 4px 0' }}>
-            <button
-              type="button"
-              className="hit-44"
-              onClick={onToggle}
-              aria-label={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
-              title={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
-              style={{
-                width: 28, height: 28,
-                borderRadius: '50%',
-                background: 'transparent',
-                border: '1px solid var(--aurora-gline)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--aurora-faint)',
-              }}
-            >
-              {isExpanded ? <ChevronLeft size={13} strokeWidth={1.6} /> : <ChevronRight size={13} strokeWidth={1.6} />}
-            </button>
-          </div>
         </div>
 
+        {/* Expand/collapse handle on the panel's edge, level with the logo */}
+        <button
+          type="button"
+          className="hit-44 sidebar-handle"
+          onClick={onToggle}
+          aria-label={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
+          title={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
+        >
+          {isExpanded ? <ChevronLeft size={13} strokeWidth={1.8} /> : <ChevronRight size={13} strokeWidth={1.8} />}
+        </button>
       </aside>
     </>
   )

@@ -167,8 +167,6 @@ interface CardProps {
   familyStatus?: BudgetStatus
   /** Shared category only: who spent how much of it. */
   split?: MemberShare[]
-  /** Reorder mode: the drag handle is shown (otherwise the card is just a button). */
-  reorder?: boolean
   formatAmount: (n: number) => string
   t: ReturnType<typeof useTranslation>['t']
   onEdit: (cat: Category) => void
@@ -179,7 +177,7 @@ interface CardProps {
   selected?: boolean
 }
 
-function SortableGridCard({ cat, status, familyStatus, split, formatAmount, t, onEdit, severity, selected, reorder }: CardProps) {
+function SortableGridCard({ cat, status, familyStatus, split, formatAmount, t, onEdit, severity, selected }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
 
   return (
@@ -206,15 +204,13 @@ function SortableGridCard({ cat, status, familyStatus, split, formatAmount, t, o
           {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={20} color={cat.color} strokeWidth={1.8} /> })()}
         </div>
         <CategoryTitle cat={cat} formatAmount={formatAmount} t={t} size={14} />
-        {reorder && (
-          <div
-            {...listeners}
-            style={{ color: 'var(--aurora-faint)', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', alignItems: 'center', padding: '0 2px', flexShrink: 0 }}
-            onClick={e => e.stopPropagation()}
-          >
-            <GripVertical size={16} />
-          </div>
-        )}
+        <div
+          {...listeners}
+          style={{ color: 'var(--aurora-faint)', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', alignItems: 'center', padding: '0 2px', flexShrink: 0 }}
+          onClick={e => e.stopPropagation()}
+        >
+          <GripVertical size={16} />
+        </div>
       </div>
       <CategoryBudget cat={cat} status={status} familyStatus={familyStatus} split={split} formatAmount={formatAmount} t={t} />
       {/* No limit: still say what went through the category this month */}
@@ -231,7 +227,7 @@ function SortableGridCard({ cat, status, familyStatus, split, formatAmount, t, o
 }
 
 function SortableListCard(props: CardProps) {
-  const { cat, status, familyStatus, split, formatAmount, t, onEdit, severity, selected, reorder } = props
+  const { cat, status, familyStatus, split, formatAmount, t, onEdit, severity, selected } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
 
   return (
@@ -254,15 +250,13 @@ function SortableListCard(props: CardProps) {
         boxShadow: isDragging ? '0 0 0 2px rgba(139,92,246,0.3)' : undefined,
       }}
     >
-      {reorder && (
-        <div
-          {...listeners}
-          style={{ color: 'var(--aurora-faint)', cursor: isDragging ? 'grabbing' : 'grab', flexShrink: 0, display: 'flex' }}
-          onClick={e => e.stopPropagation()}
-        >
-          <GripVertical size={15} />
-        </div>
-      )}
+      <div
+        {...listeners}
+        style={{ color: 'var(--aurora-faint)', cursor: isDragging ? 'grabbing' : 'grab', flexShrink: 0, display: 'flex' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <GripVertical size={15} />
+      </div>
       <div style={{ width: 36, height: 36, borderRadius: 12, background: cat.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={16} color={cat.color} strokeWidth={1.8} /> })()}
       </div>
@@ -279,7 +273,7 @@ function SortableListCard(props: CardProps) {
   )
 }
 
-function SortableMobileCard({ cat, status, familyStatus, split, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected, reorder }: CardProps) {
+function SortableMobileCard({ cat, status, familyStatus, split, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
 
   const outerTransform = [
@@ -317,16 +311,14 @@ function SortableMobileCard({ cat, status, familyStatus, split, formatAmount, t,
               {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={16} color={cat.color} strokeWidth={1.8} /> })()}
             </div>
             <CategoryTitle cat={cat} formatAmount={formatAmount} t={t} size={13} />
-            {reorder && (
-              <div
-                {...listeners}
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--aurora-glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'grab', touchAction: 'none' }}
-              >
-                <GripVertical size={14} color="var(--aurora-faint)" />
-              </div>
-            )}
+            <div
+              {...listeners}
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--aurora-glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'grab', touchAction: 'none' }}
+            >
+              <GripVertical size={14} color="var(--aurora-faint)" />
+            </div>
           </div>
           <CategoryBudget cat={cat} status={status} familyStatus={familyStatus} split={split} formatAmount={formatAmount} t={t} compact />
           {cat.budgetLimit == null && status && status.spent > 0 && (
@@ -407,7 +399,6 @@ export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` is today; the lists carry the month
   }, [familyVariable, familyFixed, members, user?.id])
-  const [reorder, setReorder] = useState(false)
   // The summary and the card tint follow Moje / Rodinné: in the family view a
   // shared category counts with the whole family's spend
   const heroStatuses = useMemo(() => scope === 'family'
@@ -759,8 +750,7 @@ export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (
             <>
               {/* Select toggle — mobile */}
               {!selectMode && (
-                <div className="flex justify-end lg:hidden" style={{ marginTop: 8, gap: 8 }}>
-                  <button onClick={() => setReorder(r => !r)} aria-pressed={reorder} style={selectBtnStyle(reorder)}>{reorder ? t.expenses.categories.reorderDone : t.expenses.categories.reorder}</button>
+                <div className="flex justify-end lg:hidden" style={{ marginTop: 8 }}>
                   <button onClick={() => setSelectMode(true)} style={selectBtnStyle(false)}>{t.expenses.categories.selectMode}</button>
                 </div>
               )}
@@ -787,8 +777,7 @@ export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (
                 </div>
                 {!selectMode && (
                   <>
-                    <button onClick={() => setReorder(r => !r)} aria-pressed={reorder} style={selectBtnStyle(reorder)}>{reorder ? t.expenses.categories.reorderDone : t.expenses.categories.reorder}</button>
-                    <button onClick={() => setSelectMode(true)} style={selectBtnStyle(false)}>{t.expenses.categories.selectMode}</button>
+                      <button onClick={() => setSelectMode(true)} style={selectBtnStyle(false)}>{t.expenses.categories.selectMode}</button>
                   </>
                 )}
               </div>
@@ -816,8 +805,8 @@ export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
                         const split = cat.shared ? familySplit(cat) : undefined
                         const card = view === 'list'
-                          ? <SortableListCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={split} reorder={reorder} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
-                          : <SortableGridCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={split} reorder={reorder} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
+                          ? <SortableListCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={split} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
+                          : <SortableGridCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={split} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
                         return cat.id === firstIncomeId
                           ? [<p key="income-group" style={groupHeading}>{t.expenses.categories.incomeGroup}</p>, card]
                           : card
@@ -843,7 +832,7 @@ export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (
                         const status = cardStatuses.find(b => b.categoryId === cat.id)
                         const familyStatus = familyStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
-                        const card = <SortableMobileCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={cat.shared ? familySplit(cat) : undefined} reorder={reorder} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={(id) => setDeleteId(id)} selected={selectedIds.has(cat.id!)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
+                        const card = <SortableMobileCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={cat.shared ? familySplit(cat) : undefined} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={(id) => setDeleteId(id)} selected={selectedIds.has(cat.id!)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
                         return cat.id === firstIncomeId
                           ? [<p key="income-group" style={groupHeading}>{t.expenses.categories.incomeGroup}</p>, card]
                           : card

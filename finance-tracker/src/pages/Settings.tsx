@@ -68,13 +68,13 @@ const DATE_FORMATS = [
   { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
 ]
 
+// Button colours that never read as a status: green, orange and red mean
+// income / near the limit / over it elsewhere in the app. A colour picked
+// before stays applied; it just is no longer offered.
 const ACCENT_COLORS = [
-  { name: 'colorViolet', value: '#7C3AED' },
   { name: 'colorBlue', value: '#3B82F6' },
-  { name: 'colorGreen', value: '#10B981' },
-  { name: 'colorOrange', value: '#F59E0B' },
-  { name: 'colorPink', value: '#EC4899' },
-  { name: 'colorRed', value: '#EF4444' },
+  { name: 'colorViolet', value: '#7C3AED' },
+  { name: 'colorTeal', value: '#0891B2' },
 ] as const
 
 // Revolut-style page background tints — separate palette per theme since a
@@ -1134,7 +1134,7 @@ export function SettingsPage() {
                   iconColor="var(--aurora-emerald)"
                   iconBg="rgba(52,211,153,0.12)"
                   label={t.settings.openingBalanceLabel}
-                  sublabel={openingBalance ? formatAmount(openingBalance) : t.common.notSet}
+                  sublabel={openingBalance ? formatAmount(openingBalance) : `${t.common.notSet} · ${t.settings.openingBalanceHint}`}
                   onClick={openOpeningModal}
                 />
               </SectionCard>

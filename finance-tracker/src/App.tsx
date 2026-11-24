@@ -566,16 +566,17 @@ function App() {
             />
           )}
           {page === 'income' && (
-            <IncomePage month={month} year={year} scope={dashView} />
+            <IncomePage month={month} year={year} />
           )}
           {page === 'variable-expenses' && (
-            <VariableExpensesPage month={month} year={year} showToast={showToast} scope={dashView} />
+            <VariableExpensesPage month={month} year={year} showToast={showToast} />
           )}
           {page === 'fixed-expenses' && (
-            <FixedExpensesPage month={month} year={year} scope={dashView} />
+            <FixedExpensesPage month={month} year={year} />
           )}
-          {page === 'categories' && <CategoriesPage showToast={showToast} scope={dashView} />}
-          {page === 'search' && <SearchPage scope={dashView} />}
+          {page === 'categories' && <CategoriesPage showToast={showToast} />}
+          {/* Search always offers the household's members as a filter (no Moje / Rodinné switch here) */}
+          {page === 'search' && <SearchPage scope={householdEnabled ? 'family' : 'personal'} />}
           {page === 'annual' && <AnnualPage scope={dashView} />}
           {(page === 'settings' || page === 'household') && (
             <div style={{ flex: 1, overflowY: 'auto' }}>

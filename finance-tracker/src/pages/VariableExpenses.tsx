@@ -322,13 +322,21 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
               </span>
             </div>
             )}
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 12 }}>
-              {listLoading || listFailed ? '\u00a0' : [
-                t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length)),
-                daysCounted > 0 ? t.expenses.avgPerDay.replace('{amount}', formatAmount(filteredTotal / daysCounted)) : '',
-                prevVariableTotal > 0 ? `${prevMonthName} ${formatAmount(prevVariableTotal)}` : '',
-              ].filter(Boolean).join(' · ')}
-            </div>
+            {/* Three tiles like the Dashboard hero (was one small grey line) */}
+            {!listLoading && !listFailed && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                {([
+                  [t.expenses.statTransactions, String(filteredSorted.length)],
+                  [t.expenses.statDailyAvg, daysCounted > 0 ? formatAmount(filteredTotal / daysCounted) : '—'],
+                  [prevMonthName.charAt(0).toLocaleUpperCase(locale) + prevMonthName.slice(1), prevVariableTotal > 0 ? formatAmount(prevVariableTotal) : '—'],
+                ] as const).map(([label, value]) => (
+                  <div key={label} style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', fontVariantNumeric: 'tabular-nums', wordBreak: 'break-word' }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </HeroCard>
 
           {!selectMode && filteredSorted.length > 0 && (

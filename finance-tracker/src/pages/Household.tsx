@@ -158,7 +158,15 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
     })
   }
 
-  const visibleActivity = activityExpanded ? activityFeed : activityFeed.slice(0, ACTIVITY_INITIAL_LIMIT)
+  // Desktop has the room for the whole feed in two columns; only phones fold it
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const on = () => setWide(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  const visibleActivity = activityExpanded || wide ? activityFeed : activityFeed.slice(0, ACTIVITY_INITIAL_LIMIT)
   const activityGroups = useMemo(() => {
     const groups: { label: string; items: ActivityItem[] }[] = []
     for (const a of visibleActivity) {
@@ -561,7 +569,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
             </div>
           ))}
           </div>
-          {activityFeed.length > ACTIVITY_INITIAL_LIMIT && (
+          {activityFeed.length > ACTIVITY_INITIAL_LIMIT && !wide && (
             <button
               onClick={() => setActivityExpanded(prev => !prev)}
               style={{ marginTop: 4, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}

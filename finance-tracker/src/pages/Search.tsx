@@ -114,7 +114,10 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '20px calc(20px + var(--page-inset, 0px)) var(--page-pad-bottom-nofab)' }}>
-      <div style={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Desktop: filters in a column on the left that stays put, results use the
+          rest of the width (a 760 px column left most of a wide screen empty) */}
+      <div className="search-layout">
+        <div className="search-filters">
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.search.title}</h1>
 
         <GlassCard radius={18} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -172,7 +175,9 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
             <button type="button" onClick={reset} style={{ ...chipStyle(false), alignSelf: 'flex-start' }}>{t.search.reset}</button>
           )}
         </GlassCard>
+        </div>
 
+        <div className="search-results">
         {(
           <>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
@@ -223,6 +228,7 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   )

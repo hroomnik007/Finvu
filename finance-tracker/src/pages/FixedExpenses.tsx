@@ -110,6 +110,7 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
   const pickerCats = useMemo(() => pickerCategories(categories, 'expense', editing?.categoryId), [categories, editing?.categoryId])
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null)
   const [activeCat, setActiveCat] = useState<string | null>(null)
+  const [catPeriod, setCatPeriod] = useState<'month' | 'year'>('month')
   const [csvOpen, setCsvOpen] = useState(false)
   const [mobileView, setMobileView] = useState<'list' | 'calendar'>('list')
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null)
@@ -283,32 +284,39 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
 
   const MONTHS_SK = t.monthsShort
 
-  const yearlyContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {/* The year's total is already in the hero ("Ročne"); the panel splits it by category */}
-      {categoryTotals.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-          {categoryTotals.map(({ id, amount: catAmt }) => {
-            const cat = catInfo.get(id)
-            const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
-            const name = cat?.name ?? '—'
-            return (
-              <div key={id || '__none__'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
-                  <Icon size={13} color={cat?.color ?? FALLBACK_COLOR} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, marginLeft: 8 }}>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-lo)' }}>{formatAmount(catAmt)}<span style={{ fontSize: 12, color: 'var(--aurora-faint)' }}>{t.common.perMonthShort}</span></span>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{formatAmount(catAmt * 12)}{t.common.perYearShort}</span>
-                </div>
+  // "Podľa kategórie": one figure per row (per month or per year, switchable),
+  // largest first, with a thin bar for its share of all fixed expenses
+  const sortedCategoryTotals = [...categoryTotals].sort((a, b) => b.amount - a.amount)
+  const periodFactor = catPeriod === 'year' ? 12 : 1
+  const yearlyContent = categoryTotals.length > 0 ? (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {sortedCategoryTotals.map(({ id, amount: catAmt }, i) => {
+        const cat = catInfo.get(id)
+        const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
+        const color = cat?.color ?? FALLBACK_COLOR
+        return (
+          <div key={id || '__none__'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: i > 0 ? '1px solid var(--aurora-gline)' : 'none' }}>
+            <span style={{ width: 28, height: 28, borderRadius: 9, background: `color-mix(in srgb, ${color} 16%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon size={14} color={color} strokeWidth={1.8} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat?.name ?? '—'}</span>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{formatAmount(catAmt * periodFactor)}</span>
               </div>
-            )
-          })}
-        </div>
-      )}
+              <div style={{ height: 3, borderRadius: 99, background: 'var(--aurora-gline)', marginTop: 5, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${total > 0 ? (catAmt / total) * 100 : 0}%`, background: color, borderRadius: 99 }} />
+              </div>
+            </div>
+          </div>
+        )
+      })}
+      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, marginTop: 2, borderTop: '1px solid var(--aurora-gline)', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
+        <span>{t.annual.total}</span>
+        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(total * periodFactor)}</span>
+      </div>
     </div>
-  )
+  ) : null
 
   const vsContent = (total > 0 || variableTotal > 0) ? (
     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -758,7 +766,17 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
             )
           })()}
           <GlassCard radius={16}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.byCategory}</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0, whiteSpace: 'nowrap' }}>{t.expenses.fixed.byCategory}</p>
+              <div role="group" aria-label={t.expenses.fixed.byCategory} style={{ display: 'inline-flex', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 10, padding: 2 }}>
+                {(['month', 'year'] as const).map(p => (
+                  <button key={p} type="button" aria-pressed={catPeriod === p} onClick={() => setCatPeriod(p)}
+                    style={{ padding: '3px 7px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, background: catPeriod === p ? 'var(--aurora-hover)' : 'transparent', color: catPeriod === p ? 'var(--aurora-hi)' : 'var(--aurora-faint)' }}>
+                    {p === 'month' ? t.expenses.fixed.monthlyLabel : t.expenses.fixed.yearlyLabel}
+                  </button>
+                ))}
+              </div>
+            </div>
             {yearlyContent}
           </GlassCard>
           {vsContent && (

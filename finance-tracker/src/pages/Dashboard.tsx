@@ -28,7 +28,7 @@ import { useAuth } from '../context/AuthContext'
 import { getMonthlySeries, getSummaryCards } from '../api/transactions'
 import { trackingStartOf } from '../utils/trackingStart'
 import { updateUserSettings } from '../api/auth'
-import { BudgetOverviewCard } from '../components/BudgetOverviewCard'
+import { BudgetAttentionCard } from '../components/BudgetAttentionCard'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
 import { useHousehold } from '../hooks/useHousehold'
@@ -210,14 +210,17 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     const today = new Date(n.getFullYear(), n.getMonth(), n.getDate())
     // Whole viewed month is before the real current month → everything in it is already paid
     const isPastMonth = year < n.getFullYear() || (year === n.getFullYear() && month < n.getMonth() + 1)
+    const isFuture = year > n.getFullYear() || (year === n.getFullYear() && month > n.getMonth() + 1)
+    const viewedYM = `${year}-${String(month).padStart(2, '0')}`
     return allFixedExpenses
+      .filter(e => !isFuture || occursInMonth(e, month))
       .map(e => {
         // The real next due date: this month when the day is still ahead, otherwise
         // next month — each clamped to its own month's length (31st → 30th / 28th).
         const dueIn = (y: number, m0: number) => new Date(y, m0, Math.min(e.dayOfMonth, new Date(y, m0 + 1, 0).getDate()))
         // (for a quarterly / yearly item: the next month it is charged in)
-        let due = dueIn(today.getFullYear(), today.getMonth())
-        for (let step = 1; step <= 12 && (due < today || !occursInMonth(e, due.getMonth() + 1)); step++) {
+        let due = isFuture ? dueIn(year, month - 1) : dueIn(today.getFullYear(), today.getMonth())
+        for (let step = 1; !isFuture && step <= 12 && (due < today || !occursInMonth(e, due.getMonth() + 1)); step++) {
           due = dueIn(today.getFullYear(), today.getMonth() + step)
         }
         const dueYM = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}`
@@ -226,6 +229,8 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
         return { ...e, amount: isPastMonth ? e.amount : price, dueYM, dueDate: toLocalISO(due), daysUntil: Math.round((due.getTime() - today.getTime()) / 86400000), paid: isPastMonth }
       })
       .filter(e => isPastMonth || !isEndedInMonth(e.endedOn, e.dueYM))
+      // Only payments of the viewed month — next month's never show here
+      .filter(e => isPastMonth || e.dueYM === viewedYM)
       .sort((a, b) => isPastMonth ? a.dayOfMonth - b.dayOfMonth : a.daysUntil - b.daysUntil)
   }, [allFixedExpenses, year, month])
   const upcomingFixed = upcomingAll.slice(0, 4)
@@ -358,15 +363,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   const heroExpenses = summaryCards?.expenses ?? (dashView === 'personal' ? totalExpenses : 0)
   const monthResult = heroIncome - heroExpenses
   const signedAmount = (n: number) => `${n >= 0 ? '+' : '−'}${formatAmount(Math.abs(n))}`
-  // Without an opening balance the big figure is only the flow since tracking
-  // began — say so instead of calling it the account balance.
-  const openingBalanceSet = (user?.opening_balance ?? 0) !== 0
-  const sinceDate = chartStart
-    ? formatLongDate(chartStart, { day: 'numeric', month: 'long', ...(chartStart.slice(0, 4) !== String(now.getFullYear()) ? { year: 'numeric' } : {}) })
-    : ''
-  const heroLabel = openingBalanceSet || !chartStart
-    ? t.dashboard.totalBalance
-    : (heroBalance < 0 ? t.dashboard.overspentSince : t.dashboard.savedSince).replace('{date}', sinceDate)
   const prevLine = (value: string) => prevMonth && !dashLoading && !dashFailed
     ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 3, display: 'flex', flexWrap: 'wrap', columnGap: 4 }}><span>{prevMonthName}</span><span style={{ whiteSpace: 'nowrap' }}>{value}</span></div>
     : null
@@ -395,7 +391,7 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     <HeroCard variant="neutral">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, minWidth: 0 }}>
-          {heroLabel}
+          {t.dashboard.totalBalance}
         </div>
         {/* Quiet link to the yearly overview (was a second primary button under the card) */}
         <button
@@ -455,17 +451,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
           {prevLine(signedAmount((prevMonth?.income ?? 0) - (prevMonth?.expense ?? 0)))}
         </div>
       </div>
-      {!openingBalanceSet && !dashLoading && !dashFailed && (
-        <div className="hero-hint">
-          <span>{t.dashboard.notAccountBalance}</span>
-          <button
-            type="button"
-            onClick={() => { try { localStorage.setItem('settings_open_section', 'finance') } catch { /* ignore */ } onNavigate('settings') }}
-          >
-            {t.dashboard.setAccountBalance}
-          </button>
-        </div>
-      )}
     </HeroCard>
   )
 
@@ -616,11 +601,10 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   )
 
   const budgetCard = (
-      <BudgetOverviewCard
+      <BudgetAttentionCard
         title={t.dashboard.budget}
         items={limitedBudgetStatuses}
         categories={categories}
-        grouped
         empty={(
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.noLimits}</p>
@@ -631,14 +615,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
               {t.dashboard.setLimits}
             </button>
           </div>
-        )}
-        footer={(
-          <button
-            onClick={() => onNavigate('categories')}
-            style={{ marginTop: 4, fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}
-          >
-            {t.dashboard.showMore}
-          </button>
         )}
       />
   )

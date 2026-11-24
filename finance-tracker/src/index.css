@@ -883,19 +883,6 @@ html.compact .card { padding: var(--card-padding); }
 }
 
 /* Small text link inside a hero card header (Dashboard: yearly overview) */
-.hero-hint {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
-  margin-top: 12px; padding: 8px 12px; border-radius: 12px;
-  font-family: 'Manrope', sans-serif; font-size: 12px; color: var(--aurora-lo);
-  background: color-mix(in srgb, var(--accent-color, #3B82F6) 9%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-color, #3B82F6) 25%, transparent);
-}
-.hero-hint button {
-  margin-left: auto; padding: 0; border: none; background: transparent; cursor: pointer;
-  font: inherit; font-weight: 700; color: var(--aurora-violet-text); white-space: nowrap;
-}
-.hero-hint button:hover { text-decoration: underline; }
-
 .hero-link {
   flex-shrink: 0;
   display: inline-flex;
@@ -1247,3 +1234,23 @@ html.has-session .boot-user { display: flex; }
 /* Household activity: day cards flow into two columns on desktop, each card stays whole */
 .activity-day { margin-bottom: 16px; break-inside: avoid; }
 @media (min-width: 1024px) { .activity-columns { columns: 2; column-gap: 16px; } }
+
+/* Hľadať: filters and results stacked on phones; side by side from lg on */
+.search-layout { display: flex; flex-direction: column; gap: 14px; }
+.search-filters, .search-results { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 1024px) {
+  .search-layout { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .search-filters { position: sticky; top: 0; }
+  .search-results { padding-top: 38px; }
+}
+
+/* Sidebar collapse handle: a small round button half over the panel's right
+   edge, level with the logo (the panel no longer clips it) */
+.sidebar-handle {
+  position: absolute; top: 26px; right: -13px; width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: var(--aurora-panel); border: 1px solid var(--aurora-gline); color: var(--aurora-lo);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25); transition: color 0.15s, border-color 0.15s;
+}
+.sidebar-handle:hover { color: var(--aurora-hi); border-color: color-mix(in srgb, var(--accent-color, #3B82F6) 50%, var(--aurora-gline)); }
+.sidebar-handle:focus-visible { outline: 2px solid var(--accent-color, #3B82F6); outline-offset: 2px; }
