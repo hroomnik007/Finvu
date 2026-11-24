@@ -78,6 +78,8 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
     await reloadCategories()
   }
   const [leavePending, setLeavePending] = useState(false)
+  // Leaving / removing a member are rare and destructive: only shown in "Spravovať"
+  const [manage, setManage] = useState(false)
   const [leaveLoading, setLeaveLoading] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [activityExpanded, setActivityExpanded] = useState(false)
@@ -181,6 +183,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   const savingsRate = totalIncome > 0 ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100) : 0
   const memberCount = householdData?.members.length ?? 0
   const animatedBalance = useCountUp(balance, 800)
+  const animatedResult = useCountUp(totalIncome - totalExpenses, 800)
 
   // Every own expense category with the family's spend (paired by name, like the
   // household stats) split per member; shared ones first, most used first
@@ -204,6 +207,29 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
     const used = (x: SharedCategoryTile) => (x.limit > 0 ? x.spent / x.limit : 0)
     return tiles.sort((x, y) => Number(y.shared) - Number(x.shared) || (x.shared ? used(y) - used(x) : x.name.localeCompare(y.name)))
   }, [stats, categories])
+
+  // "Kto koľko platí": each member's part of the shared categories' spend next
+  // to their part of the income (the same per-member stats as the tiles)
+  const monthResult = totalIncome - totalExpenses
+  const whoPays = useMemo(() => {
+    const members = householdData?.members ?? []
+    if (members.length < 2) return null
+    const palette = ['#C084FC', '#34D399', '#FBBF24', '#F472B6']
+    const others = members.filter(m => m.id !== user?.id)
+    const colorOf = (id: string) => id === user?.id ? '#60A5FA' : palette[others.findIndex(o => o.id === id) % palette.length]
+    const rows = members.map(m => {
+      const st = stats?.per_member.find(p => p.user_id === m.id)
+      const shared = categoryTiles.filter(x => x.shared).reduce((sum, x) => sum + (x.perMember.find(pm => pm.name === st?.name)?.amount ?? 0), 0)
+      return { id: m.id, name: m.name, color: colorOf(m.id), shared, income: st?.income ?? 0 }
+    })
+    const sharedTotal = rows.reduce((s, r) => s + r.shared, 0)
+    const incomeTotal = rows.reduce((s, r) => s + r.income, 0)
+    if (sharedTotal <= 0) return null
+    const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
+    const withPct = rows.map(r => ({ ...r, sharedPct: pct(r.shared, sharedTotal), incomePct: pct(r.income, incomeTotal) }))
+    const worst = [...withPct].sort((a, b) => Math.abs(b.sharedPct - b.incomePct) - Math.abs(a.sharedPct - a.incomePct))[0]
+    return { rows: withPct, sharedTotal, incomeTotal, worst, matches: Math.abs(worst.sharedPct - worst.incomePct) <= 5 }
+  }, [householdData, stats, categoryTiles, user?.id])
 
   if (!householdEnabled) {
     return (
@@ -250,19 +276,19 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
         </div>
 
         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 8 }}>
-          {ht.title} · Rodina {householdData?.name ?? ''}
+          Rodina {householdData?.name ?? ''} · {t.dashboard.monthResult}
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'baseline' }}>
             <span style={{
               fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
-              background: `linear-gradient(120deg, var(--aurora-hi), ${balance < 0 ? 'var(--aurora-rose)' : 'var(--aurora-cyan)'})`,
+              background: `linear-gradient(120deg, var(--aurora-hi), ${monthResult < 0 ? 'var(--aurora-rose)' : 'var(--aurora-cyan)'})`,
               WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
             }}>
-              {balance >= 0 ? '+' : '−'}{formatAmountParts(Math.abs(animatedBalance)).main}
+              {monthResult >= 0 ? '+' : '−'}{formatAmountParts(Math.abs(animatedResult)).main}
             </span>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-              {formatAmountParts(Math.abs(animatedBalance)).rest}
+              {formatAmountParts(Math.abs(animatedResult)).rest}
             </span>
           </div>
           <span style={{
@@ -273,6 +299,11 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
           }}>
             {savingsRate >= 0 ? `+${savingsRate}% ${ht.savings}` : ht.inMinus}
           </span>
+        </div>
+        {/* The big figure is this month's (the badge beside it too); the running
+            total since tracking began is a second, quieter line */}
+        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-lo)', marginTop: 8 }}>
+          {ht.sinceStart}: <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: balance < 0 ? 'var(--aurora-rose)' : 'var(--aurora-hi)' }}>{balance < 0 ? '−' : ''}{formatAmount(Math.abs(animatedBalance))}</span>
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
@@ -318,11 +349,19 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                   {ht.inviteMember}
                 </button>
               )}
+              {manage && (
+                <button
+                  type="button"
+                  onClick={() => setLeavePending(true)}
+                  style={{ padding: '5px 11px', borderRadius: 10, border: '1px solid var(--aurora-rose)', background: 'transparent', color: 'var(--aurora-rose)', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
+                >{ht.leaveHousehold}</button>
+              )}
               <button
                 type="button"
-                onClick={() => setLeavePending(true)}
-                style={{ padding: '5px 11px', borderRadius: 10, border: '1px solid var(--aurora-rose)', background: 'transparent', color: 'var(--aurora-rose)', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
-              >{ht.leaveHousehold}</button>
+                aria-pressed={manage}
+                onClick={() => setManage(v => !v)}
+                style={{ padding: '5px 11px', borderRadius: 10, border: '1px solid var(--aurora-gline)', background: manage ? 'var(--aurora-hover)' : 'transparent', color: 'var(--aurora-lo)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
+              >{manage ? ht.manageDone : ht.manage}</button>
             </div>
           )
         )}
@@ -363,7 +402,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                       <span style={{ width: 4, height: 4, borderRadius: '50%', background: memberColor, display: 'inline-block' }} />
                     </div>
                   </div>
-                  {isOwner && m.id !== user?.id && (
+                  {manage && isOwner && m.id !== user?.id && (
                     removePendingId === m.id ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                         <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{ht.confirmRemoveMember}</span>
@@ -401,31 +440,64 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                   </div>
                 </div>
 
-                {/* Rozdelenie výdavkov */}
-                {exp > 0 && (
-                  <>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', marginBottom: 6 }}>{ht.expenseBreakdown}</p>
-                    <div style={{ display: 'flex', height: 8, borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
-                      {catBreakdown.map((c, j) => (
-                        <div key={j} style={{ flex: c.val, background: c.color, transition: 'flex 0.7s' }} title={`${c.name}: ${formatAmount(c.val)}`} />
-                      ))}
-                    </div>
-                    <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, lineHeight: 1.6 }}>
-                      {catBreakdown.map((c, j) => {
-                        const catTotal = catBreakdown.reduce((s, x) => s + x.val, 0)
-                        return (
-                          <span key={j}>
-                            {j > 0 && ' · '}
-                            {c.name} <span style={{ fontFamily: "'Outfit', sans-serif", color: 'var(--aurora-lo)' }}>{formatPercent(catTotal > 0 ? (c.val / catTotal) * 100 : 0)}</span>
+                {/* Rozdelenie výdavkov: the three largest categories as rows (a 12-colour
+                    strip with a dotted paragraph under it could not be read) */}
+                {exp > 0 && (() => {
+                  const catTotal = catBreakdown.reduce((sum, x) => sum + x.val, 0)
+                  return (
+                    <>
+                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', marginBottom: 8 }}>{ht.expenseBreakdown}</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                        {catBreakdown.slice(0, 3).map(c => (
+                          <div key={c.name}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginBottom: 3 }}>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                              <span style={{ fontFamily: "'Outfit', sans-serif", color: 'var(--aurora-hi)', whiteSpace: 'nowrap' }}>{formatAmount(c.val)} <span style={{ color: 'var(--aurora-faint)' }}>{formatPercent(catTotal > 0 ? (c.val / catTotal) * 100 : 0)}</span></span>
+                            </div>
+                            <div style={{ height: 4, borderRadius: 99, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${catTotal > 0 ? (c.val / catTotal) * 100 : 0}%`, background: c.color, borderRadius: 99 }} />
+                            </div>
+                          </div>
+                        ))}
+                        {catBreakdown.length > 3 && (
+                          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
+                            {ht.andMore.replace('{n}', String(catBreakdown.length - 3))} · {formatAmount(catBreakdown.slice(3).reduce((sum, x) => sum + x.val, 0))}
                           </span>
-                        )
-                      })}
-                    </p>
-                  </>
-                )}
+                        )}
+                      </div>
+                    </>
+                  )
+                })()}
               </GlassCard>
             )
           })}
+          {whoPays && (
+            <GlassCard radius={20}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{ht.whoPaysTitle}</p>
+              {([['shared', ht.sharedSpend, whoPays.sharedTotal], ['income', ht.incomeShare, whoPays.incomeTotal]] as const).map(([kind, label, total]) => (
+                <div key={kind} style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginBottom: 6 }}>
+                    <span>{label}</span><span style={{ fontFamily: "'Outfit', sans-serif", color: 'var(--aurora-lo)' }}>{formatAmount(total)}</span>
+                  </div>
+                  <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'var(--aurora-gline)', opacity: kind === 'income' ? 0.75 : 1 }}>
+                    {whoPays.rows.map(r => <div key={r.id} style={{ width: `${kind === 'shared' ? r.sharedPct : r.incomePct}%`, background: r.color }} />)}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginTop: 6, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
+                    {whoPays.rows.map(r => (
+                      <span key={r.id} style={{ whiteSpace: 'nowrap' }}>
+                        <b style={{ color: r.color }}>{r.name}</b> {formatAmount(kind === 'shared' ? r.shared : r.income)} · {formatPercent(kind === 'shared' ? r.sharedPct : r.incomePct)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-lo)', margin: 0, paddingTop: 10, borderTop: '1px solid var(--aurora-gline)' }}>
+                {whoPays.matches
+                  ? ht.splitMatches
+                  : ht.splitDiffers.replace('{name}', whoPays.worst.name).replace('{spend}', String(whoPays.worst.sharedPct)).replace('{income}', String(whoPays.worst.incomePct))}
+              </p>
+            </GlassCard>
+          )}
         </div>
       )}
 
