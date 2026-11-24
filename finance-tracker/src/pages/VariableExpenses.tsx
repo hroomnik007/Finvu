@@ -446,7 +446,8 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
         </div>
 
         {/* Right panel — desktop only: the Dashboard budget card, every row opens that category */}
-        <div className="hidden lg:block" style={{ width: 280, flexShrink: 0, position: 'sticky', top: 20, maxHeight: 'calc(100vh - 130px)', overflowY: 'auto', margin: '20px 20px 20px 0', borderRadius: 20 }}>
+        {/* Natural height: the whole category list shows, the page scrolls (an inner scroller cut it off) */}
+        <div className="hidden lg:block" style={{ width: 280, flexShrink: 0, margin: '20px 20px 20px 0', borderRadius: 20 }}>
           <BudgetOverviewCard
             title={t.expenses.variable.categoriesAndBudget}
             items={[...budgetStatuses].sort(compareBudget((x: BudgetStatus) => budgetLevel(x.spent, x.limit, limitIsFixedOnly(categories.find(c => c.id === x.categoryId)))))}

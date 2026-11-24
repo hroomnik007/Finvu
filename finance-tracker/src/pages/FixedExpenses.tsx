@@ -389,7 +389,9 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
       <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', minHeight: 0, overflowY: 'auto', paddingLeft: 'var(--page-inset, 0px)', paddingRight: 'var(--page-inset, 0px)' }}>
 
         {/* Main area — the row above is the single scroller, so the scrollbar sits at the screen edge */}
-        <div style={{ flex: 1, minWidth: 0, paddingTop: 20, paddingLeft: 20, paddingRight: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* The room for the FAB / bottom bar is at the end of the column, not under the list —
+            there it left an empty gap above "Fixné vs Variabilné" on phones */}
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 20, paddingLeft: 20, paddingRight: 20, paddingBottom: 'var(--page-pad-bottom)', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Hero wallet card */}
           <HeroCard variant="fixed" compact>
@@ -677,7 +679,7 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
             }
 
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 'var(--page-pad-bottom)' }} onClick={() => setOpenSwipeId(null)}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} onClick={() => setOpenSwipeId(null)}>
                 {upcomingList.length > 0 && (
                   <>
                     {calendarToday > 0 && (
@@ -722,7 +724,7 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
           </div>
 
           {endedExpenses.length > 0 && (
-            <details style={{ paddingBottom: 'var(--page-pad-bottom)' }}>
+            <details>
               <summary style={{ cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-faint)' }}>
                 {t.expenses.fixed.endedSection.replace('{n}', String(endedExpenses.length))}
               </summary>
@@ -756,7 +758,7 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
         </div>
 
         {/* Right panel — desktop only */}
-        <div className="hidden lg:flex" style={{ width: 280, flexShrink: 0, position: 'sticky', top: 0, maxHeight: 'calc(100vh - 64px)', overflowY: 'auto', padding: '20px 20px 20px 0', flexDirection: 'column', gap: 16 }}>
+        <div className="hidden lg:flex" style={{ width: 280, flexShrink: 0, padding: '20px 20px 20px 0', flexDirection: 'column', gap: 16 }}>
           {nextPayment && (() => {
             const badge = countdownBadge(nextPayment.dayOfMonth - calendarToday)
             return (

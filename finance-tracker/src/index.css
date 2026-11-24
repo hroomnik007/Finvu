@@ -29,6 +29,8 @@
   --aurora-cyan:    #22D3EE;
   --aurora-emerald: #6FE0B6; /* was #34D399 — AA on emerald-tinted chips */
   --aurora-rose:    #FC94A3; /* was #FB7185 — AA on glass + rose-tinted chips */
+  /* over a budget limit: a clear red (the approved review mockup), not the pink rose */
+  --aurora-over:    #F87171;
   --aurora-amber:   #FBBF24;
   --aurora-glass:   rgba(255,255,255,.06);
   --aurora-gline:   rgba(255,255,255,.12);
@@ -66,6 +68,7 @@
   --aurora-cyan:    #06697A;
   --aurora-emerald: #046F4D;
   --aurora-rose:    #BD183C;
+  --aurora-over:    #C81E1E;
   --aurora-amber:   #9C4808;
   --aurora-glass:   rgba(255,255,255,.72);
   --aurora-gline:   rgba(34,26,46,.09);

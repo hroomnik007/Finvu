@@ -18,10 +18,11 @@ const FALLBACK_COLOR = '#6b7280'
 
 /**
  * Dashboard "Rozpočet": every category with a limit, one row each in the same
- * shape — icon, name, "52 % · 59,20 / 113,20" and a bar — fullest first, so a
- * category over its limit is simply the one at the top in red (with the limit
- * marked on its bar). A category paid exactly by its fixed payments reads
- * "100 %" in the neutral colour instead of a separate "Podľa plánu" group.
+ * shape — icon, name, "52 % · 59,20 / 113,20" and a bar — fullest first. Over
+ * the limit the row is red and its bar shows the limit part dimmed, the
+ * overspend in full and a mark at the limit (as in the approved mockup).
+ * Categories paid exactly by their fixed payments are listed apart at the end
+ * under "Podľa plánu" with a "✓ 871,73 € fixné" chip.
  */
 export function BudgetAttentionCard({ title, items, categories, empty }: {
   title: string
@@ -31,12 +32,23 @@ export function BudgetAttentionCard({ title, items, categories, empty }: {
   empty?: ReactNode
 }) {
   const { t, locale } = useTranslation()
-  const { formatPercent } = useFormatters()
+  const { formatAmount, formatPercent } = useFormatters()
   const key = (n: string) => n.trim().toLowerCase()
   const catOf = (b: BudgetAttentionItem) => categories.find(c => c.id === b.categoryId) ?? categories.find(c => key(c.name) === key(b.categoryName))
   const levelOf = (b: BudgetAttentionItem) => budgetLevel(b.spent, b.limit, limitIsFixedOnly(catOf(b)))
   const overCount = items.filter(b => levelOf(b) === 'over').length
-  const rows = [...items].sort((a, b) => b.spent / b.limit - a.spent / a.limit || b.spent - a.spent)
+  const rows = items.filter(b => levelOf(b) !== 'planned').sort((a, b) => b.spent / b.limit - a.spent / a.limit || b.spent - a.spent)
+  const planned = items.filter(b => levelOf(b) === 'planned')
+  const iconTile = (b: BudgetAttentionItem) => {
+    const cat = catOf(b)
+    const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
+    const catColor = cat?.color ?? FALLBACK_COLOR
+    return (
+      <span style={{ width: 30, height: 30, borderRadius: 9, background: catColor + '26', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon size={15} color={catColor} strokeWidth={1.8} aria-hidden />
+      </span>
+    )
+  }
   // "570,68 / 300": plain numbers, decimals only where there are some
   const num = (v: number) => new Intl.NumberFormat(locale, { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v)
 
@@ -45,26 +57,21 @@ export function BudgetAttentionCard({ title, items, categories, empty }: {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{title}</h3>
         {overCount > 0 && (
-          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--aurora-rose)', background: 'color-mix(in srgb, var(--aurora-rose) 14%, transparent)', padding: '2px 9px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--aurora-over)', background: 'color-mix(in srgb, var(--aurora-over) 14%, transparent)', padding: '2px 9px', borderRadius: 99, whiteSpace: 'nowrap' }}>
             {t.dashboard.budgetOverCount.replace('{n}', String(overCount))}
           </span>
         )}
       </div>
 
-      {items.length === 0 ? empty : rows.map(b => {
-        const cat = catOf(b)
-        const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
-        const catColor = cat?.color ?? FALLBACK_COLOR
+      {items.length === 0 ? empty : <>{rows.map(b => {
         const level = levelOf(b)
         const color = BUDGET_LEVEL_COLOR[level]
         const pct = (b.spent / b.limit) * 100
         // Past the limit the bar is the spend; the white mark shows where the limit was
         const limitAt = level === 'over' ? Math.min((b.limit / b.spent) * 100, 100) : null
         return (
-          <div key={b.categoryId} title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0' }}>
-            <span style={{ width: 30, height: 30, borderRadius: 9, background: catColor + '26', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon size={15} color={catColor} strokeWidth={1.8} aria-hidden />
-            </span>
+          <div key={b.categoryId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0' }}>
+            {iconTile(b)}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 5 }}>
                 <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{b.categoryName}</span>
@@ -73,16 +80,36 @@ export function BudgetAttentionCard({ title, items, categories, empty }: {
                   {' · '}{num(b.spent)} / {num(b.limit)}
                 </span>
               </div>
-              <div style={{ position: 'relative', height: 6, borderRadius: 9, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: 9 }} />
-                {limitAt !== null && limitAt < 100 && (
-                  <div style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${limitAt}% - 1px)`, width: 2, background: 'var(--aurora-hi)' }} />
+              <div style={{ position: 'relative', height: 6, borderRadius: 9, background: 'var(--aurora-gline)', overflow: 'hidden', display: 'flex' }}>
+                {limitAt !== null ? (
+                  <>
+                    <div style={{ height: '100%', width: `${limitAt}%`, background: color, opacity: 0.55 }} />
+                    <div style={{ height: '100%', width: `${100 - limitAt}%`, background: color }} />
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${limitAt}% - 1px)`, width: 2, background: 'var(--aurora-hi)' }} />
+                  </>
+                ) : (
+                  <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: 9 }} />
                 )}
               </div>
             </div>
           </div>
         )
       })}
+
+      {planned.length > 0 && (
+        <>
+          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11.5, color: 'var(--aurora-faint)', margin: rows.length > 0 ? '10px 0 2px' : '0 0 2px', paddingTop: rows.length > 0 ? 10 : 0, borderTop: rows.length > 0 ? '1px solid var(--aurora-gline)' : 'none' }}>{t.dashboard.budgetPlanned}</p>
+          {planned.map(b => (
+            <div key={b.categoryId} title={t.expenses.categories.paidAsPlanned} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+              {iconTile(b)}
+              <span style={{ flex: 1, minWidth: 0, fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.categoryName}</span>
+              <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--aurora-lo)', background: 'color-mix(in srgb, var(--aurora-lo) 16%, transparent)', padding: '2px 8px', borderRadius: 99, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                ✓ {formatAmount(b.spent)} {t.dashboard.fixedSuffix}
+              </span>
+            </div>
+          ))}
+        </>
+      )}</>}
     </GlassCard>
   )
 }

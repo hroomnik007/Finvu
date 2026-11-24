@@ -46,7 +46,8 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
   // Only the overviews switch between own and family figures; Príjmy, Výdavky and
   // Kategórie are always the user's own (family data lives in Domácnosť)
   const showToggle = householdEnabled && (page === 'dashboard' || page === 'annual')
-  const showAdd = !(['household', 'settings'] as string[]).includes(page)
+  // Hľadať only searches: no Pridať there (phone or desktop)
+  const showAdd = !(['household', 'settings', 'search'] as string[]).includes(page)
 
   const minDate = useMemo(() => {
     const src = user?.tracking_start_date ?? user?.createdAt

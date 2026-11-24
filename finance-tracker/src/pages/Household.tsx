@@ -229,7 +229,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
     return tiles.sort((x, y) => Number(y.shared) - Number(x.shared) || (x.shared ? used(y) - used(x) : x.name.localeCompare(y.name)))
   }, [stats, categories, user?.id])
 
-  // "Kto koľko platí": each member's part of the shared categories' spend next
+  // "Podiel členov": each member's part of the shared categories' spend next
   // to their part of the income (the same per-member stats as the tiles)
   const monthResult = totalIncome - totalExpenses
   const whoPays = useMemo(() => {
@@ -248,8 +248,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
     if (sharedTotal <= 0) return null
     const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
     const withPct = rows.map(r => ({ ...r, sharedPct: pct(r.shared, sharedTotal), incomePct: pct(r.income, incomeTotal) }))
-    const worst = [...withPct].sort((a, b) => Math.abs(b.sharedPct - b.incomePct) - Math.abs(a.sharedPct - a.incomePct))[0]
-    return { rows: withPct, sharedTotal, incomeTotal, worst, matches: Math.abs(worst.sharedPct - worst.incomePct) <= 5 }
+    return { rows: withPct, sharedTotal, incomeTotal }
   }, [householdData, stats, categoryTiles, user?.id])
 
   if (!householdEnabled) {
@@ -504,10 +503,11 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
             )
           })}
           {whoPays && (
-            <GlassCard radius={20}>
+            // Own height in the grid row (stretched to the member cards it was half empty)
+            <GlassCard radius={20} style={{ alignSelf: 'start' }}>
               <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{ht.whoPaysTitle}</p>
               {([['shared', ht.sharedSpend, whoPays.sharedTotal], ['income', ht.incomeShare, whoPays.incomeTotal]] as const).map(([kind, label, total]) => (
-                <div key={kind} style={{ marginBottom: 14 }}>
+                <div key={kind} style={{ marginBottom: kind === 'shared' ? 14 : 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginBottom: 6 }}>
                     <span>{label}</span><span style={{ fontFamily: "'Outfit', sans-serif", color: 'var(--aurora-lo)' }}>{formatAmount(total)}</span>
                   </div>
@@ -523,11 +523,6 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                   </div>
                 </div>
               ))}
-              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12.5, color: 'var(--aurora-lo)', margin: 0, paddingTop: 10, borderTop: '1px solid var(--aurora-gline)' }}>
-                {whoPays.matches
-                  ? ht.splitMatches
-                  : ht.splitDiffers.replace('{name}', whoPays.worst.name).replace('{spend}', String(whoPays.worst.sharedPct)).replace('{income}', String(whoPays.worst.incomePct))}
-              </p>
             </GlassCard>
           )}
         </div>

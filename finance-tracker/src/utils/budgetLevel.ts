@@ -35,7 +35,7 @@ export function budgetLevel(spent: number, limit: number, fixedOnly = false): Bu
 export const BUDGET_LEVEL_COLOR: Record<BudgetLevel, string> = {
   ok: 'var(--aurora-emerald)',
   near: 'var(--aurora-amber)',
-  over: 'var(--aurora-rose)',
+  over: 'var(--aurora-over)',
   planned: 'var(--aurora-lo)',
 }
 
