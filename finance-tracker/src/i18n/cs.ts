@@ -774,6 +774,9 @@ export const cs: Translations = {
     emptyCategory: 'Vytvořit kategorii',
   },
   common: {
+    saveChanges: 'Uložit změny',
+    today: 'Dnes',
+    yesterday: 'Včera',
     needAmount: 'Zadej částku',
     needName: 'Zadej název',
     needCategory: 'Vyber kategorii',
@@ -1051,6 +1054,8 @@ export const cs: Translations = {
     savingsDesc: 'Nový spořicí cíl',
     saveIncome: 'Uložit příjem',
     saveExpense: 'Uložit výdaj',
+    leftAfter: 'Po zapsání zbude {amount}',
+    overAfter: 'Po zapsání {amount} nad limitem',
     saveFixed: 'Uložit fixní výdaj',
     saveCategory: 'Vytvořit kategorii',
     saveSavings: 'Vytvořit cíl',

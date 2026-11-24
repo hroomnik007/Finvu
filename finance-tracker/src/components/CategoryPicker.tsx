@@ -70,6 +70,25 @@ export function CategoryPicker({ categories, selectedId, onPick, gradient = fals
     return () => ro.disconnect()
   })
 
+  // A mouse wheel only scrolls vertically and the row hides its scrollbar, so
+  // without a touchpad the folded row could only be moved with Shift + wheel.
+  // Turn a vertical turn into a sideways scroll while the row can still move.
+  useEffect(() => {
+    const el = rowRef.current
+    if (!el || expanded) return
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+      const max = el.scrollWidth - el.clientWidth
+      if (max <= 0) return
+      const next = Math.min(max, Math.max(0, el.scrollLeft + e.deltaY))
+      if (next === el.scrollLeft) return
+      e.preventDefault()
+      el.scrollLeft = next
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [expanded])
+
   // Keep the chosen category in view in the folded row (suggestion, edit, pick from the grid).
   // Only the row scrolls sideways: scrollIntoView would also move the modal.
   useEffect(() => {

@@ -911,6 +911,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         onClose={closeSheet}
         icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
         title={editing ? t.expenses.categories.editTitle : t.expenses.categories.newTitle}
+        submitLabel={editing ? t.common.saveChanges : t.fab.saveCategory}
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         submitDisabled={!name.trim()}

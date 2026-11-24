@@ -756,6 +756,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         onClose={closeSheet}
         icon={Repeat} iconColor="#FBBF24" iconBg="rgba(251,191,36,.16)"
         title={editing ? t.expenses.fixed.editTitle : t.expenses.fixed.newTitle}
+        submitLabel={editing ? t.common.saveChanges : t.fab.saveFixed}
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={handleSave}
         autoFocusAmount={!editing}

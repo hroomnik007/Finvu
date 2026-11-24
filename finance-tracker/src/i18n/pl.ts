@@ -774,6 +774,9 @@ export const pl: Translations = {
     emptyCategory: 'Utwórz kategorię',
   },
   common: {
+    saveChanges: 'Zapisz zmiany',
+    today: 'Dziś',
+    yesterday: 'Wczoraj',
     needAmount: 'Wpisz kwotę',
     needName: 'Wpisz nazwę',
     needCategory: 'Wybierz kategorię',
@@ -1051,6 +1054,8 @@ export const pl: Translations = {
     savingsDesc: 'Nowy cel oszczędnościowy',
     saveIncome: 'Zapisz przychód',
     saveExpense: 'Zapisz wydatek',
+    leftAfter: 'Po zapisaniu zostanie {amount}',
+    overAfter: 'Po zapisaniu {amount} ponad limit',
     saveFixed: 'Zapisz stały wydatek',
     saveCategory: 'Utwórz kategorię',
     saveSavings: 'Utwórz cel',

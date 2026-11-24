@@ -12,7 +12,6 @@ import { useFixedExpenses } from '../hooks/useFixedExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
-import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
@@ -27,7 +26,7 @@ import AmountInput from './AmountInput'
 import { AmountEntry } from './AmountEntry'
 import { CategoryCircle, CategoryPicker } from './CategoryPicker'
 import { parseAmountInput } from '../utils/amountInput'
-import { budgetLevel, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
+import { BudgetPreview } from './BudgetPreview'
 
 type ModalType = 'income' | 'variable' | 'fixed' | 'category' | 'savings' | null
 
@@ -123,7 +122,6 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
   const quickCategories = useCategoriesByUsage(categories)
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses })
   const { addGoal } = useSavings()
-  const { formatAmount } = useFormatters()
   const { t } = useTranslation()
   const { user } = useAuth()
   const feedback = useSaveFeedback()
@@ -305,8 +303,6 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
   const liveVarAmt = parseAmountInput(varAmt) ?? 0
   const liveSpent = liveBudget ? liveBudget.spent + liveVarAmt : 0
   const liveLimit = liveBudget?.limit
-  const livePct = liveLimit ? Math.min((liveSpent / liveLimit) * 100, 100) : null
-  const livePctColor = liveLimit ? BUDGET_LEVEL_COLOR[budgetLevel(liveSpent, liveLimit)] : BUDGET_LEVEL_COLOR.ok
 
   // ── Only render on allowed pages ──────────────────────────────────────────
   if (!ALL_ACTIVE_PAGES.includes(currentPage)) return null
@@ -405,6 +401,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         open={activeModal === 'income'} onClose={closeModal}
         icon={ArrowUp} iconColor="#34D399" iconBg="rgba(52,211,153,.16)"
         title={t.income.addTitle}
+        submitLabel={t.fab.saveIncome}
         accent="#34D399" accent2="#22D3EE"
         onSubmit={saveIncome}
         submitDisabled={!incLabel.trim() || !incAmt}
@@ -441,6 +438,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         open={activeModal === 'variable'} onClose={closeModal}
         icon={ArrowDown} iconColor="#FB7185" iconBg="rgba(251,113,133,.16)"
         title={t.expenses.variable.addTitle}
+        submitLabel={t.fab.saveExpense}
         accent="#FB7185" accent2="#f43f5e"
         onSubmit={saveVariable}
         submitDisabled={varNewCatMode ? !varNewCatName.trim() || !varAmt : !varCatId || !varAmt}
@@ -449,16 +447,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       >
         <AmountField value={varAmt} onChange={setVarAmt} accent="#FB7185" />
 
-        {livePct !== null && liveLimit != null && (
-          <div style={{ borderRadius: 12, padding: '10px 12px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif" }}>
-              <span>{liveBudget?.categoryName}</span>
-              <span>{formatAmount(liveSpent)} / {formatAmount(liveLimit)}</span>
-            </div>
-            <div style={{ height: 4, borderRadius: 2, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 2, width: `${livePct}%`, background: livePctColor }} />
-            </div>
-          </div>
+        {liveLimit != null && liveLimit > 0 && (
+          <BudgetPreview name={liveBudget?.categoryName ?? ''} spent={liveSpent} limit={liveLimit} showAfter={liveVarAmt > 0} />
         )}
 
         {!varNewCatMode ? (
@@ -485,13 +475,13 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <DateInput compact value={varDate} onChange={setVarDate} />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <DateInput compact quick value={varDate} onChange={setVarDate} />
           <input
             type="text" placeholder={t.expenses.variable.notePlaceholder}
             value={varNote}
             onChange={e => setVarNote(e.target.value)}
-            style={{ ...finputStyle, flex: 1, width: 'auto', minWidth: 0, padding: '8px 12px', borderRadius: 12, fontSize: 12 }}
+            style={{ ...finputStyle, flex: '1 1 140px', width: 'auto', minWidth: 0, padding: '8px 12px', borderRadius: 12, fontSize: 12 }}
           />
         </div>
         <SuggestedCategoryHint name={categoryName(varSuggestion.suggestedId)} />
@@ -502,6 +492,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         open={activeModal === 'fixed'} onClose={closeModal}
         icon={Repeat} iconColor="#FBBF24" iconBg="rgba(251,191,36,.16)"
         title={t.expenses.fixed.newTitle}
+        submitLabel={t.fab.saveFixed}
         accent="#FBBF24" accent2="#f59e0b"
         onSubmit={saveFixed}
         submitDisabled={!fixLabel.trim() || !fixAmt}
@@ -582,6 +573,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         open={activeModal === 'category'} onClose={closeModal}
         icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
         title={t.expenses.categories.newTitle}
+        submitLabel={t.fab.saveCategory}
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={saveCategory}
         submitDisabled={!catName.trim()}
@@ -649,6 +641,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         open={activeModal === 'savings'} onClose={closeModal}
         icon={PiggyBank} iconColor="#A855F7" iconBg="rgba(168,85,247,.16)"
         title={t.savings.addTitle}
+        submitLabel={t.fab.saveSavings}
         accent="#A855F7" accent2="#8B5CF6"
         onSubmit={saveSavingsGoal}
         submitDisabled={!savName.trim() || !savTarget}

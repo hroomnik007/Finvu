@@ -1,11 +1,15 @@
 import { useRef } from 'react'
 import { Calendar } from 'lucide-react'
 import { useSettingsContext } from '../context/SettingsContext'
+import { useTranslation } from '../i18n'
+import { todayISO, toLocalISO } from '../utils/format'
 
 interface DateInputProps {
   value: string // always YYYY-MM-DD
   onChange: (value: string) => void
   compact?: boolean
+  /** Compact only: "Dnes" / "Včera" one-tap choices before the date (expense forms). */
+  quick?: boolean
 }
 
 function formatForDisplay(dateStr: string, fmt: string): string {
@@ -25,9 +29,10 @@ function formatForDisplay(dateStr: string, fmt: string): string {
   }
 }
 
-export function DateInput({ value, onChange, compact }: DateInputProps) {
+export function DateInput({ value, onChange, compact, quick }: DateInputProps) {
   const hiddenRef = useRef<HTMLInputElement>(null)
   const { settings } = useSettingsContext()
+  const { t } = useTranslation()
   const displayValue = formatForDisplay(value, settings.dateFormat)
 
   const openPicker = () => {
@@ -37,6 +42,49 @@ export function DateInput({ value, onChange, compact }: DateInputProps) {
     } catch {
       hiddenRef.current.click()
     }
+  }
+
+  if (compact && quick) {
+    // Most entries are from today or yesterday: one tap instead of the picker
+    const today = todayISO()
+    const y = new Date(); y.setDate(y.getDate() - 1)
+    const yesterday = toLocalISO(y)
+    const chip = (label: string, iso: string) => (
+      <button
+        type="button"
+        aria-pressed={value === iso}
+        onClick={() => onChange(iso)}
+        style={{
+          flexShrink: 0, padding: '8px 11px', borderRadius: 12, cursor: 'pointer',
+          fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+          background: value === iso ? 'color-mix(in srgb, var(--accent-color, #3B82F6) 20%, transparent)' : 'var(--aurora-glass)',
+          border: `1px solid ${value === iso ? 'color-mix(in srgb, var(--accent-color, #3B82F6) 55%, transparent)' : 'var(--aurora-gline)'}`,
+          color: value === iso ? 'var(--aurora-hi)' : 'var(--aurora-lo)',
+        }}
+      >{label}</button>
+    )
+    return (
+      <div style={{ display: 'inline-flex', gap: 6, flexShrink: 0 }}>
+        {chip(t.common.today, today)}
+        {chip(t.common.yesterday, yesterday)}
+        {value !== today && value !== yesterday
+          ? <DateInput compact value={value} onChange={onChange} />
+          : (
+            // Picker for any other day, as an icon until another day is chosen
+            <div style={{ position: 'relative', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 38, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, cursor: 'pointer' }} onClick={openPicker}>
+              <Calendar size={14} color="var(--aurora-lo)" />
+              <input
+                ref={hiddenRef}
+                type="date"
+                aria-label={displayValue}
+                value={value}
+                onChange={e => { if (e.target.value) onChange(e.target.value) }}
+                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', fontSize: 0, border: 'none', background: 'none', colorScheme: 'var(--aurora-color-scheme)' }}
+              />
+            </div>
+          )}
+      </div>
+    )
   }
 
   if (compact) {

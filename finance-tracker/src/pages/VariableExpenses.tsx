@@ -17,7 +17,8 @@ import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useFixedExpenses } from '../hooks/useFixedExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { BudgetOverviewCard } from '../components/BudgetOverviewCard'
-import { budgetLevel, compareBudget, limitIsFixedOnly, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
+import { budgetLevel, compareBudget, limitIsFixedOnly } from '../utils/budgetLevel'
+import { BudgetPreview } from '../components/BudgetPreview'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
@@ -166,8 +167,6 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const liveAmount = parseAmountInput(form.amount) ?? 0
   const liveSpent = (liveBudget?.spent ?? 0) + (editing ? 0 : liveAmount)
   const liveLimit = liveBudget?.limit
-  const livePct = liveLimit ? Math.min((liveSpent / liveLimit) * 100, 100) : null
-  const liveBudgetBarColor = liveLimit ? BUDGET_LEVEL_COLOR[budgetLevel(liveSpent, liveLimit)] : BUDGET_LEVEL_COLOR.ok
 
   const openAdd = () => {
     setEditing(null)
@@ -453,6 +452,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         onClose={() => setSheetOpen(false)}
         icon={ArrowDown} iconColor="#FB7185" iconBg="rgba(251,113,133,.16)"
         title={editing ? t.expenses.variable.editTitle : t.expenses.variable.addTitle}
+        submitLabel={editing ? t.common.saveChanges : t.fab.saveExpense}
         accent="#FB7185" accent2="#f43f5e"
         onSubmit={handleSave}
         autoFocusAmount={!editing}
@@ -463,16 +463,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
       >
         <AmountEntry value={form.amount} onValueChange={v => setForm(f => ({ ...f, amount: v }))} />
 
-        {livePct !== null && liveLimit && (
-          <div style={{ borderRadius: 12, padding: '10px 12px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif" }}>
-              <span>{liveBudget?.categoryName}</span>
-              <span>{formatAmount(liveSpent)} / {formatAmount(liveLimit)}</span>
-            </div>
-            <div style={{ height: 4, borderRadius: 2, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 2, width: `${livePct}%`, background: liveBudgetBarColor }} />
-            </div>
-          </div>
+        {liveLimit != null && liveLimit > 0 && (
+          <BudgetPreview name={liveBudget?.categoryName ?? ''} spent={liveSpent} limit={liveLimit} showAfter={!editing && liveAmount > 0} />
         )}
 
         {!newCatMode ? (
@@ -500,14 +492,14 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <DateInput compact value={form.date} onChange={date => setForm(f => ({ ...f, date }))} />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <DateInput compact quick value={form.date} onChange={date => setForm(f => ({ ...f, date }))} />
           <input
             type="text"
             placeholder={t.expenses.variable.notePlaceholder}
             value={form.note}
             onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-            style={{ flex: 1, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '8px 12px', color: 'var(--aurora-hi)', fontSize: 12, fontFamily: "'Manrope', sans-serif", outline: 'none', minWidth: 0 }}
+            style={{ flex: '1 1 140px', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 12, padding: '8px 12px', color: 'var(--aurora-hi)', fontSize: 12, fontFamily: "'Manrope', sans-serif", outline: 'none', minWidth: 0 }}
           />
         </div>
         <SuggestedCategoryHint name={quickCategories.find(c => c.id === suggestion.suggestedId)?.name} />

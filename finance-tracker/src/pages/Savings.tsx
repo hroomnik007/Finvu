@@ -493,6 +493,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         iconColor="#8B5CF6"
         iconBg="rgba(139,92,246,.16)"
         title={selectedGoal ? t.savings.editTitle : t.savings.addTitle}
+        submitLabel={selectedGoal ? t.common.saveChanges : t.fab.saveSavings}
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         submitDisabled={saveDisabled}

@@ -774,6 +774,9 @@ export const hu: Translations = {
     emptyCategory: 'Kategória létrehozása',
   },
   common: {
+    saveChanges: 'Változások mentése',
+    today: 'Ma',
+    yesterday: 'Tegnap',
     needAmount: 'Add meg az összeget',
     needName: 'Add meg a nevet',
     needCategory: 'Válassz kategóriát',
@@ -1051,6 +1054,8 @@ export const hu: Translations = {
     savingsDesc: 'Új megtakarítási cél',
     saveIncome: 'Bevétel mentése',
     saveExpense: 'Kiadás mentése',
+    leftAfter: 'Rögzítés után {amount} marad',
+    overAfter: 'Rögzítés után {amount}-tal a limit felett',
     saveFixed: 'Fix kiadás mentése',
     saveCategory: 'Kategória létrehozása',
     saveSavings: 'Cél létrehozása',

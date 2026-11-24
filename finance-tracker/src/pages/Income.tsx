@@ -362,6 +362,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
         onClose={() => setSheetOpen(false)}
         icon={ArrowUp} iconColor="#34D399" iconBg="rgba(52,211,153,.16)"
         title={editing ? t.income.editTitle : t.income.addTitle}
+        submitLabel={editing ? t.common.saveChanges : t.fab.saveIncome}
         accent="#34D399" accent2="#22D3EE"
         onSubmit={handleSave}
         autoFocusAmount={!editing}

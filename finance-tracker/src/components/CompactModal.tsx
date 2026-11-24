@@ -30,11 +30,13 @@ interface CompactModalProps {
   autoFocusAmount?: boolean
   /** Shows a visible "Zmazať" button next to save (edit forms). */
   onDelete?: () => void
+  /** Text of the save button, e.g. "Uložiť výdavok" (default: "Uložiť"). */
+  submitLabel?: string
 }
 
 export function CompactModal({
   open, onClose, icon: Icon, iconColor, iconBg, title,
-  accent, accent2, onSubmit, submitDisabled, submitHint, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount, onDelete,
+  accent, accent2, onSubmit, submitDisabled, submitHint, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount, onDelete, submitLabel,
 }: CompactModalProps) {
   const { t } = useTranslation()
   const [padSlot, setPadSlot] = useState<HTMLDivElement | null>(null)
@@ -160,12 +162,12 @@ export function CompactModal({
             onClick={handleSubmit}
             disabled={disabled}
             aria-busy={busy}
-            aria-label={busy ? t.common.saving : t.common.save}
-            title={busy ? t.common.saving : t.common.save}
+            // A labelled button says what happens; the bare ✓ circle did not
             style={{
-              width: 44, height: 44, borderRadius: '50%',
+              minHeight: 44, padding: '0 18px', borderRadius: 14, gap: 8,
               background: `linear-gradient(135deg,${accent},${accent2})`,
               border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap',
               boxShadow: disabled ? 'none' : `0 8px 22px ${accent}66`,
               cursor: busy ? 'progress' : disabled ? 'not-allowed' : 'pointer',
               opacity: submitDisabled && !busy ? 0.5 : busy ? 0.8 : 1,
@@ -174,8 +176,9 @@ export function CompactModal({
             }}
           >
             {busy
-              ? <Loader2 size={18} color="#fff" strokeWidth={2.4} className="animate-spin" aria-hidden />
-              : <Check size={18} color="#fff" strokeWidth={2.4} aria-hidden />}
+              ? <Loader2 size={16} color="#fff" strokeWidth={2.4} className="animate-spin" aria-hidden />
+              : <Check size={16} color="#fff" strokeWidth={2.4} aria-hidden />}
+            {busy ? t.common.saving : (submitLabel ?? t.common.save)}
           </button>
         </div>
       </div>

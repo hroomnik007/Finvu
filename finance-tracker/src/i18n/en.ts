@@ -774,6 +774,9 @@ export const en: Translations = {
     emptyCategory: 'Create category',
   },
   common: {
+    saveChanges: 'Save changes',
+    today: 'Today',
+    yesterday: 'Yesterday',
     needAmount: 'Enter an amount',
     needName: 'Enter a name',
     needCategory: 'Pick a category',
@@ -1051,6 +1054,8 @@ export const en: Translations = {
     savingsDesc: 'New savings goal',
     saveIncome: 'Save income',
     saveExpense: 'Save expense',
+    leftAfter: '{amount} left after this',
+    overAfter: '{amount} over the limit after this',
     saveFixed: 'Save fixed expense',
     saveCategory: 'Create category',
     saveSavings: 'Create goal',

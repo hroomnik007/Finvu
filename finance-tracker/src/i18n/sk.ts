@@ -772,6 +772,9 @@ export const sk = {
     emptyCategory: 'Vytvoriť kategóriu',
   },
   common: {
+    saveChanges: 'Uložiť zmeny',
+    today: 'Dnes',
+    yesterday: 'Včera',
     needAmount: 'Zadaj sumu',
     needName: 'Zadaj názov',
     needCategory: 'Vyber kategóriu',
@@ -1049,6 +1052,8 @@ export const sk = {
     savingsDesc: 'Nový cieľ sporenia',
     saveIncome: 'Uložiť príjem',
     saveExpense: 'Uložiť výdavok',
+    leftAfter: 'Po zapísaní ostane {amount}',
+    overAfter: 'Po zapísaní {amount} nad limitom',
     saveFixed: 'Uložiť fixný výdavok',
     saveCategory: 'Vytvoriť kategóriu',
     saveSavings: 'Vytvoriť cieľ',
