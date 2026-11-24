@@ -23,7 +23,7 @@ import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation, getLocalizedMonthNames } from '../i18n'
-import { dayHeaderParts, signFor } from '../utils/format'
+import { dayHeaderParts } from '../utils/format'
 import { pluralCount, pluralText } from '../utils/plural'
 import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
 import { defaultEntryDate } from '../utils/entryDefaults'
@@ -85,6 +85,7 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
     useVariableExpenses(month, year, scope)
   const listFailed = listError && variableExpenses.length === 0
   const { fixedExpenses } = useFixedExpenses(month, year, scope)
+  const { variableExpenses: prevVariable } = useVariableExpenses(month === 1 ? 12 : month - 1, month === 1 ? year - 1 : year, scope)
   const { categories, addCategory } = useCategories()
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year, family: scope === 'family' })
   const { isMine, ownerOf } = useRowOwner(scope)
@@ -253,6 +254,16 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
     ).reduce((sum, e) => sum + e.amount, 0)
   , [variableExpenses, activeCategory, inCategory])
   const animatedFilteredTotal = useCountUp(filteredTotal, 800)
+  // Days the total covers (up to today in the running month) and the month before, same filter
+  const daysCounted = (() => {
+    const n = new Date()
+    if (year > n.getFullYear() || (year === n.getFullYear() && month > n.getMonth() + 1)) return 0
+    return year === n.getFullYear() && month === n.getMonth() + 1 ? n.getDate() : new Date(year, month, 0).getDate()
+  })()
+  const prevMonthName = (getLocalizedMonthNames(locale)[(month + 10) % 12] ?? '').toLocaleLowerCase(locale)
+  const prevVariableTotal = useMemo(() =>
+    (activeCategory ? prevVariable.filter(e => inCategory(e, activeCategory)) : prevVariable).reduce((sum, e) => sum + e.amount, 0),
+  [prevVariable, activeCategory, inCategory])
 
   const categoriesWithExpenses = useMemo(
     () => categories.filter(c => c.id && variableExpenses.some(e => inCategory(e, c.id!))),
@@ -300,10 +311,11 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
             <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const }}>
               <span style={{
                 fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
-                background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-rose))',
+                // The title already says these are expenses: no minus, no alarm red
+                background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-lo))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>
-                {signFor(animatedFilteredTotal, '−')}{formatAmountParts(animatedFilteredTotal).main}
+                {formatAmountParts(animatedFilteredTotal).main}
               </span>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
                 {formatAmountParts(animatedFilteredTotal).rest}
@@ -311,7 +323,11 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
             </div>
             )}
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 12 }}>
-              {listLoading || listFailed ? '\u00a0' : t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length))}
+              {listLoading || listFailed ? '\u00a0' : [
+                t.expenses.transactionsThisMonth.replace('{n}', String(filteredSorted.length)),
+                daysCounted > 0 ? t.expenses.avgPerDay.replace('{amount}', formatAmount(filteredTotal / daysCounted)) : '',
+                prevVariableTotal > 0 ? `${prevMonthName} ${formatAmount(prevVariableTotal)}` : '',
+              ].filter(Boolean).join(' · ')}
             </div>
           </HeroCard>
 
@@ -410,7 +426,7 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
                       const name = e.note || cat?.name || t.expenses.variable.defaultExpense
                       const subtitle = e.note ? (cat?.name ?? '—') : ''
                       return (
-                        <DenseRow key={e.id} onClick={() => rowClick(e)} selected={selectedIds.has(e.id!)}>
+                        <DenseRow className="expense-row" key={e.id} onClick={() => rowClick(e)} selected={selectedIds.has(e.id!)}>
                           <div style={{ width: 38, height: 38, borderRadius: 12, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
                           </div>
@@ -422,8 +438,10 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-expense)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
                             {owner && <span title={owner.name} style={{ display: 'flex', marginRight: 6 }}><MemberAvatar userId={owner.id} userName={owner.name} size={22} avatarUrl={owner.avatar_url} /></span>}
+                            <span className="expense-actions" style={{ display: 'inline-flex', gap: 4 }}>
                             {!selectMode && isMine(e.created_by) && <button onClick={() => openEdit(e)} disabled={!rowActions(e, offline, isMine(e.created_by)).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
                             {!selectMode && isMine(e.created_by) && <button onClick={() => removeWithUndo(e.id!)} disabled={!rowActions(e, offline, isMine(e.created_by)).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
+                            </span>
                           </div>
                         </DenseRow>
                       )

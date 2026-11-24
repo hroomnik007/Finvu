@@ -285,8 +285,7 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
 
   const yearlyContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 24, fontWeight: 700, color: 'var(--aurora-hi)', letterSpacing: '-0.5px' }}>{formatAmount(total * 12)}</div>
-      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginBottom: 8 }}>{formatAmount(total)} × 12 {t.expenses.fixed.monthly.toLowerCase()}</div>
+      {/* The year's total is already in the hero ("Ročne"); the panel splits it by category */}
       {categoryTotals.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
           {categoryTotals.map(({ id, amount: catAmt }) => {
@@ -587,18 +586,6 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
             </div>
           )}
 
-          {/* Mobile: vs variable card */}
-          <div className="lg:hidden">
-            {vsContent && (
-              <div>
-                <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.vsVariable}</h3>
-                <GlassCard radius={18}>
-                  {vsContent}
-                </GlassCard>
-              </div>
-            )}
-          </div>
-
           {/* Expense list — upcoming/past split (mobile: hidden while calendar view is active) */}
           <div className={mobileView === 'list' ? undefined : 'hidden lg:block'}>
           {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : fixedExpenses.length === 0 ? (
@@ -742,6 +729,17 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
             </details>
           )}
 
+          {/* Mobile: vs variable card — after the payments, which are what the page is for */}
+          <div className="lg:hidden">
+            {vsContent && (
+              <div>
+                <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.vsVariable}</h3>
+                <GlassCard radius={18}>
+                  {vsContent}
+                </GlassCard>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right panel — desktop only */}
@@ -760,7 +758,7 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
             )
           })()}
           <GlassCard radius={16}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.yearly}</p>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.expenses.fixed.byCategory}</p>
             {yearlyContent}
           </GlassCard>
           {vsContent && (

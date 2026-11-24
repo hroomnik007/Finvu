@@ -1093,9 +1093,14 @@ html.fab-hidden .fab-auto-hide {
 /* Swipe-to-delete: hidden on desktop */
 @media (min-width: 1024px) { .swipe-actions { display: none !important; } }
 
-/* Fixed expense card actions: fade-in on hover (desktop), hidden on mobile */
-.expense-actions { opacity: 0; transition: opacity 0.12s; }
-.expense-row:hover .expense-actions { opacity: 1; }
+/* Row actions (edit / delete) on Príjmy, Variabilné, Fixné: shown on hover or
+   keyboard focus on pointer devices — the row itself opens the editor, so a
+   pencil and a bin on every row were only noise; touch keeps swipe-to-delete */
+@media (hover: hover) {
+  .expense-actions { opacity: 0; transition: opacity 0.12s; }
+  .expense-row:hover .expense-actions,
+  .expense-row:focus-within .expense-actions { opacity: 1; }
+}
 
 @keyframes sparkle {
   0%   { opacity: 0; transform: scale(0.5) rotate(-20deg); }

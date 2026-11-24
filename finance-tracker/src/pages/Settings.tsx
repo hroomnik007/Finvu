@@ -143,14 +143,6 @@ function SettingRow({ label, sublabel, children }: { label: string; sublabel?: R
 
 // Desktop-only cell for the 2-column settings grids — label above,
 // control sits inside a darker sunken box so cells read as compact, aligned units.
-function CompactSettingCell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', margin: 0 }}>{label}</p>
-      <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid var(--aurora-gline)', borderRadius: 8, padding: '10px 12px' }}>{children}</div>
-    </div>
-  )
-}
 
 function ChevronRow({ icon: Icon, iconColor, iconBg, label, sublabel, onClick }: {
   icon: LucideIcon; iconColor: string; iconBg: string; label: string; sublabel?: React.ReactNode; onClick: () => void
@@ -1075,8 +1067,9 @@ export function SettingsPage() {
               <div className="settings-general-compact">
               <SectionCard>
                 <SectionHeader icon={User} label={t.settings.generalSection} />
-                {/* Mobile: single column, unchanged */}
-                <div className="lg:hidden divide-y divide-white/[0.04]">
+                {/* One layout for all widths: label left, control right (the desktop
+                    2x2 grid put each small control inside a big sunken box) */}
+                <div className="divide-y divide-white/[0.04]">
                   <SettingRow label={t.settings.currency}>
                     <SettingsDropdown
                       value={settings.currency}
@@ -1123,54 +1116,6 @@ export function SettingsPage() {
                   </SettingRow>
                 </div>
 
-                {/* Desktop: compact 2x2 grid, label above a sunken control box */}
-                <div className="hidden lg:grid lg:grid-cols-2" style={{ gap: 20, padding: 20 }}>
-                  <CompactSettingCell label={t.settings.currency}>
-                    <SettingsDropdown
-                      value={settings.currency}
-                      options={CURRENCIES}
-                      onChange={v => updateSettings({ currency: v })}
-                    />
-                  </CompactSettingCell>
-
-                  <CompactSettingCell label={t.settings.language}>
-                    <LanguageSwitcher
-                      variant="full"
-                      onLanguageChange={lang => {
-                        updateUserSettings({ language: lang }).catch(() => { /* non-critical */ })
-                      }}
-                    />
-                  </CompactSettingCell>
-
-                  <CompactSettingCell label={t.settings.dateFormat}>
-                    <SettingsDropdown
-                      value={settings.dateFormat}
-                      options={DATE_FORMATS}
-                      onChange={v => updateSettings({ dateFormat: v })}
-                    />
-                  </CompactSettingCell>
-
-                  <CompactSettingCell label={t.settings.firstDayOfWeek}>
-                    <div style={{ display: 'flex', background: 'var(--aurora-glass)', borderRadius: 10, padding: 3, border: '1px solid var(--aurora-gline)', width: 'fit-content' }}>
-                      {(['monday', 'sunday'] as const).map((day, i) => (
-                        <button
-                          key={day}
-                          onClick={() => updateSettings({ firstDayOfWeek: day })}
-                          style={{
-                            padding: '5px 16px', borderRadius: 7, fontSize: 13,
-                            fontWeight: settings.firstDayOfWeek === day ? 600 : 400,
-                            background: settings.firstDayOfWeek === day ? 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))' : 'transparent',
-                            color: settings.firstDayOfWeek === day ? 'white' : 'var(--aurora-lo)',
-                            border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", transition: 'all 0.15s',
-                          }}
-                        >
-                          {i === 0 ? t.daysShort[0] : t.daysShort[6]}
-                        </button>
-                      ))}
-                    </div>
-                  </CompactSettingCell>
-                </div>
-                <p className="hidden lg:block" style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0, padding: '0 20px 16px' }}>{t.settings.languageNote}</p>
               </SectionCard>
               </div>
 

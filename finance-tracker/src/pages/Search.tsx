@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext'
 import AmountInput from '../components/AmountInput'
 import { parseAmountInput } from '../utils/amountInput'
 import { DayHeader, DenseCard, DenseRow } from '../components/DenseList'
+import { DateInput } from '../components/DateInput'
 import { groupByDay, signedAmount } from '../utils/groupByDay'
 import { dayHeaderParts } from '../utils/format'
 import { pluralCount } from '../utils/plural'
@@ -38,6 +39,18 @@ const chipStyle = (active: boolean): React.CSSProperties => ({
 })
 
 // "12,5" or "12.5" → 12.5; empty or invalid → undefined
+// The app's date field (DD.MM.YYYY per Settings) with a clear button, instead
+// of the browser's own date input whose format follows the browser language
+function DateField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t } = useTranslation()
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <DateInput compact value={value} onChange={onChange} />
+      {value && <button type="button" onClick={() => onChange('')} aria-label={t.search.reset} title={t.search.reset} style={{ border: 'none', background: 'transparent', color: 'var(--aurora-faint)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 4 }}>×</button>}
+    </span>
+  )
+}
+
 function parseAmount(raw: string): number | undefined {
   const n = parseAmountInput(raw)
   return n != null && n >= 0 ? n : undefined
@@ -87,20 +100,21 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
       limit, scope,
       member: member === 'all' ? undefined : member,
     }),
-    enabled: !!user && hasFilter,
+    // Without a filter the page lists the latest transactions instead of an empty hint
+    enabled: !!user,
     placeholderData: prev => prev,
   })
 
-  const results = hasFilter ? data?.data ?? [] : []
-  const total = hasFilter ? data?.total ?? 0 : 0
+  const results = data?.data ?? []
+  const total = data?.total ?? 0
 
   function reset() {
     setText(''); setDebounced(''); setType('all'); setMinAmount(''); setMaxAmount(''); setFrom(''); setTo(''); setMemberSel('all')
   }
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px var(--page-pad-bottom-nofab)' }}>
-      <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '20px calc(20px + var(--page-inset, 0px)) var(--page-pad-bottom-nofab)' }}>
+      <div style={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.search.title}</h1>
 
         <GlassCard radius={18} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -128,10 +142,10 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <label style={labelStyle}>{t.search.frm}
-              <input type="date" value={from} max={to || undefined} onChange={e => setFrom(e.target.value)} style={fieldStyle} />
+              <DateField value={from} onChange={setFrom} />
             </label>
             <label style={labelStyle}>{t.search.to}
-              <input type="date" value={to} min={from || undefined} onChange={e => setTo(e.target.value)} style={fieldStyle} />
+              <DateField value={to} onChange={setTo} />
             </label>
           </div>
           {memberOptions.length > 0 && (
@@ -159,12 +173,10 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
           )}
         </GlassCard>
 
-        {!hasFilter ? (
-          <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', textAlign: 'center', margin: '12px 0' }}>{t.search.hint}</p>
-        ) : (
+        {(
           <>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>
-              {isFetching && !data ? '…' : results.length === 0 ? t.search.none : t.search.count.replace('{n}', String(total))}
+              {isFetching && !data ? '…' : !hasFilter ? t.dashboard.recentTransactions : results.length === 0 ? t.search.none : t.search.count.replace('{n}', String(total))}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {groupByDay(results, r => r.date, r => (r.type === 'income' ? r.amount : -r.amount)).map(group => {

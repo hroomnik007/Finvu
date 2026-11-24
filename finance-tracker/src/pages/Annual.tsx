@@ -26,7 +26,7 @@ function downloadCsv(content: string, filename: string) {
 
 export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
   const { t, locale } = useTranslation()
-  const { formatAmount, formatPercent } = useFormatters()
+  const { formatAmount, formatPercent, currency } = useFormatters()
   const nowDate = new Date()
   const currentYear = nowDate.getFullYear()
   const currentMonthKey = `${currentYear}-${String(nowDate.getMonth() + 1).padStart(2, '0')}`
@@ -42,7 +42,12 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
   const maxCat = Math.max(1, ...categories.map(c => c.total))
   const balance = totals.income - totals.expense
   const rate = savingsRatePct(totals.income, totals.expense)
-  const rows = annualRows(year, months)
+  // Months before the first one with data (before tracking began) are left out
+  // of the chart and the table instead of drawing empty Jan–Mar
+  const allRows = annualRows(year, months)
+  const firstWithData = allRows.findIndex(r => !r.empty)
+  const rows = firstWithData > 0 ? allRows.slice(firstWithData) : allRows
+  const compactSigned = (v: number) => `${v >= 0 ? '+' : '\u2212'}${new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: 0 }).format(Math.abs(v))}`
   const shortMonth = (i: number) => {
     const m = new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(year, i, 15)).replace(/\.$/, '')
     return m.charAt(0).toLocaleUpperCase(locale) + m.slice(1)
@@ -130,6 +135,8 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
                         <div style={{ width: '38%', maxWidth: 14, height: `max(2px, ${r.expensePct}%)`, borderRadius: '3px 3px 0 0', background: 'var(--aurora-expense-bar)', opacity: r.expense > 0 ? 1 : 0.35 }} />
                       </div>
                       <span aria-hidden="true" style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: r.empty ? 'var(--aurora-faint)' : 'var(--aurora-lo)', opacity: r.empty ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '100%' }}>{shortMonth(r.index)}</span>
+                      {/* The month's result under its bars (it was only in the table) */}
+                      <span aria-hidden="true" style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10.5, fontWeight: 700, color: r.empty ? 'transparent' : r.balance >= 0 ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '100%' }}>{r.empty ? '·' : compactSigned(r.balance)}</span>
                     </div>
                   )
                 })}
@@ -179,12 +186,15 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
               <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.annual.categories}</p>
               {categories.map(c => (
                 <div key={c.name}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontFamily: "'Manrope', sans-serif", fontSize: 13, color: c.name ? 'var(--aurora-hi)' : 'var(--aurora-amber)' }}>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name || t.annual.noCategory}</span>
-                    <span style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{formatAmount(c.total)}</span>
+                    <span style={{ whiteSpace: 'nowrap', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                      {formatAmount(c.total)} <span style={{ fontWeight: 500, color: 'var(--aurora-faint)', display: 'inline-block', minWidth: 40, textAlign: 'right' }}>{formatPercent(totals.expense > 0 ? (c.total / totals.expense) * 100 : 0)}</span>
+                    </span>
                   </div>
+                  {/* One colour for every bar: the length is the information; 16 colours were noise */}
                   <div style={{ height: 6, borderRadius: 4, background: 'var(--aurora-glass)', marginTop: 4 }}>
-                    <div style={{ height: 6, borderRadius: 4, width: `${(c.total / maxCat) * 100}%`, background: c.color ?? 'var(--aurora-violet)' }} />
+                    <div style={{ height: 6, borderRadius: 4, width: `${(c.total / maxCat) * 100}%`, background: c.name ? 'var(--accent-color, var(--aurora-violet))' : 'var(--aurora-amber)' }} />
                   </div>
                 </div>
               ))}

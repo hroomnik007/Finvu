@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { CSSProperties } from 'react'
 import type { Page } from '../App'
-import { ChevronLeft, ChevronRight, Sun, Moon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Sun, Moon, Search } from 'lucide-react'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { isPhotoUrl, avatarSrc, monogramGradientFor } from '../utils/avatar'
@@ -155,6 +155,42 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
     </button>
   )
 
+  // Search covers income and expenses, so it lives in the top bar (it was the
+  // fourth item under Výdavky); "/" opens it from anywhere outside a text field
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
+      const el = e.target as HTMLElement | null
+      if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))) return
+      if (document.querySelector('[role="dialog"]')) return
+      if (!onNavigate) return
+      e.preventDefault()
+      onNavigate('search')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onNavigate])
+
+  const searchBtn = (
+    <button
+      type="button"
+      className="hit-44"
+      onClick={() => onNavigate?.('search')}
+      aria-label={t.nav.search}
+      title={`${t.nav.search} (/)`}
+      aria-current={page === 'search' ? 'page' : undefined}
+      style={{
+        width: 36, height: 36, borderRadius: '50%',
+        background: page === 'search' ? 'var(--aurora-hover)' : 'var(--aurora-glass)',
+        border: '1px solid var(--aurora-gline)',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'var(--aurora-lo)', flexShrink: 0,
+      }}
+    >
+      <Search size={16} strokeWidth={1.8} />
+    </button>
+  )
+
   const themeToggleBtn = (
     <button
       type="button"
@@ -218,6 +254,7 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
               {t.common.add}
             </button>
           )}
+          {searchBtn}
           {themeToggleBtn}
           <NotificationCenter onNavigate={onNavigate} />
           {avatarEl(46)}

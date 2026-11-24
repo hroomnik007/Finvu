@@ -245,17 +245,13 @@ export function IncomePage({ month, year, scope = 'personal' }: IncomePageProps)
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.income.oneTimeLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(oneTimeTotal)}</div>
               </div>
+              {/* The year's income as a third tile (it was a full-width card for one number) */}
+              <div title={`${t.income.yearlyIncomeDesc} ${year}`} style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '8px 12px', flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}><CalendarDays size={12} aria-hidden /> {t.income.yearlyIncomeTitle} {year}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-emerald)' }}>{formatAmount(yearlyIncome)}</div>
+              </div>
             </div>
           </HeroCard>
-
-          {/* Ročný príjem */}
-          <GlassCard radius={18}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 10 }}>
-              <CalendarDays size={12} /> {t.income.yearlyIncomeTitle} {year}
-            </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 22, color: 'var(--aurora-emerald)', marginBottom: 4 }}>{formatAmount(yearlyIncome)}</div>
-            <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{t.income.yearlyIncomeDesc} {year}</div>
-          </GlassCard>
 
           {/* List / empty state */}
           {listLoading ? <ListSkeleton /> : listFailed ? <QueryError onRetry={listRetry} /> : sorted.length === 0 ? (
@@ -313,7 +309,7 @@ export function IncomePage({ month, year, scope = 'personal' }: IncomePageProps)
                     <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · +${formatAmount(dayTotal)}`} />
                     <DenseCard>
                       {items.map(income => (
-                        <DenseRow key={income.id} onClick={() => openEdit(income)}>
+                        <DenseRow className="expense-row" key={income.id} onClick={() => openEdit(income)}>
                             <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
                             </div>
@@ -335,10 +331,10 @@ export function IncomePage({ month, year, scope = 'personal' }: IncomePageProps)
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', marginRight: 8 }}>+{formatAmount(income.amount)}</span>
                             {ownerOf(income.created_by) && <span title={ownerOf(income.created_by)!.name} style={{ display: 'flex', marginRight: 6 }}><MemberAvatar userId={ownerOf(income.created_by)!.id} userName={ownerOf(income.created_by)!.name} size={22} avatarUrl={ownerOf(income.created_by)!.avatar_url} /></span>}
-                            {isMine(income.created_by) && <>
+                            {isMine(income.created_by) && <span className="expense-actions" style={{ display: 'inline-flex', gap: 4 }}>
                             <button onClick={() => openEdit(income)} disabled={!rowActions(income, offline, isMine(income.created_by)).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
                             <button onClick={() => requestDelete(income)} disabled={!rowActions(income, offline, isMine(income.created_by)).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
-                            </>}
+                            </span>}
                           </div>
                         </DenseRow>
                       ))}
