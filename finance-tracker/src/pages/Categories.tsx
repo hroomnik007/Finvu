@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useModalA11y } from '../hooks/useModalA11y'
-import { Plus, Pencil, Trash2, Tag, GripVertical } from 'lucide-react'
+import { Plus, Trash2, Tag, GripVertical, Users } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
   DndContext,
@@ -36,7 +36,6 @@ import { useFormatters } from '../hooks/useFormatters'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useCountUp } from '../hooks/useCountUp'
 import { useTranslation } from '../i18n'
-import { signFor } from '../utils/format'
 import { showErrorToast } from '../lib/toastStore'
 import { apiErrorMessage } from '../utils/apiError'
 import { pluralText } from '../utils/plural'
@@ -47,6 +46,7 @@ import AmountInput from '../components/AmountInput'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 import { sharedFixedLimit, sharedLimitFor } from '../utils/sharedLimit'
 import { budgetLevel, budgetSeverity, compareBudget, limitIsFixedOnly, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
+import { useHousehold } from '../hooks/useHousehold'
 
 const selectBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
@@ -74,22 +74,88 @@ function limitBreakdown(cat: Category, formatAmount: (n: number) => string, t: R
   const shared = sharedFixedLimit(cat)
   if (shared) {
     if (!shared.reserve) return ''
-    return ` · ${t.expenses.categories.limitBreakdown.replace('{fixed}', formatAmount(shared.fixedTotal)).replace('{reserve}', formatAmount(shared.reserve))}`
+    return t.expenses.categories.limitBreakdown.replace('{fixed}', formatAmount(shared.fixedTotal)).replace('{reserve}', formatAmount(shared.reserve))
   }
   if (!cat.autoLimit || !cat.limitReserve || cat.budgetLimit == null) return ''
   const fixed = Math.max(0, cat.budgetLimit - cat.limitReserve)
-  return ` · ${t.expenses.categories.limitBreakdown.replace('{fixed}', formatAmount(fixed)).replace('{reserve}', formatAmount(cat.limitReserve))}`
+  return t.expenses.categories.limitBreakdown.replace('{fixed}', formatAmount(fixed)).replace('{reserve}', formatAmount(cat.limitReserve))
 }
 
 type BudgetStatus = { categoryId: string; spent: number; percentage: number; limit: number }
 
-function FamilyShareLine({ cat, familyStatus, formatAmount, t }: Pick<CardProps, 'cat' | 'familyStatus' | 'formatAmount' | 't'>) {
-  if (!cat.shared || cat.budgetLimit == null || !familyStatus) return null
-  const level = budgetLevel(familyStatus.spent, familyStatus.limit, limitIsFixedOnly(cat))
-  const color = level === 'ok' ? 'var(--aurora-faint)' : BUDGET_LEVEL_COLOR[level]
+/** One member's part of a shared category's spend this month. */
+export interface MemberShare { id: string; name: string; amount: number; color: string; me: boolean }
+
+/** Name row + limit line shared by every card layout. */
+function CategoryTitle({ cat, formatAmount, t, size }: Pick<CardProps, 'cat' | 'formatAmount' | 't'> & { size: number }) {
+  const breakdown = limitBreakdown(cat, formatAmount, t)
   return (
-    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color, marginTop: 4 }}>
-      {t.expenses.categories.familyShare.replace('{spent}', formatAmount(familyStatus.spent)).replace('{pct}', String(Math.round(familyStatus.percentage)))}
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: size, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+        {cat.shared && (
+          <span title={t.expenses.categories.sharedBadge} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0, fontFamily: "'Manrope', sans-serif", fontSize: 10.5, fontWeight: 700, color: 'var(--aurora-lo)', background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', padding: '1px 6px', borderRadius: 99 }}>
+            <Users size={10} aria-hidden />{t.expenses.categories.sharedBadge}
+          </span>
+        )}
+      </div>
+      {cat.budgetLimit != null
+        // The fixed / variable split of an auto limit moved to the tooltip: on three
+        // lines it made those cards taller than their neighbours
+        ? <div title={breakdown || undefined} style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.expenses.categories.limitShort.replace('{amount}', formatAmount(cat.budgetLimit))}{breakdown ? ' ⓘ' : ''}</div>
+        : cat.autoLimit
+          ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', marginTop: 2 }}>⚡ {t.expenses.categories.autoLimit}</div>
+          : <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat.type === 'income' ? t.expenses.categories.typeIncome : t.expenses.categories.noLimit}</div>
+      }
+    </div>
+  )
+}
+
+/**
+ * The budget part of a category card. A shared category shows the family's
+ * spend in one bar split per member, with a mark at the limit once it is
+ * passed (before, the bar was the user's own share and the family's 665 % sat
+ * in a small line under it). Others show the user's own spend. The status is a
+ * sum: "+270,68 € nad limitom", "ostáva 64,63 €" or "✓ Zaplatené podľa plánu".
+ */
+function CategoryBudget({ cat, status, familyStatus, split, formatAmount, t, compact }: Pick<CardProps, 'cat' | 'status' | 'familyStatus' | 'split' | 'formatAmount' | 't'> & { compact?: boolean }) {
+  const { formatPercent } = useFormatters()
+  const family = cat.shared && familyStatus && split && split.length > 0 ? familyStatus : undefined
+  const st = family ?? status
+  if (!st || cat.budgetLimit == null) return null
+  const level = budgetLevel(st.spent, st.limit, limitIsFixedOnly(cat))
+  const color = BUDGET_LEVEL_COLOR[level]
+  const scale = Math.max(st.spent, st.limit) || 1
+  const parts = family ? split!.filter(m => m.amount > 0) : [{ id: 'own', name: '', amount: st.spent, color, me: true }]
+  const chip = level === 'over'
+    ? { text: t.expenses.categories.overBy.replace('{amount}', formatAmount(st.spent - st.limit)), color }
+    : level === 'planned'
+      ? { text: `✓ ${t.expenses.categories.paidAsPlanned}`, color }
+      : { text: t.expenses.categories.leftAmount.replace('{amount}', formatAmount(st.limit - st.spent)), color: level === 'near' ? color : 'var(--aurora-faint)' }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 4 : 6 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: compact ? 13 : 18, fontWeight: 700, color: st.spent > 0 ? 'var(--aurora-expense)' : 'var(--aurora-faint)', fontVariantNumeric: 'tabular-nums' }}>
+          {formatAmount(st.spent)}
+          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11.5, fontWeight: 500, color: 'var(--aurora-faint)' }}> {t.expenses.categories.ofLimit.replace('{amount}', formatAmount(st.limit))}</span>
+        </span>
+      </div>
+      <div title={formatPercent(st.percentage)} style={{ position: 'relative', height: compact ? 5 : 7, borderRadius: 4, background: 'var(--aurora-gline)', overflow: 'hidden', display: 'flex' }}>
+        {parts.map(m => (
+          <div key={m.id} style={{ height: '100%', width: `${(m.amount / scale) * 100}%`, background: family ? m.color : color, transition: 'width 0.3s' }} />
+        ))}
+        {st.spent > st.limit && <div style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${(st.limit / scale) * 100}% - 1px)`, width: 2, background: 'var(--aurora-hi)' }} />}
+      </div>
+      {family && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', fontFamily: "'Manrope', sans-serif", fontSize: 11.5, color: 'var(--aurora-faint)' }}>
+          {parts.map(m => (
+            <span key={m.id} style={{ whiteSpace: 'nowrap' }}>
+              <b style={{ color: m.color, fontWeight: 700 }}>{m.me ? t.expenses.categories.you : m.name}</b> {formatAmount(m.amount)}
+            </span>
+          ))}
+        </div>
+      )}
+      <span style={{ alignSelf: 'flex-start', fontFamily: "'Manrope', sans-serif", fontSize: 11.5, fontWeight: 700, color: chip.color, background: `color-mix(in srgb, ${chip.color} 12%, transparent)`, padding: '1px 8px', borderRadius: 99 }}>{chip.text}</span>
     </div>
   )
 }
@@ -99,6 +165,10 @@ interface CardProps {
   status: BudgetStatus | undefined
   /** Shared category only: what the whole family spent in it. */
   familyStatus?: BudgetStatus
+  /** Shared category only: who spent how much of it. */
+  split?: MemberShare[]
+  /** Reorder mode: the drag handle is shown (otherwise the card is just a button). */
+  reorder?: boolean
   formatAmount: (n: number) => string
   t: ReturnType<typeof useTranslation>['t']
   onEdit: (cat: Category) => void
@@ -109,12 +179,8 @@ interface CardProps {
   selected?: boolean
 }
 
-function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, onDelete, severity, selected }: CardProps) {
-  const { formatPercent } = useFormatters()
+function SortableGridCard({ cat, status, familyStatus, split, formatAmount, t, onEdit, severity, selected, reorder }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
-  const pct = status ? Math.min(status.percentage, 100) : 0
-  const level = status ? budgetLevel(status.spent, status.limit, limitIsFixedOnly(cat)) : 'ok'
-  const barColor = BUDGET_LEVEL_COLOR[level]
 
   return (
     <div
@@ -139,44 +205,18 @@ function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, 
         <div style={{ width: 44, height: 44, borderRadius: 14, background: cat.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={20} color={cat.color} strokeWidth={1.8} /> })()}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
-          {cat.budgetLimit != null
-            ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>
-            : cat.autoLimit
-              ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', marginTop: 2 }}>⚡ {t.expenses.categories.autoLimit}</div>
-              : <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2 }}>{cat.type === 'income' ? t.expenses.categories.typeIncome : t.expenses.categories.noLimit}</div>
-          }
-        </div>
-        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+        <CategoryTitle cat={cat} formatAmount={formatAmount} t={t} size={14} />
+        {reorder && (
           <div
             {...listeners}
-            style={{ color: 'var(--aurora-faint)', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', alignItems: 'center', padding: '0 2px' }}
+            style={{ color: 'var(--aurora-faint)', cursor: isDragging ? 'grabbing' : 'grab', display: 'flex', alignItems: 'center', padding: '0 2px', flexShrink: 0 }}
             onClick={e => e.stopPropagation()}
           >
-            <GripVertical size={14} />
+            <GripVertical size={16} />
           </div>
-          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 4 }}>
-            <button type="button" className="hit-44" aria-label={t.common.edit} title={t.common.edit} onClick={() => onEdit(cat)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={13} /></button>
-            <button type="button" className="hit-44" aria-label={t.common.delete} title={t.common.delete} onClick={() => onDelete(cat.id!)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={13} /></button>
-          </div>
-        </div>
+        )}
       </div>
-      {cat.budgetLimit != null && (
-        <>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-expense)', marginBottom: 8 }}>
-            {signFor(status?.spent ?? 0, '−')}{formatAmount(status?.spent ?? 0)}
-          </div>
-          <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', marginBottom: 6 }}>
-            <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
-            <span>{t.expenses.categories.spent}</span>
-            <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontWeight: 700, color: barColor }}>{level === 'planned' ? '✓ ' : ''}{formatPercent(status?.percentage ?? 0)}</span>
-          </div>
-          <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
-        </>
-      )}
+      <CategoryBudget cat={cat} status={status} familyStatus={familyStatus} split={split} formatAmount={formatAmount} t={t} />
       {/* No limit: still say what went through the category this month */}
       {cat.budgetLimit == null && status && status.spent > 0 && (
         <>
@@ -191,12 +231,8 @@ function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, 
 }
 
 function SortableListCard(props: CardProps) {
-  const { formatPercent } = useFormatters()
-  const { cat, status, familyStatus, formatAmount, t, onEdit, onDelete, severity, selected } = props
+  const { cat, status, familyStatus, split, formatAmount, t, onEdit, severity, selected, reorder } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
-  const pct = status ? Math.min(status.percentage, 100) : 0
-  const level = status ? budgetLevel(status.spent, status.limit, limitIsFixedOnly(cat)) : 'ok'
-  const barColor = BUDGET_LEVEL_COLOR[level]
 
   return (
     <div
@@ -218,49 +254,33 @@ function SortableListCard(props: CardProps) {
         boxShadow: isDragging ? '0 0 0 2px rgba(139,92,246,0.3)' : undefined,
       }}
     >
-      <div
-        {...listeners}
-        style={{ color: 'var(--aurora-faint)', cursor: isDragging ? 'grabbing' : 'grab', flexShrink: 0, display: 'flex' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <GripVertical size={15} />
-      </div>
+      {reorder && (
+        <div
+          {...listeners}
+          style={{ color: 'var(--aurora-faint)', cursor: isDragging ? 'grabbing' : 'grab', flexShrink: 0, display: 'flex' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <GripVertical size={15} />
+        </div>
+      )}
       <div style={{ width: 36, height: 36, borderRadius: 12, background: cat.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={16} color={cat.color} strokeWidth={1.8} /> })()}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
-        {cat.budgetLimit != null && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>}
-      </div>
-      {cat.budgetLimit != null && status && (
-        <div style={{ width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: status.spent > 0 ? 'var(--aurora-expense)' : 'var(--aurora-faint)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : formatAmount(0)}</span>
-            <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{formatPercent(status.percentage)}</span>
-          </div>
-          <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
+      <CategoryTitle cat={cat} formatAmount={formatAmount} t={t} size={13} />
+      {cat.budgetLimit != null && (
+        <div style={{ width: 240, flexShrink: 0 }}>
+          <CategoryBudget cat={cat} status={status} familyStatus={familyStatus} split={split} formatAmount={formatAmount} t={t} compact />
         </div>
       )}
       {cat.budgetLimit == null && status && status.spent > 0 && (
         <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-expense)', flexShrink: 0 }}>−{formatAmount(status.spent)}</span>
       )}
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-        <button type="button" className="hit-44" aria-label={t.common.edit} title={t.common.edit} onClick={() => onEdit(cat)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={12} /></button>
-        <button type="button" className="hit-44" aria-label={t.common.delete} title={t.common.delete} onClick={() => onDelete(cat.id!)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-rose)' }}><Trash2 size={12} /></button>
-      </div>
     </div>
   )
 }
 
-function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected }: CardProps) {
-  const { formatPercent } = useFormatters()
+function SortableMobileCard({ cat, status, familyStatus, split, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected, reorder }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
-  const pct = status ? Math.min(status.percentage, 100) : 0
-  const level = status ? budgetLevel(status.spent, status.limit, limitIsFixedOnly(cat)) : 'ok'
-  const barColor = BUDGET_LEVEL_COLOR[level]
 
   const outerTransform = [
     CSS.Transform.toString(transform),
@@ -296,36 +316,19 @@ function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit
             <div style={{ width: 36, height: 36, borderRadius: 12, background: cat.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {(() => { const Icon = CATEGORY_ICON_MAP[cat.icon ?? ''] ?? Tag; return <Icon size={16} color={cat.color} strokeWidth={1.8} /> })()}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.shared ? '👥 ' : ''}{cat.name}</div>
-              {cat.budgetLimit != null
-                ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 1 }}>Limit: {formatAmount(cat.budgetLimit)}{limitBreakdown(cat, formatAmount, t)}</div>
-                : cat.autoLimit
-                  ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-violet-text)', marginTop: 1 }}>⚡ {t.expenses.categories.autoLimit}</div>
-                  : null
-              }
-            </div>
-            <div
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--aurora-glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'grab', touchAction: 'none' }}
-            >
-              <GripVertical size={14} color="var(--aurora-faint)" />
-            </div>
+            <CategoryTitle cat={cat} formatAmount={formatAmount} t={t} size={13} />
+            {reorder && (
+              <div
+                {...listeners}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--aurora-glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'grab', touchAction: 'none' }}
+              >
+                <GripVertical size={14} color="var(--aurora-faint)" />
+              </div>
+            )}
           </div>
-          {cat.budgetLimit != null && status && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: status.spent > 0 ? 'var(--aurora-expense)' : 'var(--aurora-faint)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : formatAmount(0)}</span>
-                <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{formatPercent(status.percentage)}</span>
-              </div>
-              <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
-            </div>
-          )}
+          <CategoryBudget cat={cat} status={status} familyStatus={familyStatus} split={split} formatAmount={formatAmount} t={t} compact />
           {cat.budgetLimit == null && status && status.spent > 0 && (
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-expense)' }}>−{formatAmount(status.spent)}</span>
           )}
@@ -375,6 +378,36 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month: now.getMonth() + 1, year: now.getFullYear() })
   const sharedCategories = useMemo(() => (sharingOn ? categories.filter(c => c.shared) : []), [sharingOn, categories])
   const familyStatuses = useBudgetStatus({ categories: sharedCategories, variableExpenses: familyVariable, fixedExpenses: familyFixed, month: now.getMonth() + 1, year: now.getFullYear(), family: true })
+
+  // Who spent how much in each shared category this month (rows paired by
+  // category name like the family statuses; a row without an owner is the user's).
+  const { members } = useHousehold()
+  const familySplit = useMemo(() => {
+    const key = (n?: string | null) => (n ?? '').trim().toLowerCase()
+    const byCat = new Map<string, Map<string, number>>()
+    const add = (cat: string | null | undefined, owner: string, amount: number) => {
+      const k = key(cat)
+      const m = byCat.get(k) ?? new Map<string, number>()
+      m.set(owner, (m.get(owner) ?? 0) + amount)
+      byCat.set(k, m)
+    }
+    const me = user?.id ?? ''
+    for (const v of familyVariable) add(v.categoryName, v.created_by ?? me, v.amount)
+    for (const f of familyFixed) {
+      if (isFixedExpenseDue(f.dayOfMonth, now.getMonth() + 1, now.getFullYear(), new Date())) add(f.categoryName, f.ownerId ?? me, f.amount)
+    }
+    const palette = ['#C084FC', '#34D399', '#FBBF24', '#F472B6']
+    const people = [...members].sort((a, b) => Number(b.id === me) - Number(a.id === me))
+    return (cat: Category): MemberShare[] => {
+      const m = byCat.get(key(cat.name))
+      return people.map((p, i) => ({
+        id: p.id, name: p.name, me: p.id === me, amount: m?.get(p.id) ?? 0,
+        color: p.id === me ? '#60A5FA' : palette[(i - 1 + palette.length) % palette.length],
+      }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` is today; the lists carry the month
+  }, [familyVariable, familyFixed, members, user?.id])
+  const [reorder, setReorder] = useState(false)
 
   // What the cards show: the budget status of a category with a limit, or — for an
   // expense category without one — just what was spent in it this month (own
@@ -430,6 +463,13 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
       ...categories.filter(c => !localIds.includes(c.id!)),
     ]
   }, [categories, localIds])
+  // Budgets first, income categories (no limit, no bar) in their own group after them
+  const groupedCategories = useMemo(() => [
+    ...sortedCategories.filter(c => c.type !== 'income'),
+    ...sortedCategories.filter(c => c.type === 'income'),
+  ], [sortedCategories])
+  const firstIncomeId = groupedCategories.find(c => c.type === 'income')?.id
+  const groupHeading: React.CSSProperties = { gridColumn: '1 / -1', margin: '10px 0 0', fontFamily: "'Manrope', sans-serif", fontSize: 12.5, fontWeight: 700, color: 'var(--aurora-lo)' }
 
   const sensors = useSensors(
     useSensor(MouseSensor),
@@ -713,7 +753,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
             <>
               {/* Select toggle — mobile */}
               {!selectMode && (
-                <div className="flex justify-end lg:hidden" style={{ marginTop: 8 }}>
+                <div className="flex justify-end lg:hidden" style={{ marginTop: 8, gap: 8 }}>
+                  <button onClick={() => setReorder(r => !r)} aria-pressed={reorder} style={selectBtnStyle(reorder)}>{reorder ? t.expenses.categories.reorderDone : t.expenses.categories.reorder}</button>
                   <button onClick={() => setSelectMode(true)} style={selectBtnStyle(false)}>{t.expenses.categories.selectMode}</button>
                 </div>
               )}
@@ -739,7 +780,10 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                   ))}
                 </div>
                 {!selectMode && (
-                  <button onClick={() => setSelectMode(true)} style={selectBtnStyle(false)}>{t.expenses.categories.selectMode}</button>
+                  <>
+                    <button onClick={() => setReorder(r => !r)} aria-pressed={reorder} style={selectBtnStyle(reorder)}>{reorder ? t.expenses.categories.reorderDone : t.expenses.categories.reorder}</button>
+                    <button onClick={() => setSelectMode(true)} style={selectBtnStyle(false)}>{t.expenses.categories.selectMode}</button>
+                  </>
                 )}
               </div>
 
@@ -751,7 +795,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext
-                    items={sortedCategories.map(c => c.id!)}
+                    items={groupedCategories.map(c => c.id!)}
                     strategy={view === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
                   >
                     <div style={{
@@ -760,14 +804,17 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                       flexDirection: view === 'list' ? 'column' : undefined,
                       gap: 12,
                     }}>
-                      {sortedCategories.map(cat => {
+                      {groupedCategories.map(cat => {
                         const status = cardStatuses.find(b => b.categoryId === cat.id)
                         const familyStatus = familyStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
-                        if (view === 'list') {
-                          return <SortableListCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
-                        }
-                        return <SortableGridCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
+                        const split = cat.shared ? familySplit(cat) : undefined
+                        const card = view === 'list'
+                          ? <SortableListCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={split} reorder={reorder} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
+                          : <SortableGridCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={split} reorder={reorder} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={id => setDeleteId(id)} severity={severity} selected={selectedIds.has(cat.id!)} />
+                        return cat.id === firstIncomeId
+                          ? [<p key="income-group" style={groupHeading}>{t.expenses.categories.incomeGroup}</p>, card]
+                          : card
                       })}
                     </div>
                   </SortableContext>
@@ -782,15 +829,18 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext
-                    items={sortedCategories.map(c => c.id!)}
+                    items={groupedCategories.map(c => c.id!)}
                     strategy={verticalListSortingStrategy}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 'var(--page-pad-bottom)' }}>
-                      {sortedCategories.map(cat => {
+                      {groupedCategories.map(cat => {
                         const status = cardStatuses.find(b => b.categoryId === cat.id)
                         const familyStatus = familyStatuses.find(b => b.categoryId === cat.id)
                         const severity = cat.id === urgentCategoryId ? urgentSeverity : null
-                        return <SortableMobileCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={(id) => setDeleteId(id)} selected={selectedIds.has(cat.id!)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
+                        const card = <SortableMobileCard key={cat.id} cat={cat} status={status} familyStatus={familyStatus} split={cat.shared ? familySplit(cat) : undefined} reorder={reorder} formatAmount={formatAmount} t={t} onEdit={cardClick} onDelete={(id) => setDeleteId(id)} selected={selectedIds.has(cat.id!)} isSwipeOpen={openSwipeId === cat.id} onSwipeOpen={() => setOpenSwipeId(cat.id!)} severity={severity} />
+                        return cat.id === firstIncomeId
+                          ? [<p key="income-group" style={groupHeading}>{t.expenses.categories.incomeGroup}</p>, card]
+                          : card
                       })}
                     </div>
                   </SortableContext>
@@ -914,6 +964,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
         submitLabel={editing ? t.common.saveChanges : t.fab.saveCategory}
         accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
+        onDelete={editing?.id ? () => { const id = editing.id!; closeSheet(); setDeleteId(id) } : undefined}
         submitDisabled={!name.trim()}
         submitHint={t.common.needName}
         submitting={saveGuard.pending}
