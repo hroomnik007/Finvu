@@ -851,7 +851,7 @@ export const sk = {
     whoPaysTitle: 'Kto koľko platí',
     sharedSpend: 'Spoločné výdavky',
     incomeShare: 'Príjmy',
-    splitMatches: 'Spoločné výdavky delíte približne podľa príjmov.',
+    splitMatches: 'Spoločné výdavky sa delia približne podľa príjmov.',
     splitDiffers: '{name}: {spend} % spoločných výdavkov, {income} % príjmov.',
     andMore: 'a ďalších {n}',
     sharedCategoriesTitle: 'Spoločné kategórie',

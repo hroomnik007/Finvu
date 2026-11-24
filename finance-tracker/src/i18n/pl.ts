@@ -853,7 +853,7 @@ export const pl: Translations = {
     whoPaysTitle: 'Kto ile płaci',
     sharedSpend: 'Wspólne wydatki',
     incomeShare: 'Przychody',
-    splitMatches: 'Wspólne wydatki dzielicie mniej więcej według przychodów.',
+    splitMatches: 'Wspólne wydatki dzielą się mniej więcej według przychodów.',
     splitDiffers: '{name}: {spend}% wspólnych wydatków, {income}% przychodów.',
     andMore: 'i {n} innych',
     sharedCategoriesTitle: 'Wspólne kategorie',

@@ -853,7 +853,7 @@ export const cs: Translations = {
     whoPaysTitle: 'Kdo kolik platí',
     sharedSpend: 'Společné výdaje',
     incomeShare: 'Příjmy',
-    splitMatches: 'Společné výdaje dělíte přibližně podle příjmů.',
+    splitMatches: 'Společné výdaje se dělí přibližně podle příjmů.',
     splitDiffers: '{name}: {spend} % společných výdajů, {income} % příjmů.',
     andMore: 'a dalších {n}',
     sharedCategoriesTitle: 'Společné kategorie',
