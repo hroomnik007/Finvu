@@ -110,6 +110,7 @@ interface CardProps {
 }
 
 function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, onDelete, severity, selected }: CardProps) {
+  const { formatPercent } = useFormatters()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const level = status ? budgetLevel(status.spent, status.limit, limitIsFixedOnly(cat)) : 'ok'
@@ -171,7 +172,7 @@ function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, 
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
             <span>{t.expenses.categories.spent}</span>
-            <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontWeight: 700, color: barColor }}>{level === 'planned' ? '✓ ' : ''}{Math.round(status?.percentage ?? 0)}%</span>
+            <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontWeight: 700, color: barColor }}>{level === 'planned' ? '✓ ' : ''}{formatPercent(status?.percentage ?? 0)}</span>
           </div>
           <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
         </>
@@ -190,6 +191,7 @@ function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, 
 }
 
 function SortableListCard(props: CardProps) {
+  const { formatPercent } = useFormatters()
   const { cat, status, familyStatus, formatAmount, t, onEdit, onDelete, severity, selected } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
@@ -236,8 +238,8 @@ function SortableListCard(props: CardProps) {
             <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : '—'}</span>
-            <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{Math.round(status.percentage)}%</span>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: status.spent > 0 ? 'var(--aurora-rose)' : 'var(--aurora-faint)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : formatAmount(0)}</span>
+            <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{formatPercent(status.percentage)}</span>
           </div>
           <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
         </div>
@@ -254,6 +256,7 @@ function SortableListCard(props: CardProps) {
 }
 
 function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected }: CardProps) {
+  const { formatPercent } = useFormatters()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
   const level = status ? budgetLevel(status.spent, status.limit, limitIsFixedOnly(cat)) : 'ok'
@@ -317,8 +320,8 @@ function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit
                 <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : '—'}</span>
-                <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{Math.round(status.percentage)}%</span>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: status.spent > 0 ? 'var(--aurora-rose)' : 'var(--aurora-faint)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : formatAmount(0)}</span>
+                <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{formatPercent(status.percentage)}</span>
               </div>
               <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
             </div>
@@ -753,7 +756,7 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                   >
                     <div style={{
                       display: view === 'grid' ? 'grid' : 'flex',
-                      gridTemplateColumns: view === 'grid' ? 'repeat(4, 1fr)' : undefined,
+                      gridTemplateColumns: view === 'grid' ? 'repeat(auto-fill, minmax(min(100%, 250px), 1fr))' : undefined,
                       flexDirection: view === 'list' ? 'column' : undefined,
                       gap: 12,
                     }}>

@@ -1,6 +1,6 @@
 import { useSettingsContext } from '../context/SettingsContext'
 import { useTranslation } from '../i18n'
-import { formatMoney, formatMoneyParts, formatNumber, formatDateLocale, withDisplayMinus } from '../utils/format'
+import { formatMoney, formatMoneyParts, formatNumber, formatPercent, formatDateLocale, withDisplayMinus } from '../utils/format'
 
 // One place for UI formatting: amounts use the active language's number
 // conventions (Intl) and the user's currency; dates use the active language.
@@ -18,6 +18,7 @@ export function useFormatters() {
   }
 
   const formatNum = (value: number, options?: Intl.NumberFormatOptions): string => formatNumber(value, locale, options)
+  const formatPct = (value: number): string => formatPercent(value, locale)
 
   // Numeric date following the user's explicit date-format preference (Settings).
   const formatDate = (dateStr: string): string => {
@@ -42,5 +43,5 @@ export function useFormatters() {
   const formatLongDate = (value: string | Date, options?: Intl.DateTimeFormatOptions): string =>
     formatDateLocale(value, locale, options)
 
-  return { formatAmount, formatAmountParts, formatNumber: formatNum, formatDate, formatLongDate, locale, currency }
+  return { formatAmount, formatAmountParts, formatNumber: formatNum, formatPercent: formatPct, formatDate, formatLongDate, locale, currency }
 }

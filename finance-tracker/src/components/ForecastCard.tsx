@@ -1,4 +1,5 @@
 import { GlassCard } from './GlassCard'
+import { useFormatters } from '../hooks/useFormatters'
 
 interface ForecastCardProps {
   progressPct: number
@@ -25,6 +26,7 @@ export function ForecastCard({
   paceText,
   lowest,
 }: ForecastCardProps) {
+  const { formatPercent } = useFormatters()
   const clamped = Math.min(Math.max(progressPct, 0), 100)
   const offset = CIRCUMFERENCE * (1 - clamped / 100)
 
@@ -42,7 +44,7 @@ export function ForecastCard({
             />
           </svg>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-hi)', margin: 0, lineHeight: 1.2 }}>{Math.round(clamped)}%</p>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-hi)', margin: 0, lineHeight: 1.2 }}>{formatPercent(clamped)}</p>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{monthLabel}</p>
           </div>
         </div>

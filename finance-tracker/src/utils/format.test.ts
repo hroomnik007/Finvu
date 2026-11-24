@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDateLocale, formatMoney, formatMoneyParts, toLocalISO, formatMonthYearFrom, withDisplayMinus, dayHeaderParts } from './format'
+import { formatDateLocale, formatMoney, formatMoneyParts, toLocalISO, formatMonthYearFrom, withDisplayMinus, dayHeaderParts, formatPercent } from './format'
 
 describe('toLocalISO', () => {
   it('uses the local calendar date, not the UTC one', () => {
@@ -93,5 +93,18 @@ describe('signFor', () => {
     expect(signFor(-0.001, '−')).toBe('')
     expect(signFor(0.01, '−')).toBe('−')
     expect(signFor(12.5, '+')).toBe('+')
+  })
+})
+
+describe('formatPercent', () => {
+  it('follows each language: a no-break space before % in sk and cs, none in en', () => {
+    expect(formatPercent(8, 'sk')).toBe('8\u00a0%')
+    expect(formatPercent(8, 'cs')).toBe('8\u00a0%')
+    expect(formatPercent(8, 'en')).toBe('8%')
+  })
+
+  it('rounds to whole percent and uses the display minus', () => {
+    expect(formatPercent(664.85, 'sk')).toBe('665\u00a0%')
+    expect(formatPercent(-1.3, 'sk')).toBe('\u22121\u00a0%')
   })
 })

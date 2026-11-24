@@ -37,7 +37,7 @@ const small = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(-
  */
 export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
   const { t, locale } = useTranslation()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatPercent } = useFormatters()
   const ht = t.household
 
   const shared = tiles.filter(x => x.shared)
@@ -90,7 +90,7 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
                   <Icon size={15} color={x.color} strokeWidth={1.8} />
                 </span>
                 <span style={{ flex: 1, minWidth: 0, fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.name}</span>
-                {x.limit > 0 && <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: bar, flexShrink: 0 }}>{level === 'planned' ? '✓ ' : ''}{pct > 999 ? '>999%' : `${Math.round(pct)}%`}</span>}
+                {x.limit > 0 && <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: bar, flexShrink: 0 }}>{level === 'planned' ? '✓ ' : ''}{pct > 999 ? `>${formatPercent(999)}` : formatPercent(pct)}</span>}
                 <button
                   type="button"
                   onClick={() => onUnshare(x.id)}

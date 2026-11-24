@@ -70,7 +70,7 @@ function goalMonthly(goal: SavingsGoal): number {
 export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
   const { goals, isLoading: listLoading, isError: listError, refetch: listRetry, addGoal, updateGoal, deleteGoal, pauseGoal, resumeGoal, reload: reloadGoals } = useSavings()
   const listFailed = listError && goals.length === 0
-  const { formatAmount, formatAmountParts } = useFormatters()
+  const { formatAmount, formatAmountParts, formatPercent } = useFormatters()
   const { t, locale } = useTranslation()
   const feedback = useSaveFeedback()
 
@@ -401,7 +401,7 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
             <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.savings.percentOfIncome}</div>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                {incomePercent !== null ? `${incomePercent}%` : '—'}
+                {incomePercent !== null ? formatPercent(incomePercent) : '—'}
               </div>
             </div>
           </div>

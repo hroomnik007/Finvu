@@ -42,6 +42,11 @@ export function formatNumber(value: number, locale: string = DEFAULT_LOCALE, opt
   return new Intl.NumberFormat(locale, options).format(value)
 }
 
+/** Whole percent in the language's own style: "8 %" (sk, cs), "8%" (en, pl, hu). Takes 8 for 8 %. */
+export function formatPercent(value: number, locale: string = DEFAULT_LOCALE): string {
+  return withDisplayMinus(new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 }).format(value / 100))
+}
+
 function toDate(value: string | Date): Date {
   if (value instanceof Date) return value
   // Plain YYYY-MM-DD is a calendar date: parse it as local midnight, not UTC.

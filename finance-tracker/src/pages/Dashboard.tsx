@@ -87,7 +87,7 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     allMonthFixedExpenses.filter(f => isFixedExpenseDue(f.dayOfMonth, month, year)),
   [allMonthFixedExpenses, month, year])
   const { goals: savingsGoals } = useSavings()
-  const { formatAmount, formatAmountParts, formatLongDate } = useFormatters()
+  const { formatAmount, formatAmountParts, formatLongDate, formatPercent } = useFormatters()
   const { t, locale } = useTranslation()
   const { profileName } = useSettingsContext()
   const { user, refreshUser } = useAuth()
@@ -447,7 +447,7 @@ const upcomingFixed = useMemo(() => {
         </div>
         <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.savingsRate}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{heroValue(`${savRate}%`)}</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{heroValue(formatPercent(savRate))}</div>
         </div>
       </div>
     </HeroCard>
@@ -579,7 +579,7 @@ const upcomingFixed = useMemo(() => {
                 />
               </div>
               <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '6px 0 0' }}>
-                {formatAmount(totalExpenses)} / {formatAmount(monthChallengeTarget)} ({Math.round(challengeProgress * 100)}%)
+                {formatAmount(totalExpenses)} / {formatAmount(monthChallengeTarget)} ({formatPercent(challengeProgress * 100)})
               </p>
             </>
           )}

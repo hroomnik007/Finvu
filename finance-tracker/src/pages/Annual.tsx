@@ -26,7 +26,7 @@ function downloadCsv(content: string, filename: string) {
 
 export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
   const { t, locale } = useTranslation()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatPercent } = useFormatters()
   const nowDate = new Date()
   const currentYear = nowDate.getFullYear()
   const currentMonthKey = `${currentYear}-${String(nowDate.getMonth() + 1).padStart(2, '0')}`
@@ -105,7 +105,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
               [t.dashboard.income, `+${formatAmount(totals.income)}`, 'var(--aurora-emerald)'],
               [t.dashboard.expenses, `\u2212${formatAmount(totals.expense)}`, 'var(--aurora-rose)'],
               [t.annual.balance, signed(balance), balance >= 0 ? 'var(--aurora-emerald)' : 'var(--aurora-rose)'],
-              ...(rate !== null ? [[t.dashboard.savingsRate, `${rate} %`, 'var(--aurora-hi)']] : []),
+              ...(rate !== null ? [[t.dashboard.savingsRate, formatPercent(rate), 'var(--aurora-hi)']] : []),
             ] as [string, string, string][]).map(([label, value, color]) => (
               <GlassCard key={label} radius={16} style={{ padding: '14px 16px' }}>
                 <div style={statLabel}>{label}</div>

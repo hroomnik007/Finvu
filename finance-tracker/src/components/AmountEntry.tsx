@@ -21,7 +21,7 @@ import { applyAmountKey } from '../utils/amountKeypad'
 export function AmountEntry({ value, onValueChange, accent }: {
   value: string
   onValueChange: (value: string) => void
-  /** Thin coloured bar at the end of the field (the form's accent). */
+  /** The form's accent: the field's border takes it while the amount is being typed. */
   accent?: string
 }) {
   const { t, locale } = useTranslation()
@@ -32,6 +32,8 @@ export function AmountEntry({ value, onValueChange, accent }: {
   const padRef = useRef<HTMLDivElement>(null)
   const padSlot = useContext(AmountPadSlot)
   const [padOpen, setPadOpen] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const active = padOpen || focused
 
   // Any tap outside the amount field and its pad folds the pad away. On click,
   // not on pointerdown: folding shifts everything below the pad up, so a click
@@ -92,19 +94,19 @@ export function AmountEntry({ value, onValueChange, accent }: {
 
   return (
     <div ref={boxRef} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 14, padding: '10px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, background: 'var(--aurora-glass)', border: `1px solid ${active && accent ? accent : 'var(--aurora-gline)'}`, borderRadius: 14, padding: '10px 14px', transition: 'border-color 0.15s' }}>
         <AmountInput
           placeholder="0"
           value={value}
           onValueChange={onValueChange}
           readOnly={touch}
           keypadOnly={touch}
-          onFocus={() => setPadOpen(true)}
+          onFocus={() => { setFocused(true); setPadOpen(true) }}
+          onBlur={() => setFocused(false)}
           onClick={() => setPadOpen(true)}
           style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--aurora-hi)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 26, width: '100%', minWidth: 0 }}
         />
         <span style={{ fontSize: 15, color: 'var(--aurora-lo)', fontFamily: "'Manrope', sans-serif", flexShrink: 0 }}>€</span>
-        {accent && <div style={{ width: 2, height: 20, borderRadius: 1, background: accent, flexShrink: 0 }} />}
       </div>
       {pad && !padSlot && pad}
       {pad && padSlot && createPortal(pad, padSlot)}

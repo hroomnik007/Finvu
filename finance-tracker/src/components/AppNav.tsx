@@ -346,32 +346,30 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
             {isExpanded && t.nav.settings}
           </button>
 
+          {/* Expand/collapse toggle — inside the panel (it used to hang half outside
+              the right edge, where the aside's overflow: hidden cut it in two) */}
+          <div style={{ display: 'flex', justifyContent: isExpanded ? 'flex-end' : 'center', padding: '4px 4px 0' }}>
+            <button
+              type="button"
+              className="hit-44"
+              onClick={onToggle}
+              aria-label={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
+              title={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
+              style={{
+                width: 28, height: 28,
+                borderRadius: '50%',
+                background: 'transparent',
+                border: '1px solid var(--aurora-gline)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--aurora-faint)',
+              }}
+            >
+              {isExpanded ? <ChevronLeft size={13} strokeWidth={1.6} /> : <ChevronRight size={13} strokeWidth={1.6} />}
+            </button>
           </div>
+        </div>
 
-        {/* Expand/collapse toggle */}
-        <button
-          type="button"
-          className="hit-44"
-          onClick={onToggle}
-          aria-label={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
-          style={{
-            position: 'absolute',
-            right: -12,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 24, height: 24,
-            borderRadius: '50%',
-            background: 'var(--aurora-panel)',
-            border: '1px solid var(--aurora-gline)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-            color: 'var(--aurora-faint)',
-            zIndex: 10,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-          }}
-        >
-          {isExpanded ? <ChevronLeft size={11} strokeWidth={1.5} /> : <ChevronRight size={11} strokeWidth={1.5} />}
-        </button>
       </aside>
     </>
   )

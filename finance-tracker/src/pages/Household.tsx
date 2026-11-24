@@ -57,7 +57,7 @@ interface HouseholdPageProps {
 
 export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
   const { user, refreshUser } = useAuth()
-  const { formatAmount, formatAmountParts } = useFormatters()
+  const { formatAmount, formatAmountParts, formatPercent } = useFormatters()
   const { categories, reload: reloadCategories } = useCategories()
   const { t, locale } = useTranslation()
   const { household: ht } = t
@@ -416,7 +416,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                         return (
                           <span key={j}>
                             {j > 0 && ' · '}
-                            {c.name} <span style={{ fontFamily: "'Outfit', sans-serif", color: 'var(--aurora-lo)' }}>{catTotal > 0 ? Math.round((c.val / catTotal) * 100) : 0}%</span>
+                            {c.name} <span style={{ fontFamily: "'Outfit', sans-serif", color: 'var(--aurora-lo)' }}>{formatPercent(catTotal > 0 ? (c.val / catTotal) * 100 : 0)}</span>
                           </span>
                         )
                       })}

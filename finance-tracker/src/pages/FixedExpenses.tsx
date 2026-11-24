@@ -70,7 +70,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   const endedExpenses = useMemo(() => allFixed.filter(e => isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
   const { variableExpenses } = useVariableExpenses(month, year)
   const { categories } = useCategories()
-  const { formatAmount, formatAmountParts, formatDate } = useFormatters()
+  const { formatAmount, formatAmountParts, formatDate, formatPercent } = useFormatters()
   const { t, locale } = useTranslation()
   const offline = useOffline()
   const feedback = useSaveFeedback()
@@ -333,7 +333,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
         </div>
         {(total + variableTotal) > 0 && (
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-amber)', fontWeight: 700, marginTop: 8 }}>
-            {t.nav.fixed} {Math.round((total / (total + variableTotal)) * 100)}%
+            {t.nav.fixed} {formatPercent((total / (total + variableTotal)) * 100)}
           </div>
         )}
       </div>

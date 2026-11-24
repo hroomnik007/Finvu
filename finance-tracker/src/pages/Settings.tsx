@@ -186,10 +186,14 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
       onClick={onChange}
       disabled={disabled}
       className={`w-12 h-[26px] rounded-full transition-all duration-200 relative flex-shrink-0 ${
-        disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+        disabled ? 'cursor-not-allowed' : 'cursor-pointer'
       }`}
+      // Locked switches dim only the track: a dimmed white knob read as "off"
       style={{
-        background: checked ? 'var(--accent-color)' : 'var(--toggle-inactive)',
+        background: checked
+          ? (disabled ? 'color-mix(in srgb, var(--accent-color) 55%, var(--toggle-inactive))' : 'var(--accent-color)')
+          : 'var(--toggle-inactive)',
+        opacity: disabled && !checked ? 0.6 : 1,
       }}
     >
       <div

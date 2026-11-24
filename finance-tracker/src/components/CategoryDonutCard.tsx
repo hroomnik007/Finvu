@@ -27,7 +27,7 @@ interface CategoryDonutCardProps {
  * pie hover), identical visual style in both places.
  */
 export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps) {
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatPercent } = useFormatters()
   const { t, locale } = useTranslation()
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
@@ -179,7 +179,7 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
                       fontWeight: isHighlighted ? 700 : 400,
                       transition: 'font-weight 0.1s, color 0.1s',
                     }}>{item.name}</span>
-                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', flexShrink: 0 }}>{itemPieIdx !== -1 ? pctByIndex[itemPieIdx] : 0}%</span>
+                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', flexShrink: 0 }}>{formatPercent(itemPieIdx !== -1 ? pctByIndex[itemPieIdx] : 0)}</span>
                   </div>
                 )
                 if (i < 5) return row
@@ -238,7 +238,7 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
                       <SliceIcon size={18} color={slice.color} strokeWidth={1.8} style={{ marginBottom: 2 }} />
                       <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', fontWeight: 500, textAlign: 'center', padding: '0 4px', margin: 0 }}>{slice.name}</p>
                       <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 12, color: 'var(--aurora-hi)', lineHeight: 1.2, margin: '2px 0 0' }}>{formatAmount(slice.value)}</p>
-                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{pctByIndex[pieDisplayIndex] ?? 0}%</p>
+                      <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{formatPercent(pctByIndex[pieDisplayIndex] ?? 0)}</p>
                     </>
                   )
                 })() : (
