@@ -281,7 +281,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
           </div>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{ht.totalExpensesStat}</div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', wordBreak: 'break-word' }}>{signFor(totalExpenses, '−')}{formatAmount(totalExpenses)}</div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-expense)', wordBreak: 'break-word' }}>{signFor(totalExpenses, '−')}{formatAmount(totalExpenses)}</div>
           </div>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{ht.membersCount}</div>
@@ -391,7 +391,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                   </div>
                   <div style={{ textAlign: 'center', padding: '8px 6px', background: 'rgba(251,113,133,0.08)', borderRadius: 10 }}>
                     <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', marginBottom: 2 }}>{ht.expensesStat}</p>
-                    <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, color: 'var(--aurora-rose)' }}>{signFor(exp, '−')}{formatAmount(exp)}</p>
+                    <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 13, color: 'var(--aurora-expense)' }}>{signFor(exp, '−')}{formatAmount(exp)}</p>
                   </div>
                   <div style={{ textAlign: 'center', padding: '8px 6px', background: 'rgba(139,92,246,0.08)', borderRadius: 10 }}>
                     <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', marginBottom: 2 }}>{ht.balanceStat}</p>
@@ -479,7 +479,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{description}</div>
                         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta}</div>
                       </div>
-                      <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', flexShrink: 0 }}>
+                      <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: isIncome ? 'var(--aurora-emerald)' : 'var(--aurora-expense)', flexShrink: 0 }}>
                         {isIncome ? '+' : '−'}{formatAmount(a.amount)}
                       </span>
                     </DenseRow>

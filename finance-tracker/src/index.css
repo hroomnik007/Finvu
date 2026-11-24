@@ -102,6 +102,15 @@
   --text2:     #a89ec9;
   --text3:     #9790AE; /* was #6b6387 (2.5:1) — AA 4.5:1 on the dark surfaces */
   --heat-ink:  #ffffff; /* text on the semi-transparent heatmap / calendar cells */
+  /* Heatmap / payment calendar: one hue (the accent) in three strengths, small → large */
+  --heat-1: color-mix(in srgb, var(--accent-color, #3B82F6) 18%, transparent);
+  --heat-2: color-mix(in srgb, var(--accent-color, #3B82F6) 45%, transparent);
+  --heat-3: color-mix(in srgb, var(--accent-color, #3B82F6) 92%, transparent);
+  --heat-ink-strong: #ffffff;
+  /* Expense amounts read in the text colour; red is kept for overruns and losses */
+  --aurora-expense: var(--aurora-hi);
+  /* Expense bars in charts: a quiet slate next to the income green */
+  --aurora-expense-bar: color-mix(in srgb, var(--aurora-lo) 75%, transparent);
   --violet:    #8B5CF6;
   --violet2:   #7C3AED;
   --violet-glow: rgba(139,92,246,0.2);
@@ -174,6 +183,13 @@
   --text2:     #4a4270;
   --text3:     #645A8E; /* was #8b82b0 (2.9:1) */
   --heat-ink:  #1A1535;
+  --heat-1: color-mix(in srgb, var(--accent-color, #2563EB) 16%, transparent);
+  --heat-2: color-mix(in srgb, var(--accent-color, #2563EB) 36%, transparent);
+  --heat-3: color-mix(in srgb, var(--accent-color, #2563EB) 85%, transparent);
+  --heat-ink-strong: #ffffff;
+  --aurora-expense: var(--aurora-hi);
+  /* Expense bars in charts: a quiet slate next to the income green */
+  --aurora-expense-bar: color-mix(in srgb, var(--aurora-lo) 75%, transparent);
   --violet:    #7C3AED;
   --violet2:   #6D28D9;
   --violet-glow: rgba(124,58,237,0.12);

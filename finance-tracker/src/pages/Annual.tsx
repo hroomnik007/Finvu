@@ -103,7 +103,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
           <div className="annual-stats">
             {([
               [t.dashboard.income, `+${formatAmount(totals.income)}`, 'var(--aurora-emerald)'],
-              [t.dashboard.expenses, `\u2212${formatAmount(totals.expense)}`, 'var(--aurora-rose)'],
+              [t.dashboard.expenses, `\u2212${formatAmount(totals.expense)}`, 'var(--aurora-expense)'],
               [t.annual.balance, signed(balance), balance >= 0 ? 'var(--aurora-emerald)' : 'var(--aurora-rose)'],
               ...(rate !== null ? [[t.dashboard.savingsRate, formatPercent(rate), 'var(--aurora-hi)']] : []),
             ] as [string, string, string][]).map(([label, value, color]) => (
@@ -127,7 +127,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
                     <div key={r.month} role="img" aria-label={label} title={label} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <div aria-hidden="true" style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 2, borderBottom: '1px solid var(--aurora-gline)' }}>
                         <div style={{ width: '38%', maxWidth: 14, height: `max(2px, ${r.incomePct}%)`, borderRadius: '3px 3px 0 0', background: 'var(--aurora-emerald)', opacity: r.income > 0 ? 1 : 0.35 }} />
-                        <div style={{ width: '38%', maxWidth: 14, height: `max(2px, ${r.expensePct}%)`, borderRadius: '3px 3px 0 0', background: 'var(--aurora-rose)', opacity: r.expense > 0 ? 1 : 0.35 }} />
+                        <div style={{ width: '38%', maxWidth: 14, height: `max(2px, ${r.expensePct}%)`, borderRadius: '3px 3px 0 0', background: 'var(--aurora-expense-bar)', opacity: r.expense > 0 ? 1 : 0.35 }} />
                       </div>
                       <span aria-hidden="true" style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: r.empty ? 'var(--aurora-faint)' : 'var(--aurora-lo)', opacity: r.empty ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '100%' }}>{shortMonth(r.index)}</span>
                     </div>
@@ -136,7 +136,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
               </div>
               <div aria-hidden="true" style={{ display: 'flex', gap: 16, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--aurora-emerald)' }} />{t.dashboard.income}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--aurora-rose)' }} />{t.dashboard.expenses}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--aurora-expense-bar)' }} />{t.dashboard.expenses}</span>
               </div>
             </GlassCard>
 
@@ -158,7 +158,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
                       <tr key={r.month} style={{ borderTop: '1px solid var(--aurora-gline)' }}>
                         <th scope="row" style={{ ...td, ...stickyCol, fontWeight: 500, ...faint }}>{t.months[r.index]}</th>
                         <td style={{ ...td, color: 'var(--aurora-emerald)', ...faint }}>{r.income > 0 ? formatAmount(r.income) : dash}</td>
-                        <td style={{ ...td, color: 'var(--aurora-rose)', ...faint }}>{r.expense > 0 ? `\u2212${formatAmount(r.expense)}` : dash}</td>
+                        <td style={{ ...td, color: 'var(--aurora-expense)', ...faint }}>{r.expense > 0 ? `\u2212${formatAmount(r.expense)}` : dash}</td>
                         <td style={{ ...td, fontWeight: 700, color: r.balance >= 0 ? 'var(--aurora-hi)' : 'var(--aurora-rose)', ...faint }}>{r.empty ? dash : signed(r.balance)}</td>
                       </tr>
                     )
@@ -166,7 +166,7 @@ export function AnnualPage({ scope }: { scope: 'personal' | 'family' }) {
                   <tr style={{ borderTop: '2px solid var(--aurora-gline)' }}>
                     <th scope="row" style={{ ...td, ...stickyCol, fontWeight: 700 }}>{t.annual.total}</th>
                     <td style={{ ...td, fontWeight: 700, color: 'var(--aurora-emerald)' }}>{formatAmount(totals.income)}</td>
-                    <td style={{ ...td, fontWeight: 700, color: 'var(--aurora-rose)' }}>{totals.expense > 0 ? `\u2212${formatAmount(totals.expense)}` : dash}</td>
+                    <td style={{ ...td, fontWeight: 700, color: 'var(--aurora-expense)' }}>{totals.expense > 0 ? `\u2212${formatAmount(totals.expense)}` : dash}</td>
                     <td style={{ ...td, fontWeight: 700 }}>{signed(balance)}</td>
                   </tr>
                 </tbody>

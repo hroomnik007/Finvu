@@ -360,7 +360,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                               {subtitle && <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
                               <PendingBadge state={e.pending} />
                             </div>
-                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(e.amount)}</span>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-expense)', flexShrink: 0 }}>−{formatAmount(e.amount)}</span>
                           </DenseRow>
                         </SwipeableRow>
                       )
@@ -402,7 +402,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                               <PendingBadge state={e.pending} />
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
-                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-rose)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
+                            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-expense)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
                             {!selectMode && <button onClick={() => openEdit(e)} disabled={!rowActions(e, offline).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
                             {!selectMode && <button onClick={() => removeWithUndo(e.id!)} disabled={!rowActions(e, offline).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
                           </div>

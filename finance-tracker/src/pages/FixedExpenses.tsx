@@ -38,6 +38,7 @@ import { todayISO } from '../utils/format'
 import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
 import { SuggestedCategoryHint } from '../components/SuggestedCategoryHint'
 import { pickerCategories } from '../utils/entryDefaults'
+import { heatBg, heatInk, heatLevel, HEAT_LARGE_FROM } from '../utils/heatLevel'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -516,11 +517,11 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       aspectRatio: '1',
                       borderRadius: 6,
                       background: hasPayment
-                        ? (sum >= 100 ? 'rgba(251,113,133,0.6)' : sum >= 20 ? 'rgba(251,191,36,0.75)' : 'rgba(139,92,246,0.5)')
+                        ? heatBg(heatLevel(sum))
                         : 'var(--aurora-glass)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
-                      color: hasPayment ? (sum >= 20 && sum < 100 ? '#1A1535' : 'var(--heat-ink)') : isToday ? 'var(--aurora-violet-text)' : 'var(--aurora-faint)',
+                      color: hasPayment ? heatInk(heatLevel(sum)) : isToday ? 'var(--aurora-violet-text)' : 'var(--aurora-faint)',
                       border: isToday ? '1.5px solid var(--aurora-violet)' : '1px solid var(--aurora-gline)',
                       filter: isPast ? 'saturate(0.5)' : undefined,
                       cursor: hasPayment ? 'pointer' : 'default',
@@ -535,9 +536,9 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
               })}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 6, flexWrap: 'wrap' as const }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.75)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(100))}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: heatBg(1), display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: heatBg(2), display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: heatBg(3), display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(HEAT_LARGE_FROM))}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'transparent', border: '1.5px solid var(--aurora-violet)', display: 'inline-block' }} />{t.dashboard.heatmapToday}</span>
             </div>
           </GlassCard>
@@ -635,7 +636,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       <PendingBadge state={expense.pending} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                      <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: isPast ? 'var(--aurora-faint)' : 'var(--aurora-rose)' }}>{formatAmount(expense.amount)}</span>
+                      <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: isPast ? 'var(--aurora-faint)' : 'var(--aurora-expense)' }}>{formatAmount(expense.amount)}</span>
                       {!isPast && <span style={{ fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20 }}>{badge.text}</span>}
                       {isPast && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600, color: 'var(--aurora-emerald)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '2px 8px', borderRadius: 20 }}>

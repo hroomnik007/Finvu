@@ -794,7 +794,7 @@ export function CsvImportModal({ open, onClose, filterType, initialFile }: CsvIm
                         )}
                       </div>
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: row.type === 'income' ? '#34D399' : '#F87171', flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: row.type === 'income' ? '#34D399' : 'var(--aurora-expense)', flexShrink: 0 }}>
                       {row.type === 'income' ? '+' : '−'}{row.currency ? `${formatNumber(row.amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${row.currency}` : formatAmount(row.amount)}
                     </span>
                   </div>

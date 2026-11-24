@@ -9,6 +9,7 @@ import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { todayISO } from '../utils/format'
 import { useSettingsContext } from '../context/SettingsContext'
+import { heatBg, heatInk, heatLevel, HEAT_LARGE_FROM } from '../utils/heatLevel'
 
 interface ExpenseHeatmapProps {
   expenses: VariableExpense[]
@@ -18,14 +19,9 @@ interface ExpenseHeatmapProps {
   onNavigate?: (page: 'variable-expenses') => void
 }
 
-// Same small/stredné/veľké severity thresholds and colors as the Fixné
-// výdavky "Kalendár mesiaca" widget (FixedExpenses.tsx), applied to the
-// day's total variable-expense amount instead of fixed-expense amount.
-function severityColor(amount: number): string {
-  if (amount >= 100) return 'rgba(251,113,133,0.6)'
-  if (amount >= 20) return 'rgba(251,191,36,0.75)'
-  return 'rgba(139,92,246,0.5)'
-}
+// Same small/stredné/veľké steps as the Fixné výdavky "Kalendár mesiaca"
+// widget (utils/heatLevel), applied to the day's variable-expense total.
+const severityColor = (amount: number): string => heatBg(heatLevel(amount))
 
 type TooltipState = {
   date: string
@@ -106,7 +102,6 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
           const amount = dailyTotals[dateStr] || 0
           const hasSpend = amount > 0
           const isToday = todayDay === day
-          const isPast = todayDay > 0 && day < todayDay
           const isSelected = lastClickedDay === dateStr
 
           return (
@@ -124,8 +119,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
                 fontSize: 12,
                 fontWeight: 600,
                 fontFamily: "'Outfit', sans-serif",
-                color: hasSpend ? (amount >= 20 && amount < 100 ? '#1A1535' : 'var(--heat-ink)') : isToday ? 'var(--aurora-violet-text)' : 'var(--aurora-faint)',
-                filter: isPast ? 'saturate(0.5)' : undefined,
+                color: hasSpend ? heatInk(heatLevel(amount)) : isToday ? 'var(--aurora-violet-text)' : 'var(--aurora-faint)',
                 position: 'relative',
                 transition: 'transform 0.12s',
               }}
@@ -190,9 +184,9 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
 
       {/* Legend */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', marginTop: 'auto', paddingTop: 14, flexWrap: 'wrap' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(139,92,246,0.5)', display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,191,36,0.75)', display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'rgba(251,113,133,0.6)', display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(100))}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: heatBg(1), display: 'inline-block' }} />{t.dashboard.heatmapSmall}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: heatBg(2), display: 'inline-block' }} />{t.dashboard.heatmapMedium}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: heatBg(3), display: 'inline-block' }} />{t.dashboard.heatmapLarge.replace('{amount}', formatAmount(HEAT_LARGE_FROM))}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}><span style={{ width: 9, height: 9, borderRadius: 3, background: 'transparent', border: '1.5px solid var(--aurora-violet)', display: 'inline-block' }} />{t.dashboard.heatmapToday}</span>
       </div>
 
@@ -222,7 +216,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
           }}
         >
           <div style={{ fontWeight: 700, marginBottom: 4 }}>{formatLongDate(tooltip.date, { weekday: 'short', day: 'numeric', month: 'long' })}</div>
-          <div style={{ color: 'var(--aurora-rose)', fontWeight: 600, marginBottom: 6, fontFamily: "'Outfit', sans-serif" }}>
+          <div style={{ color: 'var(--aurora-expense)', fontWeight: 600, marginBottom: 6, fontFamily: "'Outfit', sans-serif" }}>
             −{formatAmount(tooltip.amount)}
           </div>
           {tooltip.dayExpenses.slice(0, 3).map((exp, i) => {
@@ -234,7 +228,7 @@ export function ExpenseHeatmap({ expenses, month, year, categories = [], onNavig
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--aurora-lo)', fontSize: 12 }}>
                   {exp.note || '—'}
                 </span>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-rose)', flexShrink: 0 }}>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-expense)', flexShrink: 0 }}>
                   -{formatAmount(exp.amount)}
                 </span>
               </div>

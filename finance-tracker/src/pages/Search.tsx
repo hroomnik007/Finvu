@@ -195,7 +195,7 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
                                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categoryName}</div>
                               )}
                             </div>
-                            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: income ? 'var(--aurora-emerald)' : 'var(--aurora-rose)', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: income ? 'var(--aurora-emerald)' : 'var(--aurora-expense)', whiteSpace: 'nowrap' }}>
                               {income ? '+' : '\u2212'}{formatAmount(r.amount)}
                             </div>
                           </DenseRow>

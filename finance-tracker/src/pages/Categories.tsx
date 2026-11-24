@@ -164,7 +164,7 @@ function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, 
       </div>
       {cat.budgetLimit != null && (
         <>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-rose)', marginBottom: 8 }}>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-expense)', marginBottom: 8 }}>
             {signFor(status?.spent ?? 0, '−')}{formatAmount(status?.spent ?? 0)}
           </div>
           <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', marginBottom: 6 }}>
@@ -180,7 +180,7 @@ function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, 
       {/* No limit: still say what went through the category this month */}
       {cat.budgetLimit == null && status && status.spent > 0 && (
         <>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-rose)', marginBottom: 8 }}>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-expense)', marginBottom: 8 }}>
             −{formatAmount(status.spent)}
           </div>
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>{t.expenses.categories.spent}</div>
@@ -238,14 +238,14 @@ function SortableListCard(props: CardProps) {
             <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: status.spent > 0 ? 'var(--aurora-rose)' : 'var(--aurora-faint)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : formatAmount(0)}</span>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: status.spent > 0 ? 'var(--aurora-expense)' : 'var(--aurora-faint)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : formatAmount(0)}</span>
             <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{formatPercent(status.percentage)}</span>
           </div>
           <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
         </div>
       )}
       {cat.budgetLimit == null && status && status.spent > 0 && (
-        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-rose)', flexShrink: 0 }}>−{formatAmount(status.spent)}</span>
+        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-expense)', flexShrink: 0 }}>−{formatAmount(status.spent)}</span>
       )}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
         <button type="button" className="hit-44" aria-label={t.common.edit} title={t.common.edit} onClick={() => onEdit(cat)} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'var(--aurora-glass)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--aurora-faint)' }}><Pencil size={12} /></button>
@@ -320,14 +320,14 @@ function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit
                 <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width 0.3s' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: status.spent > 0 ? 'var(--aurora-rose)' : 'var(--aurora-faint)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : formatAmount(0)}</span>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: status.spent > 0 ? 'var(--aurora-expense)' : 'var(--aurora-faint)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : formatAmount(0)}</span>
                 <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{formatPercent(status.percentage)}</span>
               </div>
               <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
             </div>
           )}
           {cat.budgetLimit == null && status && status.spent > 0 && (
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>−{formatAmount(status.spent)}</span>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-expense)' }}>−{formatAmount(status.spent)}</span>
           )}
         </div>
       </SwipeableRow>
