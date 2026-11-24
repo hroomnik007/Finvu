@@ -65,9 +65,11 @@ export function queuedItemLabel(q: QueuedCreate): string {
 }
 
 /**
- * What a row allows: queued rows cannot be edited (only discarded), and
- * server rows cannot be edited or deleted while offline.
+ * What a row allows: queued rows cannot be edited (only discarded), server
+ * rows cannot be edited or deleted while offline, and in the family view
+ * another member's rows are read-only (`mine` false).
  */
-export function rowActions(row: { pending?: 'pending' | 'failed' }, offline: boolean): { canEdit: boolean; canDelete: boolean } {
+export function rowActions(row: { pending?: 'pending' | 'failed' }, offline: boolean, mine = true): { canEdit: boolean; canDelete: boolean } {
+  if (!mine) return { canEdit: false, canDelete: false }
   return { canEdit: !offline && !row.pending, canDelete: !!row.pending || !offline }
 }

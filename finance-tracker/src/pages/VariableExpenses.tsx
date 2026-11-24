@@ -42,11 +42,15 @@ import { CategoryCircle, CategoryPicker } from '../components/CategoryPicker'
 import React from 'react'
 import { AmountEntry } from '../components/AmountEntry'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
+import { useRowOwner } from '../hooks/useRowOwner'
+import { MemberAvatar } from '../components/MemberAvatar'
 
 interface VariableExpensesPageProps {
   month: number
   year: number
   showToast: (msg: string) => void
+  /** Moje / Rodinné from the top bar: the family view lists every member's rows (others read-only). */
+  scope?: 'personal' | 'family'
 }
 
 interface VarForm {
@@ -76,13 +80,14 @@ function openCategory(id: string) {
   try { sessionStorage.setItem('finvu_focus_category', id) } catch { /* private mode */ }
   window.location.hash = 'categories'
 }
-export function VariableExpensesPage({ month, year, showToast }: VariableExpensesPageProps) {
+export function VariableExpensesPage({ month, year, showToast, scope = 'personal' }: VariableExpensesPageProps) {
   const { variableExpenses, isLoading: listLoading, isError: listError, refetch: listRetry, addVariableExpense, updateVariableExpense, deleteVariableExpense } =
-    useVariableExpenses(month, year)
+    useVariableExpenses(month, year, scope)
   const listFailed = listError && variableExpenses.length === 0
-  const { fixedExpenses } = useFixedExpenses(month, year)
+  const { fixedExpenses } = useFixedExpenses(month, year, scope)
   const { categories, addCategory } = useCategories()
-  const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year })
+  const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year, family: scope === 'family' })
+  const { isMine, ownerOf } = useRowOwner(scope)
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
   const offline = useOffline()
@@ -115,6 +120,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const exitSelectMode = () => { setSelectMode(false); setSelectedIds(new Set()); setOpenSwipeId(null) }
   const rowClick = (e: VariableExpense) => {
+    // Another member's row (family view) is read-only
+    if (!isMine(e.created_by)) return
     if (!selectMode) { openEdit(e); return }
     if (e.pending) return
     setSelectedIds(prev => {
@@ -160,6 +167,9 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
 
   const categoriesMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories])
   const getCategoryById = useCallback((id: string) => categoriesMap.get(id) ?? null, [categoriesMap])
+  // Another member's row carries the id of their own category: fall back to its name / icon / colour
+  const catOf = (e: VariableExpense) => getCategoryById(e.categoryId)
+    ?? (e.categoryName ? { name: e.categoryName, icon: e.categoryIcon ?? '', color: e.categoryColor ?? '#9D84D4' } : null)
   const getBudgetForCat = (catId: string) => budgetStatuses.find(b => b.categoryId === catId)
 
   const selectedCatId = form.categoryId || null
@@ -177,7 +187,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   }
 
   const openEdit = (e: VariableExpense) => {
-    if (!rowActions(e, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
+    if (!rowActions(e, offline, isMine(e.created_by)).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(e)
     setForm({ amount: formatAmountInput(e.amount, decimalSeparator(locale)), categoryId: String(e.categoryId), note: e.note, date: e.date })
     setNewCatMode(false)
@@ -230,26 +240,32 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const monthNameRaw = getLocalizedMonthNames(locale)[month - 1] ?? ''
   const MONTH_NAME_VAR = monthNameRaw.charAt(0).toUpperCase() + monthNameRaw.slice(1)
 
+  // Category chips match by name too: in the family view another member's row
+  // carries the id of their own copy of the category
+  const nameKey = (n?: string | null) => (n ?? '').trim().toLowerCase()
+  const inCategory = useCallback((e: VariableExpense, catId: string) =>
+    e.categoryId === catId || (!!e.categoryName && nameKey(e.categoryName) === nameKey(categoriesMap.get(catId)?.name)),
+  [categoriesMap])
   const filteredTotal = useMemo(() =>
     (activeCategory
-      ? variableExpenses.filter(e => e.categoryId === activeCategory)
+      ? variableExpenses.filter(e => inCategory(e, activeCategory))
       : variableExpenses
     ).reduce((sum, e) => sum + e.amount, 0)
-  , [variableExpenses, activeCategory])
+  , [variableExpenses, activeCategory, inCategory])
   const animatedFilteredTotal = useCountUp(filteredTotal, 800)
 
   const categoriesWithExpenses = useMemo(
-    () => categories.filter(c => variableExpenses.some(e => e.categoryId === c.id)),
-    [categories, variableExpenses]
+    () => categories.filter(c => c.id && variableExpenses.some(e => inCategory(e, c.id!))),
+    [categories, variableExpenses, inCategory]
   )
 
   const filteredSorted = useMemo(() =>
     [...(activeCategory
-      ? variableExpenses.filter(e => e.categoryId === activeCategory)
+      ? variableExpenses.filter(e => inCategory(e, activeCategory))
       : variableExpenses
     )]
       .sort((a, b) => b.date.localeCompare(a.date))
-  , [variableExpenses, activeCategory])
+  , [variableExpenses, activeCategory, inCategory])
 
   const dayGroups = useMemo(() => {
     return filteredSorted.reduce<Array<{ date: string; dayNum: number; weekday: string; full: string; items: VariableExpense[]; dayTotal: number }>>((acc, e) => {
@@ -344,12 +360,13 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                   <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · −${formatAmount(dayTotal)}`} />
                   <DenseCard>
                     {items.map(e => {
-                      const cat = getCategoryById(e.categoryId)
+                      const cat = catOf(e)
+                      const owner = ownerOf(e.created_by)
                       const name = e.note || cat?.name || t.expenses.variable.defaultExpense
                       // The day header carries the date; the row keeps just the category.
                       const subtitle = e.note ? (cat?.name ?? '—') : ''
                       return (
-                        <SwipeableRow key={e.id} radius={0} disabled={!rowActions(e, offline).canDelete} onDelete={() => removeWithUndo(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
+                        <SwipeableRow key={e.id} radius={0} disabled={!rowActions(e, offline, isMine(e.created_by)).canDelete} onDelete={() => removeWithUndo(e.id!)} isOpen={openSwipeId === e.id} onOpen={() => setOpenSwipeId(e.id!)}>
                           <DenseRow onClick={() => rowClick(e)} selected={selectedIds.has(e.id!)}>
                             <div style={{ width: 38, height: 38, borderRadius: 12, background: (cat?.color ?? '#9D84D4') + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {(() => { const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag; return <Icon size={17} color={cat?.color ?? '#9D84D4'} strokeWidth={1.8} /> })()}
@@ -360,6 +377,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                               <PendingBadge state={e.pending} />
                             </div>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-expense)', flexShrink: 0 }}>−{formatAmount(e.amount)}</span>
+                            {owner && <span title={owner.name} style={{ display: 'flex', flexShrink: 0 }}><MemberAvatar userId={owner.id} userName={owner.name} size={22} avatarUrl={owner.avatar_url} /></span>}
                           </DenseRow>
                         </SwipeableRow>
                       )
@@ -387,7 +405,8 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                   <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · −${formatAmount(dayTotal)}`} />
                   <DenseCard>
                     {items.map(e => {
-                      const cat = getCategoryById(e.categoryId)
+                      const cat = catOf(e)
+                      const owner = ownerOf(e.created_by)
                       const name = e.note || cat?.name || t.expenses.variable.defaultExpense
                       const subtitle = e.note ? (cat?.name ?? '—') : ''
                       return (
@@ -402,8 +421,9 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={ev => { if (!selectMode) ev.stopPropagation() }}>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-expense)', marginRight: 8 }}>−{formatAmount(e.amount)}</span>
-                            {!selectMode && <button onClick={() => openEdit(e)} disabled={!rowActions(e, offline).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
-                            {!selectMode && <button onClick={() => removeWithUndo(e.id!)} disabled={!rowActions(e, offline).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
+                            {owner && <span title={owner.name} style={{ display: 'flex', marginRight: 6 }}><MemberAvatar userId={owner.id} userName={owner.name} size={22} avatarUrl={owner.avatar_url} /></span>}
+                            {!selectMode && isMine(e.created_by) && <button onClick={() => openEdit(e)} disabled={!rowActions(e, offline, isMine(e.created_by)).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>}
+                            {!selectMode && isMine(e.created_by) && <button onClick={() => removeWithUndo(e.id!)} disabled={!rowActions(e, offline, isMine(e.created_by)).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>}
                           </div>
                         </DenseRow>
                       )

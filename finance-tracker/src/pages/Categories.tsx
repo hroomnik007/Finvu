@@ -338,7 +338,7 @@ function SortableMobileCard({ cat, status, familyStatus, split, formatAmount, t,
   )
 }
 
-export function CategoriesPage({ showToast }: { showToast: (msg: string) => void }) {
+export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (msg: string) => void; scope?: 'personal' | 'family' }) {
   const { categories, isLoading: listLoading, isError: listError, refetch: listRetry, addCategory, updateCategory, deleteCategory, reload } = useCategories()
   const listFailed = listError && categories.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
@@ -408,6 +408,11 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` is today; the lists carry the month
   }, [familyVariable, familyFixed, members, user?.id])
   const [reorder, setReorder] = useState(false)
+  // The summary and the card tint follow Moje / Rodinné: in the family view a
+  // shared category counts with the whole family's spend
+  const heroStatuses = useMemo(() => scope === 'family'
+    ? budgetStatuses.map(b => familyStatuses.find(f => f.categoryId === b.categoryId) ?? b)
+    : budgetStatuses, [scope, budgetStatuses, familyStatuses])
 
   // What the cards show: the budget status of a category with a limit, or — for an
   // expense category without one — just what was spent in it this month (own
@@ -433,8 +438,8 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   // Single most urgent over/near-budget category gets a tinted card — everything else stays neutral
   const levelOfStatus = useCallback((b: BudgetStatus) => budgetLevel(b.spent, b.limit, limitIsFixedOnly(categories.find(c => c.id === b.categoryId))), [categories])
   const worstBudgetStatus = useMemo(() =>
-    [...budgetStatuses].filter(b => b.limit > 0).sort(compareBudget(levelOfStatus))[0],
-  [budgetStatuses, levelOfStatus])
+    [...heroStatuses].filter(b => b.limit > 0).sort(compareBudget(levelOfStatus))[0],
+  [heroStatuses, levelOfStatus])
   const urgentSeverity = worstBudgetStatus ? budgetSeverity([levelOfStatus(worstBudgetStatus)]) : null
   const urgentCategoryId = urgentSeverity ? worstBudgetStatus!.categoryId : null
 
@@ -673,12 +678,12 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
     setDeleteId(null)
   }
 
-  const heroTotalSpent = budgetStatuses.reduce((s, b) => s + b.spent, 0)
-  const heroTotalLimit = budgetStatuses.reduce((s, b) => s + b.limit, 0)
+  const heroTotalSpent = heroStatuses.reduce((s, b) => s + b.spent, 0)
+  const heroTotalLimit = heroStatuses.reduce((s, b) => s + b.limit, 0)
   const heroOverallPct = heroTotalLimit > 0 ? Math.round(heroTotalSpent / heroTotalLimit * 100) : 0
-  const heroNearLimitCount = budgetStatuses.filter(b => levelOfStatus(b) === 'near').length
+  const heroNearLimitCount = heroStatuses.filter(b => levelOfStatus(b) === 'near').length
   // Once something is actually over, say so (and count only those) instead of "near limit"
-  const heroOverLimitCount = budgetStatuses.filter(b => levelOfStatus(b) === 'over').length
+  const heroOverLimitCount = heroStatuses.filter(b => levelOfStatus(b) === 'over').length
   const heroCatCount = categories.length
   const heroLevel = budgetLevel(heroTotalSpent, heroTotalLimit)
   const heroBarColor = heroLevel === 'ok' ? 'var(--aurora-violet)' : BUDGET_LEVEL_COLOR[heroLevel]
@@ -730,8 +735,9 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(heroTotalLimit)}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '8px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.expenses.categories.remaining}</div>
-                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(Math.max(0, heroTotalLimit - heroTotalSpent))}</div>
+                {/* Past the total limit say by how much, not "Zostáva 0,00 €" */}
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{heroTotalSpent > heroTotalLimit ? t.expenses.categories.overLimit : t.expenses.categories.remaining}</div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: heroTotalSpent > heroTotalLimit ? 'var(--aurora-rose)' : 'var(--aurora-hi)' }}>{heroTotalSpent > heroTotalLimit ? `+${formatAmount(heroTotalSpent - heroTotalLimit)}` : formatAmount(heroTotalLimit - heroTotalSpent)}</div>
               </div>
               <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '8px 12px', flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{heroOverLimitCount > 0 ? t.expenses.categories.overLimit : t.expenses.categories.nearLimit}</div>

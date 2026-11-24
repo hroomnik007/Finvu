@@ -33,11 +33,15 @@ import { showToast as notify } from '../lib/toastStore'
 import { SwipeableRow } from '../components/SwipeableRow'
 import { AmountEntry } from '../components/AmountEntry'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
+import { useRowOwner } from '../hooks/useRowOwner'
+import { MemberAvatar } from '../components/MemberAvatar'
 
 
 interface IncomePageProps {
   month: number
   year: number
+  /** Moje / Rodinné from the top bar: the family view lists every member's rows (others read-only). */
+  scope?: 'personal' | 'family'
 }
 
 interface FormState {
@@ -101,8 +105,9 @@ function FormBody({ form, setForm, t, adding }: FormBodyProps) {
 }
 
 
-export function IncomePage({ month, year }: IncomePageProps) {
-  const { incomes, isLoading: listLoading, isError: listError, refetch: listRetry, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year)
+export function IncomePage({ month, year, scope = 'personal' }: IncomePageProps) {
+  const { incomes, isLoading: listLoading, isError: listError, refetch: listRetry, addIncome, updateIncome, deleteIncome, changeIncomePrice, endIncome } = useIncomes(month, year, scope)
+  const { isMine, ownerOf } = useRowOwner(scope)
   const listFailed = listError && incomes.length === 0
   const { formatAmount, formatAmountParts } = useFormatters()
   const { t, locale } = useTranslation()
@@ -125,14 +130,15 @@ export function IncomePage({ month, year }: IncomePageProps) {
   // Same source and rules as the Annual page (tracking start respected, future
   // months left out), so the two yearly figures always agree. Shares its cache.
   const { data: yearSeries } = useQuery({
-    queryKey: ['monthlySeries', `${year}-01`, `${year}-12`, 'personal', 'categories'],
-    queryFn: () => getMonthlySeries(`${year}-01`, `${year}-12`, 'personal', 'categories'),
+    queryKey: ['monthlySeries', `${year}-01`, `${year}-12`, scope, 'categories'],
+    queryFn: () => getMonthlySeries(`${year}-01`, `${year}-12`, scope, 'categories'),
   })
   const yearlyIncome = yearTotals(monthsUpTo(yearSeries?.months ?? [], todayISO().substring(0, 7))).income
 
   const openAdd = () => { setEditing(null); setIsCorrection(false); setEndOpen(false); setForm(makeEmpty(month, year)); setSheetOpen(true) }
   const openEdit = (income: Income) => {
-    if (!rowActions(income, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
+    if (!isMine(income.created_by)) return
+    if (!rowActions(income, offline, isMine(income.created_by)).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(income)
     setPriceFrom(nowYM); setIsCorrection(false); setEndOpen(false); setEndMonth(nowYM)
     setForm({ amount: formatAmountInput(income.amount, decimalSeparator(locale)), label: income.label, date: income.date, recurring: income.recurring })
@@ -270,7 +276,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                     <DayHeader dayNum={dayNum} weekday={weekday} full={full} summary={`${pluralCount(items.length, t.common.txCount, locale)} · +${formatAmount(dayTotal)}`} />
                     <DenseCard>
                       {items.map(income => (
-                        <SwipeableRow key={income.id} radius={0} disabled={!rowActions(income, offline).canDelete} onDelete={() => requestDelete(income)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
+                        <SwipeableRow key={income.id} radius={0} disabled={!rowActions(income, offline, isMine(income.created_by)).canDelete} onDelete={() => requestDelete(income)} isOpen={openSwipeId === income.id} onOpen={() => setOpenSwipeId(income.id!)}>
                           <DenseRow onClick={() => openEdit(income)}>
                             <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(52,211,153,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               {income.recurring ? <Repeat size={17} color="var(--aurora-emerald)" /> : <Calendar size={17} color="var(--aurora-emerald)" />}
@@ -291,6 +297,7 @@ export function IncomePage({ month, year }: IncomePageProps) {
                               <PendingBadge state={income.pending} />
                             </div>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', flexShrink: 0 }}>+{formatAmount(income.amount)}</span>
+                            {ownerOf(income.created_by) && <span title={ownerOf(income.created_by)!.name} style={{ display: 'flex', flexShrink: 0 }}><MemberAvatar userId={ownerOf(income.created_by)!.id} userName={ownerOf(income.created_by)!.name} size={22} avatarUrl={ownerOf(income.created_by)!.avatar_url} /></span>}
                           </DenseRow>
                         </SwipeableRow>
                       ))}
@@ -327,8 +334,11 @@ export function IncomePage({ month, year }: IncomePageProps) {
                             </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--aurora-emerald)', marginRight: 8 }}>+{formatAmount(income.amount)}</span>
-                            <button onClick={() => openEdit(income)} disabled={!rowActions(income, offline).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
-                            <button onClick={() => requestDelete(income)} disabled={!rowActions(income, offline).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
+                            {ownerOf(income.created_by) && <span title={ownerOf(income.created_by)!.name} style={{ display: 'flex', marginRight: 6 }}><MemberAvatar userId={ownerOf(income.created_by)!.id} userName={ownerOf(income.created_by)!.name} size={22} avatarUrl={ownerOf(income.created_by)!.avatar_url} /></span>}
+                            {isMine(income.created_by) && <>
+                            <button onClick={() => openEdit(income)} disabled={!rowActions(income, offline, isMine(income.created_by)).canEdit} className="btn-icon" aria-label={t.common.edit} title={t.common.edit} style={{ color: 'var(--aurora-faint)' }}><Edit2 size={13} /></button>
+                            <button onClick={() => requestDelete(income)} disabled={!rowActions(income, offline, isMine(income.created_by)).canDelete} className="btn-icon" aria-label={t.common.delete} title={t.common.delete} style={{ color: 'var(--aurora-faint)' }}><Trash2 size={13} /></button>
+                            </>}
                           </div>
                         </DenseRow>
                       ))}

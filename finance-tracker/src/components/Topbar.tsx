@@ -43,7 +43,8 @@ export function Topbar({ page, month, year, onMonthChange, dashView, onDashViewC
 
   const householdEnabled = user?.household_enabled ?? false
   const showMonth = MONTH_PAGES.includes(page)
-  const showToggle = householdEnabled && (page === 'dashboard' || page === 'annual')
+  // Every page that lists money: the choice is one setting for the whole app
+  const showToggle = householdEnabled && ['dashboard', 'annual', 'income', 'variable-expenses', 'fixed-expenses', 'categories', 'search'].includes(page)
   const showAdd = !(['household', 'settings'] as string[]).includes(page)
 
   const minDate = useMemo(() => {

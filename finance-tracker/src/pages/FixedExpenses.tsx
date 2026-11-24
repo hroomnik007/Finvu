@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
 import {
   Pencil, Trash2, Plus, Calendar, List as ListIcon, CheckCircle2, Tag, Repeat,
@@ -39,6 +39,8 @@ import { useCategorySuggestion } from '../hooks/useCategorySuggestion'
 import { SuggestedCategoryHint } from '../components/SuggestedCategoryHint'
 import { pickerCategories } from '../utils/entryDefaults'
 import { heatBg, heatInk, heatLevel, HEAT_LARGE_FROM } from '../utils/heatLevel'
+import { useRowOwner } from '../hooks/useRowOwner'
+import { MemberAvatar } from '../components/MemberAvatar'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -60,16 +62,19 @@ const pillStyle = (active: boolean): React.CSSProperties => ({
 interface FixedExpensesPageProps {
   month: number
   year: number
+  /** Moje / Rodinné from the top bar: the family view lists every member's bills (others read-only). */
+  scope?: 'personal' | 'family'
 }
 
-export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
-  const { fixedExpenses: allFixed, isLoading: listLoading, isError: listError, refetch: listRetry, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense } = useFixedExpenses(undefined, undefined, 'personal', true)
+export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpensesPageProps) {
+  const { fixedExpenses: allFixed, isLoading: listLoading, isError: listError, refetch: listRetry, addFixedExpense, updateFixedExpense, deleteFixedExpense, endFixedExpense } = useFixedExpenses(undefined, undefined, scope, true)
+  const { isMine, ownerOf } = useRowOwner(scope)
   const listFailed = listError && allFixed.length === 0
   const nowYM = useMemo(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }, [])
   // Running items drive the totals and lists; ended ones sit in their own section
   const fixedExpenses = useMemo(() => allFixed.filter(e => !isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
   const endedExpenses = useMemo(() => allFixed.filter(e => isEndedInMonth(e.endedOn, nowYM)), [allFixed, nowYM])
-  const { variableExpenses } = useVariableExpenses(month, year)
+  const { variableExpenses } = useVariableExpenses(month, year, scope)
   const { categories } = useCategories()
   const { formatAmount, formatAmountParts, formatDate, formatPercent } = useFormatters()
   const { t, locale } = useTranslation()
@@ -87,8 +92,14 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   )
 
   // Lists show the stored category whatever its type; only the picker is limited.
-  const getCat = (id?: string | null): Category | null =>
-    categories.find(c => c.id === id) ?? null
+  // Another member's bill carries the id of their own category: use its name / icon / colour
+  const catOfRow = useCallback((e: FixedExpense): Pick<Category, 'name' | 'icon' | 'color'> | null =>
+    categories.find(c => c.id === e.categoryId)
+    ?? (e.categoryName ? { name: e.categoryName, icon: e.categoryIcon ?? '', color: e.categoryColor ?? FALLBACK_COLOR } : null),
+  [categories])
+  // Filters and totals group by category name, so the family view puts a
+  // member's "Bývanie" together with yours (their rows carry their own ids)
+  const catKey = useCallback((e: FixedExpense) => (catOfRow(e)?.name ?? '').trim().toLowerCase(), [catOfRow])
 
   // A subscription card on the dashboard can send us here with the form to prefill
   const [initialPrefill] = useState(peekFixedPrefill)
@@ -133,32 +144,39 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   // Per month on average: a yearly 600 € counts as 50 € here (and 600 € in the year)
   const total = useMemo(() => fixedExpenses.reduce((s, e) => s + monthlyEquivalent(e), 0), [fixedExpenses])
   const filteredTotal = useMemo(() =>
-    activeCat === null ? total : fixedExpenses.filter(e => (e.categoryId ?? '') === activeCat).reduce((s, e) => s + monthlyEquivalent(e), 0)
-  , [fixedExpenses, activeCat, total])
+    activeCat === null ? total : fixedExpenses.filter(e => catKey(e) === activeCat).reduce((s, e) => s + monthlyEquivalent(e), 0)
+  , [fixedExpenses, activeCat, total, catKey])
   const variableTotal = useMemo(() => variableExpenses.reduce((s, e) => s + e.amount, 0), [variableExpenses])
   const animatedFilteredTotal = useCountUp(filteredTotal, 800)
 
   const filtered = useMemo(
     () => activeCat === null
       ? fixedExpenses
-      : fixedExpenses.filter(e => (e.categoryId ?? '') === activeCat),
-    [fixedExpenses, activeCat]
+      : fixedExpenses.filter(e => catKey(e) === activeCat),
+    [fixedExpenses, activeCat, catKey]
   )
+
+  // key (category name) → how to show it
+  const catInfo = useMemo(() => {
+    const m = new Map<string, Pick<Category, 'name' | 'icon' | 'color'>>()
+    for (const e of fixedExpenses) { const c = catOfRow(e); const k = catKey(e); if (c && k && !m.has(k)) m.set(k, c) }
+    return m
+  }, [fixedExpenses, catOfRow, catKey])
 
   const categoryTotals = useMemo(() => {
     const map = new Map<string, number>()
     for (const e of fixedExpenses) {
-      const key = e.categoryId ?? ''
+      const key = catKey(e)
       map.set(key, (map.get(key) ?? 0) + monthlyEquivalent(e))
     }
     return Array.from(map.entries())
       .filter(([, amt]) => amt > 0)
       .map(([id, amount]) => ({ id, amount }))
-  }, [fixedExpenses])
+  }, [fixedExpenses, catKey])
 
   const usedCategoryIds = useMemo(
-    () => [...new Set(fixedExpenses.map(e => e.categoryId ?? ''))],
-    [fixedExpenses]
+    () => [...new Set(fixedExpenses.map(catKey))],
+    [fixedExpenses, catKey]
   )
 
   const daysInCurrentMonth = useMemo(() => new Date(year, month, 0).getDate(), [year, month])
@@ -216,6 +234,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
   }
 
   function openEdit(e: FixedExpense) {
+    if (!isMine(e.ownerId)) return
     if (!rowActions(e, offline).canEdit) { if (offline) notify(t.offline.editOffline); return }
     setEditing(e); setLabel(e.label); setAmount(formatAmountInput(e.amount, decimalSeparator(locale)))
     setDayOfMonth(String(e.dayOfMonth)); setCategoryId(e.categoryId ?? ''); setNote(e.note)
@@ -271,7 +290,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
       {categoryTotals.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
           {categoryTotals.map(({ id, amount: catAmt }) => {
-            const cat = getCat(id)
+            const cat = catInfo.get(id)
             const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
             const name = cat?.name ?? '—'
             return (
@@ -476,7 +495,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                   {dayPayments.length === 0 ? (
                     <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: 0 }}>{t.expenses.fixed.noPaymentsThisDay}</p>
                   ) : dayPayments.map(e => {
-                    const cat = getCat(e.categoryId)
+                    const cat = catOfRow(e)
                     const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
                     const color = cat?.color ?? FALLBACK_COLOR
                     return (
@@ -553,7 +572,7 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                     {t.expenses.fixed.allCategories}
                   </button>
                   {usedCategoryIds.filter(id => id !== '').map(catId => {
-                    const cat = getCat(catId)
+                    const cat = catInfo.get(catId)
                     const isActive = activeCat === catId
                     const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
                     return (
@@ -607,14 +626,15 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
             const pastList = isPastMonth ? inMonth.slice().sort((a, b) => a.dayOfMonth - b.dayOfMonth) : calendarToday === -1 ? [] : inMonth.filter(e => e.dayOfMonth < calendarToday).sort((a, b) => b.dayOfMonth - a.dayOfMonth)
 
             const renderCard = (expense: typeof filtered[0], isPast = false) => {
-              const cat = getCat(expense.categoryId)
+              const cat = catOfRow(expense)
+              const owner = ownerOf(expense.ownerId)
               const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
               const color = cat?.color ?? FALLBACK_COLOR
               const daysUntil = ((expense.dayOfMonth - (calendarToday > 0 ? calendarToday : new Date().getDate()) + 31) % 31)
               const badge = countdownBadge(daysUntil)
               const monthAbbr = MONTHS_SK[month - 1] ?? ''
               return (
-                <SwipeableRow key={expense.id} radius={0} disabled={!rowActions(expense, offline).canDelete} onDelete={() => setDeleteId(expense.id!)} isOpen={openSwipeId === expense.id} onOpen={() => setOpenSwipeId(expense.id!)}>
+                <SwipeableRow key={expense.id} radius={0} disabled={!rowActions(expense, offline, isMine(expense.ownerId)).canDelete} onDelete={() => setDeleteId(expense.id!)} isOpen={openSwipeId === expense.id} onOpen={() => setOpenSwipeId(expense.id!)}>
                   <DenseRow onClick={() => openEdit(expense)} className="expense-row" style={{ opacity: isPast ? 0.65 : 1 }}>
                     {/* Date tile */}
                     <div style={{
@@ -636,7 +656,10 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                       <PendingBadge state={expense.pending} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                      <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: isPast ? 'var(--aurora-faint)' : 'var(--aurora-expense)' }}>{formatAmount(expense.amount)}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: isPast ? 'var(--aurora-faint)' : 'var(--aurora-expense)' }}>{formatAmount(expense.amount)}</span>
+                        {owner && <span title={owner.name} style={{ display: 'flex' }}><MemberAvatar userId={owner.id} userName={owner.name} size={20} avatarUrl={owner.avatar_url} /></span>}
+                      </span>
                       {!isPast && <span style={{ fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20 }}>{badge.text}</span>}
                       {isPast && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 600, color: 'var(--aurora-emerald)', background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)', padding: '2px 8px', borderRadius: 20 }}>
@@ -644,9 +667,9 @@ export function FixedExpensesPage({ month, year }: FixedExpensesPageProps) {
                         </span>
                       )}
                     </div>
-                    <div className="expense-actions hidden lg:flex" style={{ alignItems: 'center', gap: 2, flexShrink: 0 }} onClick={ev => ev.stopPropagation()}>
-                      <button type="button" className="hit-44" onClick={() => openEdit(expense)} disabled={!rowActions(expense, offline).canEdit} aria-label={t.common.edit} title={t.common.edit} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
-                      <button type="button" className="hit-44" onClick={() => setDeleteId(expense.id!)} disabled={!rowActions(expense, offline).canDelete} aria-label={t.common.delete} title={t.common.delete} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
+                    <div className="expense-actions hidden lg:flex" style={{ alignItems: 'center', gap: 2, flexShrink: 0, visibility: isMine(expense.ownerId) ? undefined : 'hidden' }} onClick={ev => ev.stopPropagation()}>
+                      <button type="button" className="hit-44" onClick={() => openEdit(expense)} disabled={!rowActions(expense, offline, isMine(expense.ownerId)).canEdit} aria-label={t.common.edit} title={t.common.edit} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={13} /></button>
+                      <button type="button" className="hit-44" onClick={() => setDeleteId(expense.id!)} disabled={!rowActions(expense, offline, isMine(expense.ownerId)).canDelete} aria-label={t.common.delete} title={t.common.delete} style={{ width: 30, height: 30, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={13} /></button>
                     </div>
                   </DenseRow>
                 </SwipeableRow>

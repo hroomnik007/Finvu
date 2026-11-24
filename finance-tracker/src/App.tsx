@@ -566,15 +566,15 @@ function App() {
             />
           )}
           {page === 'income' && (
-            <IncomePage month={month} year={year} />
+            <IncomePage month={month} year={year} scope={dashView} />
           )}
           {page === 'variable-expenses' && (
-            <VariableExpensesPage month={month} year={year} showToast={showToast} />
+            <VariableExpensesPage month={month} year={year} showToast={showToast} scope={dashView} />
           )}
           {page === 'fixed-expenses' && (
-            <FixedExpensesPage month={month} year={year} />
+            <FixedExpensesPage month={month} year={year} scope={dashView} />
           )}
-          {page === 'categories' && <CategoriesPage showToast={showToast} />}
+          {page === 'categories' && <CategoriesPage showToast={showToast} scope={dashView} />}
           {page === 'search' && <SearchPage scope={dashView} />}
           {page === 'annual' && <AnnualPage scope={dashView} />}
           {(page === 'settings' || page === 'household') && (
