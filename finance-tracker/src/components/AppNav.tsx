@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import {
-  LayoutDashboard, TrendingUp, CreditCard, Settings, Receipt, Tag, Search, ChevronLeft, ChevronRight, ChevronDown, PiggyBank, CalendarRange, Repeat,
+  LayoutDashboard, TrendingUp, CreditCard, Settings, Receipt, Tag, Search, ChevronRight, ChevronDown, PiggyBank, CalendarRange, Repeat, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import type { Page } from '../App'
 import { useTranslation } from '../i18n'
@@ -107,11 +107,8 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
           // reference where sidebar and content share one continuous glow.
           background: 'transparent',
           borderRight: '1px solid var(--aurora-gline)',
-          // Visible, so the collapse handle on the edge is not cut in half; the
-          // logo row, the nav list and the bottom section clip their own text
-          overflow: 'visible',
+          overflow: 'hidden',
           position: 'relative',
-          zIndex: 30,
         }}
       >
         {/* Logo */}
@@ -349,18 +346,23 @@ export function AppNav({ current, onChange, collapsed, onToggle, mobileOpen, onM
             {isExpanded && t.nav.settings}
           </button>
 
+          {/* Expand/collapse: the last row at the bottom of the panel, under Nastavenia */}
+          <button
+            type="button"
+            onClick={onToggle}
+            className="t-nav"
+            style={navItemStyle(false)}
+            onMouseEnter={e => hoverOn(e, false)}
+            onMouseLeave={e => hoverOff(e, false)}
+            aria-label={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
+            title={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
+          >
+            {isExpanded
+              ? <PanelLeftClose size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+              : <PanelLeftOpen size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />}
+            {isExpanded && t.nav.collapseSidebar}
+          </button>
         </div>
-
-        {/* Expand/collapse handle on the panel's edge, level with the logo */}
-        <button
-          type="button"
-          className="hit-44 sidebar-handle"
-          onClick={onToggle}
-          aria-label={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
-          title={isExpanded ? t.nav.collapseSidebar : t.nav.expandSidebar}
-        >
-          {isExpanded ? <ChevronLeft size={13} strokeWidth={1.8} /> : <ChevronRight size={13} strokeWidth={1.8} />}
-        </button>
       </aside>
     </>
   )

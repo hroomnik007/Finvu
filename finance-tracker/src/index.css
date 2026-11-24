@@ -1243,14 +1243,3 @@ html.has-session .boot-user { display: flex; }
   .search-filters { position: sticky; top: 0; }
   .search-results { padding-top: 38px; }
 }
-
-/* Sidebar collapse handle: a small round button half over the panel's right
-   edge, level with the logo (the panel no longer clips it) */
-.sidebar-handle {
-  position: absolute; top: 26px; right: -13px; width: 26px; height: 26px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  background: var(--aurora-panel); border: 1px solid var(--aurora-gline); color: var(--aurora-lo);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25); transition: color 0.15s, border-color 0.15s;
-}
-.sidebar-handle:hover { color: var(--aurora-hi); border-color: color-mix(in srgb, var(--accent-color, #3B82F6) 50%, var(--aurora-gline)); }
-.sidebar-handle:focus-visible { outline: 2px solid var(--accent-color, #3B82F6); outline-offset: 2px; }

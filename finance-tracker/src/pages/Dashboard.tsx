@@ -715,11 +715,14 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
       {/* ════════════════════════════════════════
           DESKTOP LAYOUT
       ════════════════════════════════════════ */}
-      <div className="hidden lg:grid gap-6 items-start w-full" style={{ gridTemplateColumns: 'minmax(0, 1fr) 280px', marginTop: 8 }}>
+      {/* Two rows: the greeting sits over the left column only, so the right
+          panel starts level with the hero card, not with the greeting */}
+      <div className="hidden lg:grid items-start w-full" style={{ gridTemplateColumns: 'minmax(0, 1fr) 280px', columnGap: 24, rowGap: 20, marginTop: 8 }}>
+
+        <div style={{ gridColumn: 1, gridRow: 1, minWidth: 0 }}>{greetingDesktop}</div>
 
         {/* LEFT */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, overflowX: 'hidden' }}>
-          {greetingDesktop}
+        <div style={{ gridColumn: 1, gridRow: 2, display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, overflowX: 'hidden' }}>
           {heroSection}
           {subscriptionHints}
           <div className="grid grid-cols-2 items-stretch" style={{ gap: 16 }}>
@@ -731,6 +734,8 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
         {/* RIGHT panel */}
         <div
           style={{
+            gridColumn: 2,
+            gridRow: 2,
             background: 'var(--aurora-glass)',
             border: '1px solid var(--aurora-gline)',
             borderRadius: 20,
