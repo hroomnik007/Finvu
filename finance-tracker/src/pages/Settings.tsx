@@ -325,6 +325,7 @@ export function SettingsPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot hand-off read from localStorage
       if (section === 'security') { openMobileSection('security') }
       else if (section === 'data') { openMobileSection('data') }
+      else if (section === 'finance') { openMobileSection('finance') }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

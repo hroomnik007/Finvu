@@ -883,6 +883,19 @@ html.compact .card { padding: var(--card-padding); }
 }
 
 /* Small text link inside a hero card header (Dashboard: yearly overview) */
+.hero-hint {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+  margin-top: 12px; padding: 8px 12px; border-radius: 12px;
+  font-family: 'Manrope', sans-serif; font-size: 12px; color: var(--aurora-lo);
+  background: color-mix(in srgb, var(--accent-color, #3B82F6) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-color, #3B82F6) 25%, transparent);
+}
+.hero-hint button {
+  margin-left: auto; padding: 0; border: none; background: transparent; cursor: pointer;
+  font: inherit; font-weight: 700; color: var(--aurora-violet-text); white-space: nowrap;
+}
+.hero-hint button:hover { text-decoration: underline; }
+
 .hero-link {
   flex-shrink: 0;
   display: inline-flex;

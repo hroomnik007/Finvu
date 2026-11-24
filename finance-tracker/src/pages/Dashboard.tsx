@@ -29,7 +29,6 @@ import { getMonthlySeries, getSummaryCards } from '../api/transactions'
 import { trackingStartOf } from '../utils/trackingStart'
 import { updateUserSettings } from '../api/auth'
 import { BudgetOverviewCard } from '../components/BudgetOverviewCard'
-import { budgetLevel, compareBudget, limitIsFixedOnly } from '../utils/budgetLevel'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
 import { useHousehold } from '../hooks/useHousehold'
@@ -37,7 +36,7 @@ import { MemberAvatar } from '../components/MemberAvatar'
 import { useCountUp } from '../hooks/useCountUp'
 import type { Page } from '../App'
 import type { Translations } from '../i18n/sk'
-import { todayISO } from '../utils/format'
+import { todayISO, toLocalISO } from '../utils/format'
 import { FirstRunChecklist } from '../components/FirstRunChecklist'
 
 const FALLBACK_COLOR = '#6b7280'
@@ -87,7 +86,7 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     allMonthFixedExpenses.filter(f => isFixedExpenseDue(f.dayOfMonth, month, year)),
   [allMonthFixedExpenses, month, year])
   const { goals: savingsGoals } = useSavings()
-  const { formatAmount, formatAmountParts, formatLongDate, formatPercent } = useFormatters()
+  const { formatAmount, formatAmountParts, formatLongDate } = useFormatters()
   const { t, locale } = useTranslation()
   const { profileName } = useSettingsContext()
   const { user, refreshUser } = useAuth()
@@ -101,15 +100,9 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   // Same figures as the Categories page: family view measures a shared category
   // against everything the family spent in it.
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses: allVariableExpenses, fixedExpenses, month, year, family: familyView })
-  const sortedBudgetStatuses = useMemo(() =>
-    budgetStatuses
-      .filter(b => b.limit > 0)
-      // Over the limit first, then near it, paid-as-planned last: an exceeded
-      // category must never drop out of the five just because it has few transactions.
-      .sort(compareBudget(x => budgetLevel(x.spent, x.limit, limitIsFixedOnly(categories.find(c => c.id === x.categoryId)))))
-      .slice(0, 5),
-    [budgetStatuses, categories]
-  )
+  // Every category with a limit: the grouped budget card picks what needs
+  // attention (over → near), lists "as planned" ones and folds the rest into one line
+  const limitedBudgetStatuses = useMemo(() => budgetStatuses.filter(b => b.limit > 0), [budgetStatuses])
   const greeting = getGreeting(displayName, t)
 
   const incomes = useMemo(() =>
@@ -167,15 +160,18 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   // tracking-start rules as the cards), for the comparison below.
   const chartStart = trackingStartOf(user)
   const prevKey = month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, '0')}`
-  const { data: prevMonthExpenses = 0 } = useQuery({
-    queryKey: ['dashboardChart', prevKey, chartStart, dashView],
+  const { data: prevMonth = null } = useQuery({
+    queryKey: ['dashboardPrevMonth', prevKey, chartStart, dashView],
     queryFn: async () => {
-      if (chartStart && prevKey < chartStart.slice(0, 7)) return 0
+      if (chartStart && prevKey < chartStart.slice(0, 7)) return null
       const series = await getMonthlySeries(prevKey, prevKey, dashView).catch(() => null)
-      return series?.months[0]?.expense ?? 0
+      const m = series?.months[0]
+      return m ? { income: m.income, expense: m.expense } : null
     },
     enabled: !!user,
   })
+  const prevMonthExpenses = prevMonth?.expense ?? 0
+  const prevMonthName = t.months[(month + 10) % 12].toLocaleLowerCase(locale)
 
   const { data: summaryCards = null, isLoading: sumLoading, isError: sumError, refetch: sumRetry } = useQuery({
     queryKey: ['summaryCards', year, month, dashView],
@@ -200,8 +196,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   const dayOfMonth = isCurrentMonth ? now.getDate() : daysInMonth
   const dailyAvgExpense = dayOfMonth > 0 ? totalExpenses / dayOfMonth : 0
 
-  const monthChallengeTarget = prevMonthExpenses
-  const challengeProgress = monthChallengeTarget > 0 ? Math.min(totalExpenses / monthChallengeTarget, 1) : 0
 
   function countdownBadge(daysUntil: number) {
     if (daysUntil === 0) return { text: t.expenses.fixed.countdown.today, color: 'var(--aurora-violet-text)', bg: 'rgba(139,92,246,0.15)' }
@@ -211,7 +205,7 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     return { text, color: 'var(--aurora-emerald)', bg: 'rgba(52,211,153,0.15)' }
   }
 
-const upcomingFixed = useMemo(() => {
+  const upcomingAll = useMemo(() => {
     const n = new Date()
     const today = new Date(n.getFullYear(), n.getMonth(), n.getDate())
     // Whole viewed month is before the real current month → everything in it is already paid
@@ -229,12 +223,16 @@ const upcomingFixed = useMemo(() => {
         const dueYM = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}`
         // The price valid in the month it falls due (a change may start next month)
         const price = [...(e.history ?? [])].reverse().find(h => h.from <= dueYM)?.amount ?? e.amount
-        return { ...e, amount: isPastMonth ? e.amount : price, dueYM, daysUntil: Math.round((due.getTime() - today.getTime()) / 86400000), paid: isPastMonth }
+        return { ...e, amount: isPastMonth ? e.amount : price, dueYM, dueDate: toLocalISO(due), daysUntil: Math.round((due.getTime() - today.getTime()) / 86400000), paid: isPastMonth }
       })
       .filter(e => isPastMonth || !isEndedInMonth(e.endedOn, e.dueYM))
       .sort((a, b) => isPastMonth ? a.dayOfMonth - b.dayOfMonth : a.daysUntil - b.daysUntil)
-      .slice(0, 4)
   }, [allFixedExpenses, year, month])
+  const upcomingFixed = upcomingAll.slice(0, 4)
+  // Still to pay in the real current month (all of them, not only the four shown)
+  const dueThisMonth = upcomingAll
+    .filter(e => !e.paid && e.dueYM === todayISO().slice(0, 7))
+    .reduce((sum, e) => sum + e.amount, 0)
 
   const motivationalMsg = (() => {
     if (totalIncome < 0.01) {
@@ -265,7 +263,6 @@ const upcomingFixed = useMemo(() => {
   // ── Right panel urgency + severity tinting ─────────────────────────────────
 
   // ── Forecast (end-of-month prediction) ──────────────────────────────────────
-  const forecastProgressPct = daysInMonth > 0 ? (isFutureMonth ? 0 : (dayOfMonth / daysInMonth) * 100) : 0
   // Fixed bills count once; only variable spending up to today is extrapolated,
   // and expenses already entered with a later date count once (see monthForecast).
   const todayKey = todayISO()
@@ -360,7 +357,19 @@ const upcomingFixed = useMemo(() => {
   const heroIncome = summaryCards?.income ?? (dashView === 'personal' ? totalIncome : 0)
   const heroExpenses = summaryCards?.expenses ?? (dashView === 'personal' ? totalExpenses : 0)
   const monthResult = heroIncome - heroExpenses
-  const savRate = heroIncome > 0 ? Math.round(((heroIncome - heroExpenses) / heroIncome) * 100) : 0
+  const signedAmount = (n: number) => `${n >= 0 ? '+' : '−'}${formatAmount(Math.abs(n))}`
+  // Without an opening balance the big figure is only the flow since tracking
+  // began — say so instead of calling it the account balance.
+  const openingBalanceSet = (user?.opening_balance ?? 0) !== 0
+  const sinceDate = chartStart
+    ? formatLongDate(chartStart, { day: 'numeric', month: 'long', ...(chartStart.slice(0, 4) !== String(now.getFullYear()) ? { year: 'numeric' } : {}) })
+    : ''
+  const heroLabel = openingBalanceSet || !chartStart
+    ? t.dashboard.totalBalance
+    : (heroBalance < 0 ? t.dashboard.overspentSince : t.dashboard.savedSince).replace('{date}', sinceDate)
+  const prevLine = (value: string) => prevMonth && !dashLoading && !dashFailed
+    ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 3, display: 'flex', flexWrap: 'wrap', columnGap: 4 }}><span>{prevMonthName}</span><span style={{ whiteSpace: 'nowrap' }}>{value}</span></div>
+    : null
   const animatedBalance = useCountUp(heroBalance, 800)
   const animatedIncome = useCountUp(heroIncome, 800)
   const animatedExpenses = useCountUp(heroExpenses, 800)
@@ -375,7 +384,8 @@ const upcomingFixed = useMemo(() => {
   // exact target (floating-point rounding), which would otherwise never
   // satisfy a strict === check and leave the gradient span permanently unmounted.
   const balanceSettled = Math.abs(animatedBalance - heroBalance) < 0.005
-  const balanceSign = heroBalance >= 0 ? '+' : '−'
+  // A balance is a state, not a change: only a negative one gets a sign
+  const balanceSign = heroBalance < 0 ? '−' : ''
   const balanceParts = formatAmountParts(Math.abs(balanceSettled ? heroBalance : animatedBalance))
   const balanceText = balanceParts.main
   const balanceFontStyle = {
@@ -385,7 +395,7 @@ const upcomingFixed = useMemo(() => {
     <HeroCard variant="neutral">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, minWidth: 0 }}>
-          {t.dashboard.totalBalance}
+          {heroLabel}
         </div>
         {/* Quiet link to the yearly overview (was a second primary button under the card) */}
         <button
@@ -418,14 +428,6 @@ const upcomingFixed = useMemo(() => {
         </span>
       </div>
       )}
-      {/* The big figure is the running total since tracking began; the tiles below
-          are this month's, so the month's own result is spelled out between them. */}
-      <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-lo)', marginTop: 10 }}>
-        {t.dashboard.monthResult} · {t.months[month - 1]} {year}:{' '}
-        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: monthResult < 0 ? 'var(--aurora-rose)' : 'var(--aurora-emerald)' }}>
-          {heroValue(`${monthResult >= 0 ? '+' : '−'}${formatAmount(Math.abs(monthResult))}`)}
-        </span>
-      </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <div
           onClick={() => onNavigate('income')}
@@ -435,6 +437,7 @@ const upcomingFixed = useMemo(() => {
         >
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.income}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedIncome))}</div>
+          {prevLine(formatAmount(prevMonth?.income ?? 0))}
         </div>
         <div
           onClick={() => onNavigate('variable-expenses')}
@@ -444,12 +447,25 @@ const upcomingFixed = useMemo(() => {
         >
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.expenses}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-expense)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedExpenses))}</div>
+          {prevLine(formatAmount(prevMonth?.expense ?? 0))}
         </div>
         <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.savingsRate}</div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{heroValue(formatPercent(savRate))}</div>
+          <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.monthResult}</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: monthResult < 0 ? 'var(--aurora-rose)' : 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(signedAmount(monthResult))}</div>
+          {prevLine(signedAmount((prevMonth?.income ?? 0) - (prevMonth?.expense ?? 0)))}
         </div>
       </div>
+      {!openingBalanceSet && !dashLoading && !dashFailed && (
+        <div className="hero-hint">
+          <span>{t.dashboard.notAccountBalance}</span>
+          <button
+            type="button"
+            onClick={() => { try { localStorage.setItem('settings_open_section', 'finance') } catch { /* ignore */ } onNavigate('settings') }}
+          >
+            {t.dashboard.setAccountBalance}
+          </button>
+        </div>
+      )}
     </HeroCard>
   )
 
@@ -474,6 +490,59 @@ const upcomingFixed = useMemo(() => {
     )
   )
 
+  // Desktop: the latest entries of the viewed month under the charts (that
+  // column used to end early while the right panel kept going)
+  const recentRows = useMemo(() => {
+    const today = todayISO()
+    const catOf = (id: string) => categories.find(c => c.id === id)
+    return [
+      ...variableExpenses.filter(v => v.date <= today).map(v => {
+        const cat = catOf(v.categoryId)
+        return { key: `v-${v.id ?? `${v.date}-${v.note}-${v.amount}`}`, date: v.date, name: v.note || v.categoryName || cat?.name || t.annual.noCategory, sub: v.categoryName ?? cat?.name ?? '', icon: v.categoryIcon ?? cat?.icon, color: v.categoryColor ?? cat?.color ?? FALLBACK_COLOR, amount: -v.amount, ownerId: v.created_by ?? undefined }
+      }),
+      ...incomes.filter(i => !i.recurring && i.date <= today).map(i => ({ key: `i-${i.id ?? `${i.date}-${i.label}`}`, date: i.date, name: i.label, sub: t.dashboard.income, icon: '📈', color: '#34D399', amount: i.amount, ownerId: i.created_by ?? undefined })),
+    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8)
+  }, [variableExpenses, incomes, categories, t])
+
+  const recentCard = recentRows.length > 0 && !dashLoading && !dashFailed ? (
+    <GlassCard radius={20}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+        <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.dashboard.recentTransactions}</h3>
+        <button
+          onClick={() => onNavigate('variable-expenses')}
+          style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-cyan)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
+        >
+          {t.dashboard.showAll}
+        </button>
+      </div>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', columnGap: 24 }}>
+        {recentRows.map(r => {
+          const Icon = CATEGORY_ICON_MAP[r.icon ?? ''] ?? Tag
+          const owner = familyView && r.ownerId ? ownerOf(r.ownerId) : undefined
+          return (
+            <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid var(--aurora-gline)' }}>
+              <div style={{ width: 30, height: 30, borderRadius: 10, background: catBg(r.color), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={14} color={r.color} strokeWidth={1.8} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sub} · {formatLongDate(r.date, { day: 'numeric', month: 'numeric' })}</div>
+              </div>
+              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: r.amount > 0 ? 'var(--aurora-emerald)' : 'var(--aurora-expense)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                {r.amount > 0 ? '+' : '−'}{formatAmount(Math.abs(r.amount))}
+              </span>
+              {owner && (
+                <span title={owner.name} aria-label={owner.name} style={{ display: 'flex', flexShrink: 0 }}>
+                  <MemberAvatar userId={owner.id} userName={owner.name} size={22} avatarUrl={owner.avatar_url} />
+                </span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </GlassCard>
+  ) : null
+
   const heatmapCard = (
     <ExpenseHeatmap
       expenses={variableExpenses}
@@ -484,8 +553,7 @@ const upcomingFixed = useMemo(() => {
     />
   )
 
-  const rightPanelCards = (
-    <>
+  const upcomingCard = (
       <GlassCard radius={20}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
           <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.dashboard.upcomingPayments}</h3>
@@ -499,46 +567,60 @@ const upcomingFixed = useMemo(() => {
           )}
         </div>
         {upcomingFixed.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {upcomingFixed.map(fe => {
+          // A flat list (rows split by a hairline) — a glass card per payment
+          // nested in the glass panel cost the names their width ("365 inves…")
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {upcomingFixed.map((fe, i) => {
               const badge = fe.paid ? { text: t.expenses.paid, color: 'var(--aurora-emerald)', bg: 'rgba(52,211,153,0.15)' } : countdownBadge(fe.daysUntil)
               const cat = categories.find(c => c.id === fe.categoryId)
               const color = cat?.color ?? FALLBACK_COLOR
               const Icon = CATEGORY_ICON_MAP[cat?.icon ?? ''] ?? Tag
+              const owner = familyView ? ownerOf(fe.ownerId) : undefined
               return (
-                <GlassCard key={fe.id ?? fe.label} radius={18} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 13, background: catBg(color), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon size={18} color={color} strokeWidth={1.8} />
+                <div key={fe.id ?? fe.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i > 0 ? '1px solid var(--aurora-gline)' : 'none' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: catBg(color), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={15} color={color} strokeWidth={1.8} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{fe.label}</div>
-                    {/* One non-wrapping row: the owner tag (family view) must never push the badge text or the card onto extra lines */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                      <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: badge.color, background: badge.bg, padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.text}</span>
-                      {familyView && ownerOf(fe.ownerId) && (
-                        // Avatar instead of a name tag: always fits, the name is in the tooltip
-                        <span title={ownerOf(fe.ownerId)!.name} aria-label={ownerOf(fe.ownerId)!.name} style={{ display: 'flex', flexShrink: 0 }}>
-                          <MemberAvatar userId={ownerOf(fe.ownerId)!.id} userName={ownerOf(fe.ownerId)!.name} size={20} avatarUrl={ownerOf(fe.ownerId)!.avatar_url} />
-                        </span>
-                      )}
+                    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', lineHeight: 1.25, overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{fe.label}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', whiteSpace: 'nowrap' }}>
+                      {!fe.paid && <span>{formatLongDate(fe.dueDate, { day: 'numeric', month: 'numeric' })}</span>}
+                      <span style={{ fontWeight: 600, color: badge.color, background: badge.bg, padding: '1px 6px', borderRadius: 20 }}>{badge.text}</span>
                     </div>
                   </div>
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-expense)', flexShrink: 0 }}>
-                    {formatAmount(fe.amount)}
-                  </span>
-                </GlassCard>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-expense)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatAmount(fe.amount)}
+                    </span>
+                    {owner && (
+                      // Who pays it (family view); the name is in the tooltip
+                      <span title={owner.name} aria-label={owner.name} style={{ display: 'flex' }}>
+                        <MemberAvatar userId={owner.id} userName={owner.name} size={24} avatarUrl={owner.avatar_url} />
+                      </span>
+                    )}
+                  </div>
+                </div>
               )
             })}
+            {dueThisMonth > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, paddingTop: 9, borderTop: '1px solid var(--aurora-gline)', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
+                <span>{t.dashboard.dueThisMonthTotal}</span>
+                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--aurora-hi)', fontVariantNumeric: 'tabular-nums' }}>{formatAmount(dueThisMonth)}</span>
+              </div>
+            )}
           </div>
         ) : (
           <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.noUpcomingPayments}</p>
         )}
       </GlassCard>
+  )
 
+  const budgetCard = (
       <BudgetOverviewCard
         title={t.dashboard.budget}
-        items={sortedBudgetStatuses}
+        items={limitedBudgetStatuses}
         categories={categories}
+        grouped
         empty={(
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.noLimits}</p>
@@ -559,48 +641,25 @@ const upcomingFixed = useMemo(() => {
           </button>
         )}
       />
+  )
 
-      {(insightMainText || monthChallengeTarget > 0) && (
-        <GlassCard radius={20}>
-          <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{t.dashboard.howYouAreDoing}</p>
-          {insightMainText && (
-            <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, color: insightMainColor, margin: monthChallengeTarget > 0 ? '0 0 12px' : 0 }}>{insightMainText}</p>
-          )}
-          {monthChallengeTarget > 0 && (
-            <>
-              <div style={{ height: 8, borderRadius: 99, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    height: '100%', borderRadius: 99,
-                    width: `${Math.round(challengeProgress * 100)}%`,
-                    background: challengeProgress < 0.8 ? 'var(--aurora-emerald)' : challengeProgress < 1 ? 'var(--aurora-amber)' : 'var(--aurora-rose)',
-                    transition: 'width 0.4s',
-                  }}
-                />
-              </div>
-              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: '6px 0 0' }}>
-                {formatAmount(totalExpenses)} / {formatAmount(monthChallengeTarget)} ({formatPercent(challengeProgress * 100)})
-              </p>
-            </>
-          )}
-        </GlassCard>
-      )}
-
+  const forecastCard = (
       <ForecastCard
-        progressPct={forecastProgressPct}
-        monthLabel={t.dashboard.ofMonth}
-        predictedBalanceLabel={t.dashboard.predictedBalance}
+        title={t.dashboard.monthEnd}
+        note={isCurrentMonth ? pluralText(daysInMonth - dayOfMonth, t.dashboard.daysLeft, locale) : undefined}
         predictedBalanceText={predictedBalanceText}
         predictedBalanceColor={predictedBalanceColor}
-        paceText={paceText}
+        paceText={isCurrentMonth ? t.dashboard.ifSpendingLikeNow.replace('{amount}', formatAmount(forecast.variablePerDay)) : paceText}
+        insight={insightMainText ? { text: insightMainText, color: insightMainColor } : undefined}
         lowest={lowestAhead && lowestAhead.lowestDay > dayOfMonth ? {
           label: t.dashboard.lowestBalance.replace('{day}', `${lowestAhead.lowestDay}.`),
           text: `${lowestAhead.lowest < 0 ? '−' : ''}${formatAmount(Math.abs(lowestAhead.lowest))}`,
           negative: lowestAhead.lowest < 0,
         } : undefined}
       />
+  )
 
-      {(user?.savings_enabled && savingsGoals.length > 0) && (
+  const savingsCard = (user?.savings_enabled && savingsGoals.length > 0) && (
         <GlassCard radius={20}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.savings.dashboardTitle}</p>
@@ -633,10 +692,12 @@ const upcomingFixed = useMemo(() => {
             })}
           </div>
         </GlassCard>
-      )}
-
-    </>
   )
+
+  // Desktop panel: payments first (the panel sits beside the balance).
+  const rightPanelCards = <>{upcomingCard}{budgetCard}{forecastCard}{savingsCard}</>
+  // Phone: what needs attention first — budget and month end before the payments.
+  const mobileCards = <>{budgetCard}{forecastCard}{upcomingCard}{savingsCard}</>
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -718,9 +779,9 @@ const upcomingFixed = useMemo(() => {
         <div>{greetingRow}</div>
         {heroSection}
         {subscriptionHints}
-        {/* Daily-use order: balance → upcoming payments → budget → charts */}
+        {/* Daily-use order: balance → budget → month end → upcoming payments → charts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {rightPanelCards}
+          {mobileCards}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {pieChartCard}
@@ -742,6 +803,7 @@ const upcomingFixed = useMemo(() => {
             {heatmapCard}
             {pieChartCard}
           </div>
+          {recentCard}
         </div>
 
         {/* RIGHT panel */}

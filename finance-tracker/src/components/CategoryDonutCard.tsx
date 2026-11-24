@@ -5,7 +5,6 @@ import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
-import { pluralText } from '../utils/plural'
 
 export interface DonutDatum {
   name: string
@@ -26,14 +25,16 @@ interface CategoryDonutCardProps {
  * Household module. Self-contained interaction state (clicked > legend hover >
  * pie hover), identical visual style in both places.
  */
+const TOP_SLICES = 5
+const REST_COLOR = '#64748B'
+
 export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps) {
   const { formatAmount, formatPercent } = useFormatters()
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [legendHoverIndex, setLegendHoverIndex] = useState<number | null>(null)
   const [clickedIndex, setClickedIndex] = useState<number | null>(null)
-  const [showAllPie, setShowAllPie] = useState(false)
   // Gate the recharts <ResponsiveContainer> until after the first paint so it
   // measures a real box — same rAF pattern as FixedExpenses.tsx (setState inside
   // a plain mount effect trips react-hooks/set-state-in-effect).
@@ -49,9 +50,18 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
   const resetPie = () => { setClickedIndex(null); setLegendHoverIndex(null); setActiveIndex(null) }
   const selectPie = (index: number | null) => { setClickedIndex(index); setLegendHoverIndex(null); setActiveIndex(null) }
 
-  const pieData = useMemo(() => data.filter(d => d.value > 0), [data])
-  const sortedPieData = useMemo(() => [...pieData].sort((a, b) => b.value - a.value), [pieData])
-  const remainingPieCount = sortedPieData.length > 5 ? sortedPieData.length - 5 : 0
+  // The five largest categories and one "Ďalšie" slice for the rest: past six,
+  // slices turn into slivers that can't be told apart (or tapped).
+  const { pieData, restCount } = useMemo(() => {
+    const sorted = data.filter(d => d.value > 0).sort((a, b) => b.value - a.value)
+    if (sorted.length <= TOP_SLICES + 1) return { pieData: sorted, restCount: 0 }
+    const rest = sorted.slice(TOP_SLICES)
+    return {
+      pieData: [...sorted.slice(0, TOP_SLICES), { name: t.dashboard.otherCategories, icon: null, value: rest.reduce((sum, d) => sum + d.value, 0), color: REST_COLOR }],
+      restCount: rest.length,
+    }
+  }, [data, t])
+  const sortedPieData = pieData
   const denom = total ?? pieData.reduce((s, d) => s + d.value, 0)
 
   // Integer percentages that always sum to exactly 100 (largest-remainder
@@ -140,7 +150,7 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
                 (many categories) is centred inside the 190px box, pushing the
                 first rows above the scroll origin where they can't be reached —
                 on desktop too, not just the mobile "show more" case. */}
-            <div style={{ width: '100%', minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(148px, 100%), 1fr))', rowGap: 6, columnGap: 16, alignContent: 'start' }}>
+            <div style={{ width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               {sortedPieData.map((item, i) => {
                 const itemPieIdx = pieData.findIndex(d => d.name === item.name)
                 const isSelected = clickedIndex !== null && clickedIndex === itemPieIdx
@@ -150,7 +160,6 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
                     key={i}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, cursor: 'pointer',
-                      width: 'fit-content', maxWidth: '100%',
                       padding: '3px 6px', borderRadius: 6, margin: '0 -6px',
                       background: isSelected ? 'rgba(139,92,246,0.12)' : 'transparent',
                       border: isSelected ? '1px solid rgba(139,92,246,0.2)' : '1px solid transparent',
@@ -178,26 +187,14 @@ export function CategoryDonutCard({ data, title, total }: CategoryDonutCardProps
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       fontWeight: isHighlighted ? 700 : 400,
                       transition: 'font-weight 0.1s, color 0.1s',
-                    }}>{item.name}</span>
-                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', flexShrink: 0 }}>{formatPercent(itemPieIdx !== -1 ? pctByIndex[itemPieIdx] : 0)}</span>
+                      flex: 1, minWidth: 0,
+                    }}>{item.name}{restCount > 0 && i === TOP_SLICES ? ` (${restCount})` : ''}</span>
+                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-hi)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{formatAmount(item.value)}</span>
+                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', flexShrink: 0, minWidth: 34, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatPercent(itemPieIdx !== -1 ? pctByIndex[itemPieIdx] : 0)}</span>
                   </div>
                 )
-                if (i < 5) return row
-                return (
-                  <div key={i} className={!showAllPie ? 'hidden md:block' : undefined}>
-                    {row}
-                  </div>
-                )
+                return row
               })}
-              {remainingPieCount > 0 && (
-                <button
-                  className="md:hidden"
-                  onClick={() => setShowAllPie(p => !p)}
-                  style={{ fontSize: 12, color: 'var(--aurora-violet-text)', cursor: 'pointer', background: 'transparent', border: 'none', padding: 0, textAlign: 'left', fontFamily: "'Manrope', sans-serif" }}
-                >
-                  {showAllPie ? t.dashboard.showLess : pluralText(remainingPieCount, t.dashboard.moreItems, locale)}
-                </button>
-              )}
             </div>
             {/* Donut */}
             <div
