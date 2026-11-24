@@ -23,6 +23,7 @@ import { shareCategories } from '../api/categories'
 import type { HouseholdData, MonthlyStats, ActivityItem } from '../api/households'
 import { parseDescription } from '../hooks/useFixedExpenses'
 import { DenseCard, DenseRow } from '../components/DenseList'
+import { limitIsFixedOnly } from '../utils/budgetLevel'
 
 const CAT_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#A78BFA', '#F97316']
 
@@ -197,6 +198,7 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
         return {
           id: c.id!, name: c.name, icon: c.icon, color: c.color, shared: !!c.shared,
           limit: c.budgetLimit ?? 0, spent: perMember.reduce((sum, pm) => sum + pm.amount, 0), perMember,
+          limitFixedOnly: limitIsFixedOnly(c),
         }
       })
     const used = (x: SharedCategoryTile) => (x.limit > 0 ? x.spent / x.limit : 0)

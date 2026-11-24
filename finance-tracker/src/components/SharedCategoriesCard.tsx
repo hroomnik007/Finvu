@@ -4,6 +4,7 @@ import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { pluralText } from '../utils/plural'
+import { budgetLevel, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
 
 export interface SharedCategoryTile {
   id: string
@@ -16,6 +17,8 @@ export interface SharedCategoryTile {
   /** What the whole family spent in the category this month. */
   spent: number
   perMember: { name: string; amount: number }[]
+  /** The common limit is exactly the household's fixed payments (no reserve). */
+  limitFixedOnly?: boolean
 }
 
 interface Props {
@@ -38,7 +41,7 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
   const ht = t.household
 
   const shared = tiles.filter(x => x.shared)
-  const over = shared.filter(x => x.limit > 0 && x.spent > x.limit).length
+  const over = shared.filter(x => budgetLevel(x.spent, x.limit, x.limitFixedOnly) === 'over').length
   const totalSpent = shared.reduce((s, x) => s + x.spent, 0)
   const totalLimit = shared.reduce((s, x) => s + x.limit, 0)
 
@@ -60,7 +63,8 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
         {tiles.map(x => {
           const Icon = CATEGORY_ICON_MAP[x.icon] ?? Tag
           const pct = x.limit > 0 ? (x.spent / x.limit) * 100 : 0
-          const bar = pct >= 100 ? 'var(--aurora-rose)' : pct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+          const level = budgetLevel(x.spent, x.limit, x.limitFixedOnly)
+          const bar = BUDGET_LEVEL_COLOR[level]
 
           if (!x.shared) {
             return (
@@ -80,13 +84,13 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
           }
 
           return (
-            <div key={x.id} style={{ padding: '12px 14px', borderRadius: 16, border: `1px solid ${pct >= 100 ? 'rgba(251,113,133,0.4)' : 'rgba(139,92,246,0.3)'}`, background: 'var(--aurora-glass)' }}>
+            <div key={x.id} style={{ padding: '12px 14px', borderRadius: 16, border: `1px solid ${level === 'over' ? 'rgba(251,113,133,0.4)' : 'rgba(139,92,246,0.3)'}`, background: 'var(--aurora-glass)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 32, height: 32, borderRadius: 10, background: x.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon size={15} color={x.color} strokeWidth={1.8} />
                 </span>
                 <span style={{ flex: 1, minWidth: 0, fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.name}</span>
-                {x.limit > 0 && <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: bar, flexShrink: 0 }}>{pct > 999 ? '>999%' : `${Math.round(pct)}%`}</span>}
+                {x.limit > 0 && <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: bar, flexShrink: 0 }}>{level === 'planned' ? '✓ ' : ''}{pct > 999 ? '>999%' : `${Math.round(pct)}%`}</span>}
                 <button
                   type="button"
                   onClick={() => onUnshare(x.id)}

@@ -29,6 +29,7 @@ import { getMonthlySeries, getSummaryCards } from '../api/transactions'
 import { trackingStartOf } from '../utils/trackingStart'
 import { updateUserSettings } from '../api/auth'
 import { BudgetOverviewCard } from '../components/BudgetOverviewCard'
+import { budgetLevel, compareBudget, limitIsFixedOnly } from '../utils/budgetLevel'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useSavings } from '../hooks/useSavings'
 import { useHousehold } from '../hooks/useHousehold'
@@ -103,11 +104,11 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   const sortedBudgetStatuses = useMemo(() =>
     budgetStatuses
       .filter(b => b.limit > 0)
-      // Closest to (or furthest over) its limit first: an exceeded category must
-      // never drop out of the five just because it has few transactions.
-      .sort((a, b) => b.percentage - a.percentage || b.spent - a.spent)
+      // Over the limit first, then near it, paid-as-planned last: an exceeded
+      // category must never drop out of the five just because it has few transactions.
+      .sort(compareBudget(x => budgetLevel(x.spent, x.limit, limitIsFixedOnly(categories.find(c => c.id === x.categoryId)))))
       .slice(0, 5),
-    [budgetStatuses]
+    [budgetStatuses, categories]
   )
   const greeting = getGreeting(displayName, t)
 

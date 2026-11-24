@@ -17,6 +17,7 @@ import { useVariableExpenses } from '../hooks/useVariableExpenses'
 import { useFixedExpenses } from '../hooks/useFixedExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { BudgetOverviewCard } from '../components/BudgetOverviewCard'
+import { budgetLevel, compareBudget, limitIsFixedOnly, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
 import { useBudgetStatus } from '../hooks/useBudgetStatus'
 import { useFormatters } from '../hooks/useFormatters'
 import { useCountUp } from '../hooks/useCountUp'
@@ -56,12 +57,6 @@ interface VarForm {
 
 const emptyForm = (month: number, year: number): VarForm => ({ amount: '', categoryId: '', note: '', date: defaultEntryDate(month, year) })
 
-const getBudgetBarColor = (pct: number, autoLimit = false) => {
-  if (autoLimit) return '#22c55e'
-  if (pct >= 100) return 'var(--aurora-rose)'
-  if (pct >= 80) return 'var(--aurora-amber)'
-  return 'var(--green)'
-}
 
 const pillStyle = (active: boolean): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -172,7 +167,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
   const liveSpent = (liveBudget?.spent ?? 0) + (editing ? 0 : liveAmount)
   const liveLimit = liveBudget?.limit
   const livePct = liveLimit ? Math.min((liveSpent / liveLimit) * 100, 100) : null
-  const liveBudgetBarColor = livePct !== null ? getBudgetBarColor(livePct) : 'var(--green)'
+  const liveBudgetBarColor = liveLimit ? BUDGET_LEVEL_COLOR[budgetLevel(liveSpent, liveLimit)] : BUDGET_LEVEL_COLOR.ok
 
   const openAdd = () => {
     setEditing(null)
@@ -426,7 +421,7 @@ export function VariableExpensesPage({ month, year, showToast }: VariableExpense
         <div className="hidden lg:block" style={{ width: 280, flexShrink: 0, position: 'sticky', top: 20, maxHeight: 'calc(100vh - 130px)', overflowY: 'auto', margin: '20px 20px 20px 0', borderRadius: 20 }}>
           <BudgetOverviewCard
             title={t.expenses.variable.categoriesAndBudget}
-            items={[...budgetStatuses].sort((a: BudgetStatus, b: BudgetStatus) => b.percentage - a.percentage)}
+            items={[...budgetStatuses].sort(compareBudget((x: BudgetStatus) => budgetLevel(x.spent, x.limit, limitIsFixedOnly(categories.find(c => c.id === x.categoryId)))))}
             categories={categories}
             onRowClick={openCategory}
             empty={(

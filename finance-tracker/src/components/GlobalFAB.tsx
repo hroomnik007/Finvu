@@ -27,6 +27,7 @@ import AmountInput from './AmountInput'
 import { AmountEntry } from './AmountEntry'
 import { CategoryCircle, CategoryPicker } from './CategoryPicker'
 import { parseAmountInput } from '../utils/amountInput'
+import { budgetLevel, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
 
 type ModalType = 'income' | 'variable' | 'fixed' | 'category' | 'savings' | null
 
@@ -305,9 +306,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
   const liveSpent = liveBudget ? liveBudget.spent + liveVarAmt : 0
   const liveLimit = liveBudget?.limit
   const livePct = liveLimit ? Math.min((liveSpent / liveLimit) * 100, 100) : null
-  const livePctColor = livePct !== null
-    ? (livePct >= 100 ? '#f87171' : livePct >= 70 ? '#fbbf24' : '#34d399')
-    : '#34d399'
+  const livePctColor = liveLimit ? BUDGET_LEVEL_COLOR[budgetLevel(liveSpent, liveLimit)] : BUDGET_LEVEL_COLOR.ok
 
   // ── Only render on allowed pages ──────────────────────────────────────────
   if (!ALL_ACTIVE_PAGES.includes(currentPage)) return null

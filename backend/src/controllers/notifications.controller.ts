@@ -7,6 +7,8 @@ import { notificationsDismissed, transactions, categories, savingsGoals } from "
 import { AuthRequest } from "../middleware/authenticate";
 import { fixedDayOfMonth, isActiveInMonth, occursInMonth } from "../lib/recurring";
 
+const BUDGET_NEAR_PCT = 85;
+
 // ── Feed item types (translated client-side from kind + params) ─────────────
 type FeedItem =
   | { id: string; kind: "budget"; categoryName: string; spent: number; limit: number }
@@ -70,11 +72,14 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
 
   const items: FeedItem[] = [];
 
-  // Budget warnings (≥ 80 % of limit spent this month)
+  // Budget warnings (≥ 85 % of limit spent this month, same threshold as the
+  // app's amber bars in utils/budgetLevel.ts)
   const spentByCategory = new Map<string, number>();
+  const variableByCategory = new Map<string, number>();
   for (const tx of variableTxs) {
     if (!tx.categoryId) continue;
     spentByCategory.set(tx.categoryId, (spentByCategory.get(tx.categoryId) ?? 0) + Number(tx.amount));
+    variableByCategory.set(tx.categoryId, (variableByCategory.get(tx.categoryId) ?? 0) + Number(tx.amount));
   }
   // Fixed expenses already due this month count as spent, like on the Categories
   // page — an auto limit (fixed + reserve) would otherwise never be reached here.
@@ -89,7 +94,10 @@ export async function getFeed(req: AuthRequest, res: Response): Promise<void> {
     const limit = Number(cat.budgetLimit);
     if (!limit || limit <= 0) continue;
     const spent = spentByCategory.get(cat.id) ?? 0;
-    if ((spent / limit) * 100 < 80) continue;
+    // Only scheduled fixed payments, still within the limit: paid as planned,
+    // nothing to act on (e.g. an auto limit made of rent alone at 100 %).
+    if (!variableByCategory.has(cat.id) && Math.round(spent * 100) <= Math.round(limit * 100)) continue;
+    if ((spent / limit) * 100 < BUDGET_NEAR_PCT) continue;
     items.push({ id: `budget-${cat.id}`, kind: "budget", categoryName: cat.name, spent, limit });
   }
 

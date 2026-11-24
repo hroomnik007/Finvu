@@ -2,6 +2,8 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Tag } from 'lucide-react'
 import type { Category } from '../types'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
+import { budgetLevel, budgetSeverity, limitIsFixedOnly, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
+import { useTranslation } from '../i18n'
 
 const FALLBACK_COLOR = '#6b7280'
 
@@ -10,12 +12,16 @@ export interface BudgetOverviewItem {
   categoryName: string
   categoryIcon?: string | null
   percentage: number
+  spent: number
+  limit: number
 }
 
 /**
  * Category budget card shared by the Dashboard ("Rozpočet") and the Variabilné
  * side panel, so both look the same: severity-tinted glass, icon + name + %,
- * a bar per category. The card turns red / amber when a category is at 100 / 90 %.
+ * a bar per category. Colours follow utils/budgetLevel: the card turns red /
+ * amber when a category is over / near its limit; a category whose fixed-only
+ * limit is spent exactly reads as paid as planned (grey ✓), not as an overrun.
  */
 export function BudgetOverviewCard({ title, items, categories, onRowClick, empty, footer, style }: {
   title: string
@@ -26,7 +32,9 @@ export function BudgetOverviewCard({ title, items, categories, onRowClick, empty
   footer?: ReactNode
   style?: CSSProperties
 }) {
-  const severity = items.some(b => b.percentage >= 100) ? 'red' : items.some(b => b.percentage >= 90) ? 'warning' : null
+  const { t } = useTranslation()
+  const levelOf = (b: BudgetOverviewItem) => budgetLevel(b.spent, b.limit, limitIsFixedOnly(categories.find(c => c.id === b.categoryId)))
+  const severity = budgetSeverity(items.map(levelOf))
   const tint = severity === 'red' ? 'var(--aurora-rose)' : severity === 'warning' ? 'var(--aurora-amber)' : null
   return (
     <div style={{
@@ -41,7 +49,8 @@ export function BudgetOverviewCard({ title, items, categories, onRowClick, empty
       <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: '0 0 12px' }}>{title}</p>
       {items.map(b => {
         const cat = categories.find(c => c.id === b.categoryId)
-        const barColor = (cat?.autoLimit && !cat.limitReserve) ? 'var(--aurora-emerald)' : b.percentage >= 100 ? 'var(--aurora-rose)' : b.percentage >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+        const level = levelOf(b)
+        const barColor = BUDGET_LEVEL_COLOR[level]
         const Icon = CATEGORY_ICON_MAP[b.categoryIcon ?? ''] ?? Tag
         const row = (
           <>
@@ -49,7 +58,7 @@ export function BudgetOverviewCard({ title, items, categories, onRowClick, empty
               <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Icon size={14} color={cat?.color ?? FALLBACK_COLOR} strokeWidth={1.8} style={{ flexShrink: 0 }} /> {b.categoryName}
               </span>
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor }}>{Math.round(b.percentage)}%</span>
+              <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor }}>{level === 'planned' ? '✓ ' : ''}{Math.round(b.percentage)}%</span>
             </div>
             <div style={{ height: 6, borderRadius: 99, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 99, width: `${Math.min(b.percentage, 100)}%`, background: barColor }} />

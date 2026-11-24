@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { Plus, Pencil, Trash2, Tag, GripVertical } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
@@ -46,6 +46,7 @@ import type { Category } from '../types'
 import AmountInput from '../components/AmountInput'
 import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
 import { sharedFixedLimit, sharedLimitFor } from '../utils/sharedLimit'
+import { budgetLevel, budgetSeverity, compareBudget, limitIsFixedOnly, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
 
 const selectBtnStyle = (active: boolean): React.CSSProperties => ({
   padding: '7px 14px', borderRadius: 12, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
@@ -84,7 +85,8 @@ type BudgetStatus = { categoryId: string; spent: number; percentage: number; lim
 
 function FamilyShareLine({ cat, familyStatus, formatAmount, t }: Pick<CardProps, 'cat' | 'familyStatus' | 'formatAmount' | 't'>) {
   if (!cat.shared || cat.budgetLimit == null || !familyStatus) return null
-  const color = familyStatus.percentage >= 100 ? 'var(--aurora-rose)' : familyStatus.percentage >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-faint)'
+  const level = budgetLevel(familyStatus.spent, familyStatus.limit, limitIsFixedOnly(cat))
+  const color = level === 'ok' ? 'var(--aurora-faint)' : BUDGET_LEVEL_COLOR[level]
   return (
     <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color, marginTop: 4 }}>
       {t.expenses.categories.familyShare.replace('{spent}', formatAmount(familyStatus.spent)).replace('{pct}', String(Math.round(familyStatus.percentage)))}
@@ -110,8 +112,8 @@ interface CardProps {
 function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, onDelete, severity, selected }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
-  const rawPct = status?.percentage ?? 0
-  const barColor = cat.autoLimit && !cat.limitReserve ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+  const level = status ? budgetLevel(status.spent, status.limit, limitIsFixedOnly(cat)) : 'ok'
+  const barColor = BUDGET_LEVEL_COLOR[level]
 
   return (
     <div
@@ -169,7 +171,7 @@ function SortableGridCard({ cat, status, familyStatus, formatAmount, t, onEdit, 
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
             <span>{t.expenses.categories.spent}</span>
-            <span style={{ fontWeight: 700, color: barColor }}>{Math.round(status?.percentage ?? 0)}%</span>
+            <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontWeight: 700, color: barColor }}>{level === 'planned' ? '✓ ' : ''}{Math.round(status?.percentage ?? 0)}%</span>
           </div>
           <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
         </>
@@ -191,8 +193,8 @@ function SortableListCard(props: CardProps) {
   const { cat, status, familyStatus, formatAmount, t, onEdit, onDelete, severity, selected } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
-  const rawPct = status?.percentage ?? 0
-  const barColor = cat.autoLimit && !cat.limitReserve ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+  const level = status ? budgetLevel(status.spent, status.limit, limitIsFixedOnly(cat)) : 'ok'
+  const barColor = BUDGET_LEVEL_COLOR[level]
 
   return (
     <div
@@ -235,7 +237,7 @@ function SortableListCard(props: CardProps) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : '—'}</span>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
+            <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{Math.round(status.percentage)}%</span>
           </div>
           <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
         </div>
@@ -254,8 +256,8 @@ function SortableListCard(props: CardProps) {
 function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit, onDelete, isSwipeOpen, onSwipeOpen, severity, selected }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id! })
   const pct = status ? Math.min(status.percentage, 100) : 0
-  const rawPct = status?.percentage ?? 0
-  const barColor = cat.autoLimit && !cat.limitReserve ? 'var(--aurora-emerald)' : rawPct >= 100 ? 'var(--aurora-rose)' : rawPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-emerald)'
+  const level = status ? budgetLevel(status.spent, status.limit, limitIsFixedOnly(cat)) : 'ok'
+  const barColor = BUDGET_LEVEL_COLOR[level]
 
   const outerTransform = [
     CSS.Transform.toString(transform),
@@ -316,7 +318,7 @@ function SortableMobileCard({ cat, status, familyStatus, formatAmount, t, onEdit
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--aurora-rose)' }}>{status.spent > 0 ? `−${formatAmount(status.spent)}` : '—'}</span>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: barColor + '18', padding: '1px 6px', borderRadius: 20 }}>{Math.round(status.percentage)}%</span>
+                <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: barColor, background: `color-mix(in srgb, ${barColor} 10%, transparent)`, padding: '1px 6px', borderRadius: 20 }}>{level === 'planned' ? '✓ ' : ''}{Math.round(status.percentage)}%</span>
               </div>
               <FamilyShareLine cat={cat} familyStatus={familyStatus} formatAmount={formatAmount} t={t} />
             </div>
@@ -393,15 +395,12 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   }, [budgetStatuses, categories, variableExpenses, fixedExpenses])
 
   // Single most urgent over/near-budget category gets a tinted card — everything else stays neutral
+  const levelOfStatus = useCallback((b: BudgetStatus) => budgetLevel(b.spent, b.limit, limitIsFixedOnly(categories.find(c => c.id === b.categoryId))), [categories])
   const worstBudgetStatus = useMemo(() =>
-    budgetStatuses
-      .filter(b => b.limit > 0)
-      .reduce<BudgetStatus | undefined>((worst, b) => (!worst || b.percentage > worst.percentage) ? b : worst, undefined),
-  [budgetStatuses])
-  const urgentCategoryId = worstBudgetStatus && worstBudgetStatus.percentage >= 90 ? worstBudgetStatus.categoryId : null
-  const urgentSeverity: 'red' | 'warning' | null = !worstBudgetStatus
-    ? null
-    : worstBudgetStatus.percentage >= 100 ? 'red' : worstBudgetStatus.percentage >= 90 ? 'warning' : null
+    [...budgetStatuses].filter(b => b.limit > 0).sort(compareBudget(levelOfStatus))[0],
+  [budgetStatuses, levelOfStatus])
+  const urgentSeverity = worstBudgetStatus ? budgetSeverity([levelOfStatus(worstBudgetStatus)]) : null
+  const urgentCategoryId = urgentSeverity ? worstBudgetStatus!.categoryId : null
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<Category | null>(null)
@@ -634,11 +633,12 @@ export function CategoriesPage({ showToast }: { showToast: (msg: string) => void
   const heroTotalSpent = budgetStatuses.reduce((s, b) => s + b.spent, 0)
   const heroTotalLimit = budgetStatuses.reduce((s, b) => s + b.limit, 0)
   const heroOverallPct = heroTotalLimit > 0 ? Math.round(heroTotalSpent / heroTotalLimit * 100) : 0
-  const heroNearLimitCount = budgetStatuses.filter(b => b.limit > 0 && b.spent >= b.limit * 0.9).length
+  const heroNearLimitCount = budgetStatuses.filter(b => levelOfStatus(b) === 'near').length
   // Once something is actually over, say so (and count only those) instead of "near limit"
-  const heroOverLimitCount = budgetStatuses.filter(b => b.limit > 0 && b.spent > b.limit).length
+  const heroOverLimitCount = budgetStatuses.filter(b => levelOfStatus(b) === 'over').length
   const heroCatCount = categories.length
-  const heroBarColor = heroOverallPct >= 90 ? 'var(--aurora-rose)' : heroOverallPct >= 70 ? 'var(--aurora-amber)' : 'var(--aurora-violet)'
+  const heroLevel = budgetLevel(heroTotalSpent, heroTotalLimit)
+  const heroBarColor = heroLevel === 'ok' ? 'var(--aurora-violet)' : BUDGET_LEVEL_COLOR[heroLevel]
   const animatedHeroSpent = useCountUp(heroTotalSpent, 800)
 
   return (
