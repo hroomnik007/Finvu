@@ -1,10 +1,13 @@
-import { Tag, X } from 'lucide-react'
+import { Tag, X, Users } from 'lucide-react'
 import { GlassCard } from './GlassCard'
 import { CATEGORY_ICON_MAP } from '../utils/categoryIcons'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
 import { pluralText } from '../utils/plural'
-import { budgetLevel, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
+import { budgetLevel } from '../utils/budgetLevel'
+import { CategoryBudget } from './CategoryBudget'
+import type { MemberShare } from './CategoryBudget'
+import type { Category } from '../types'
 
 export interface SharedCategoryTile {
   id: string
@@ -19,6 +22,10 @@ export interface SharedCategoryTile {
   perMember: { name: string; amount: number }[]
   /** The common limit is exactly the household's fixed payments (no reserve). */
   limitFixedOnly?: boolean
+  /** The user's copy of the category (for the budget block shared with Kategórie). */
+  category: Category
+  /** perMember with ids and member colours, for the split bar. */
+  split: MemberShare[]
 }
 
 interface Props {
@@ -37,7 +44,7 @@ const small = { fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(-
  */
 export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
   const { t, locale } = useTranslation()
-  const { formatAmount, formatPercent } = useFormatters()
+  const { formatAmount } = useFormatters()
   const ht = t.household
 
   const shared = tiles.filter(x => x.shared)
@@ -48,7 +55,7 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
   return (
     <GlassCard radius={20}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <p style={heading}>👥 {ht.sharedCategoriesTitle}</p>
+        <p style={{ ...heading, display: 'inline-flex', alignItems: 'center', gap: 7 }}><Users size={15} color="var(--aurora-lo)" aria-hidden /> {ht.sharedCategoriesTitle}</p>
         {shared.length > 0 && (
           <span style={small}>
             {pluralText(shared.length, ht.sharedCount, locale)}
@@ -64,7 +71,6 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
           const Icon = CATEGORY_ICON_MAP[x.icon] ?? Tag
           const pct = x.limit > 0 ? (x.spent / x.limit) * 100 : 0
           const level = budgetLevel(x.spent, x.limit, x.limitFixedOnly)
-          const bar = BUDGET_LEVEL_COLOR[level]
 
           if (!x.shared) {
             return (
@@ -83,38 +89,33 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
             )
           }
 
+          // Same card as on Kategórie: icon tile, name + limit, the family's
+          // spend split per member with the limit marked, status as a sum
           return (
-            <div key={x.id} style={{ padding: '12px 14px', borderRadius: 16, border: `1px solid ${level === 'over' ? 'rgba(251,113,133,0.4)' : 'rgba(139,92,246,0.3)'}`, background: 'var(--aurora-glass)' }}>
+            <div key={x.id} style={{ padding: 16, borderRadius: 20, border: `1px solid ${level === 'over' ? 'color-mix(in srgb, var(--aurora-rose) 35%, var(--aurora-gline))' : 'var(--aurora-gline)'}`, background: level === 'over' ? 'color-mix(in srgb, var(--aurora-rose) 7%, var(--aurora-glass))' : 'var(--aurora-glass)', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 32, height: 32, borderRadius: 10, background: x.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon size={15} color={x.color} strokeWidth={1.8} />
+                <span style={{ width: 44, height: 44, borderRadius: 14, background: x.color + '25', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon size={20} color={x.color} strokeWidth={1.8} />
                 </span>
-                <span style={{ flex: 1, minWidth: 0, fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.name}</span>
-                {x.limit > 0 && <span title={level === 'planned' ? t.expenses.categories.paidAsPlanned : undefined} style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 700, color: bar, flexShrink: 0 }}>{level === 'planned' ? '✓ ' : ''}{pct > 999 ? `>${formatPercent(999)}` : formatPercent(pct)}</span>}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.name}</div>
+                  <div style={{ ...small, marginTop: 2 }}>{x.limit > 0 ? t.expenses.categories.limitShort.replace('{amount}', formatAmount(x.limit)) : t.expenses.categories.noLimit}</div>
+                </div>
                 <button
                   type="button"
                   onClick={() => onUnshare(x.id)}
                   title={ht.sharedStop}
                   aria-label={`${ht.sharedStop}: ${x.name}`}
-                  style={{ width: 22, height: 22, borderRadius: 7, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-faint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid var(--aurora-gline)', background: 'transparent', color: 'var(--aurora-faint)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
-                  <X size={12} />
+                  <X size={13} />
                 </button>
               </div>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: '10px 0 6px' }}>
-                {formatAmount(x.spent)}
-                {x.limit > 0 && <span style={{ ...small, fontSize: 12, fontWeight: 500 }}> / {formatAmount(x.limit)}</span>}
-              </div>
-              {x.limit > 0 && (
-                <div style={{ height: 5, borderRadius: 3, background: 'var(--aurora-gline)', overflow: 'hidden', marginBottom: 8 }}>
-                  <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: bar, borderRadius: 3 }} />
-                </div>
+              {x.limit > 0 ? (
+                <CategoryBudget cat={{ ...x.category, shared: true, budgetLimit: x.limit }} familyStatus={{ spent: x.spent, limit: x.limit, percentage: pct }} split={x.split} nameMembers />
+              ) : (
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 18, fontWeight: 700, color: 'var(--aurora-expense)' }}>{formatAmount(x.spent)}</div>
               )}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px' }}>
-                {x.perMember.length === 0
-                  ? <span style={small}>—</span>
-                  : x.perMember.map(pm => <span key={pm.name} style={{ ...small, whiteSpace: 'nowrap' }}>{pm.name} <b style={{ color: 'var(--aurora-lo)', fontWeight: 600 }}>{formatAmount(pm.amount)}</b></span>)}
-              </div>
             </div>
           )
         })}

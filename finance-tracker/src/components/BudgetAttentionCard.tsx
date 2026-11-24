@@ -3,7 +3,7 @@ import type { Category } from '../types'
 import { GlassCard } from './GlassCard'
 import { useFormatters } from '../hooks/useFormatters'
 import { useTranslation } from '../i18n'
-import { budgetLevel, limitIsFixedOnly } from '../utils/budgetLevel'
+import { budgetLevel, limitIsFixedOnly, BUDGET_LEVEL_COLOR } from '../utils/budgetLevel'
 
 export interface BudgetAttentionItem {
   categoryId: string
@@ -13,11 +13,11 @@ export interface BudgetAttentionItem {
 }
 
 /**
- * Dashboard "Rozpočet", as approved in the UI review mockup: only what needs a
- * look. Categories over their limit say by how much ("+270,68 € · 570,68 / 300")
- * with the limit marked on the bar; categories whose limit is just their fixed
- * payments and were paid exactly are listed under "Podľa plánu"; everything
- * else is one line.
+ * Dashboard "Rozpočet" in the style of the approved UI review mockup, listing
+ * every category with a limit: over the limit first, saying by how much
+ * ("+270,68 € · 570,68 / 300") with the limit marked on the bar; then the
+ * rest, fullest first ("98 % · 192,83 / 197"); categories whose limit is just
+ * their fixed payments and were paid exactly close the card under "Podľa plánu".
  */
 export function BudgetAttentionCard({ title, items, categories, empty }: {
   title: string
@@ -27,11 +27,11 @@ export function BudgetAttentionCard({ title, items, categories, empty }: {
   empty?: ReactNode
 }) {
   const { t, locale } = useTranslation()
-  const { formatAmount } = useFormatters()
+  const { formatAmount, formatPercent } = useFormatters()
   const levelOf = (b: BudgetAttentionItem) => budgetLevel(b.spent, b.limit, limitIsFixedOnly(categories.find(c => c.id === b.categoryId)))
   const over = items.filter(b => levelOf(b) === 'over').sort((a, b) => (b.spent - b.limit) - (a.spent - a.limit))
   const planned = items.filter(b => levelOf(b) === 'planned')
-  const rest = items.length - over.length - planned.length
+  const rest = items.filter(b => !['over', 'planned'].includes(levelOf(b))).sort((a, b) => b.spent / b.limit - a.spent / a.limit)
   // "570,68 / 300": plain numbers, decimals only where there are some
   const num = (v: number) => new Intl.NumberFormat(locale, { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v)
 
@@ -68,9 +68,28 @@ export function BudgetAttentionCard({ title, items, categories, empty }: {
             )
           })}
 
+          {rest.map(b => {
+            const color = BUDGET_LEVEL_COLOR[levelOf(b)]
+            const pct = (b.spent / b.limit) * 100
+            return (
+              <div key={b.categoryId} style={{ padding: '7px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{b.categoryName}</span>
+                  <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11.5, color: 'var(--aurora-faint)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                    <b style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, color }}>{formatPercent(pct)}</b>
+                    {' · '}{num(b.spent)} / {num(b.limit)}
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 9, background: 'var(--aurora-gline)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: 9 }} />
+                </div>
+              </div>
+            )
+          })}
+
           {planned.length > 0 && (
             <>
-              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: over.length > 0 ? '10px 0 2px' : '0 0 2px' }}>{t.dashboard.budgetPlanned}</p>
+              <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', margin: over.length + rest.length > 0 ? '10px 0 2px' : '0 0 2px' }}>{t.dashboard.budgetPlanned}</p>
               {planned.map(b => (
                 <div key={b.categoryId} title={t.expenses.categories.paidAsPlanned} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '7px 0' }}>
                   <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{b.categoryName}</span>
@@ -82,12 +101,6 @@ export function BudgetAttentionCard({ title, items, categories, empty }: {
             </>
           )}
 
-          {rest > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8, paddingTop: 10, borderTop: '1px solid var(--aurora-gline)', fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
-              <span>{over.length + planned.length > 0 ? t.dashboard.budgetOthersOk : t.dashboard.budgetAllOk}</span>
-              <span aria-hidden style={{ color: 'var(--aurora-emerald)', fontWeight: 700 }}>✓</span>
-            </div>
-          )}
         </>
       )}
     </GlassCard>

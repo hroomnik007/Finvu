@@ -590,7 +590,6 @@ export const en: Translations = {
     colorViolet: 'Violet',
     colorBlue: 'Blue',
     colorTeal: 'Teal',
-    openingBalanceHint: 'The Dashboard\'s total balance will then match your account',
     colorGreen: 'Green',
     colorOrange: 'Orange',
     colorPink: 'Pink',

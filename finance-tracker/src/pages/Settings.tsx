@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo, useId, createContext, useContext 
 import type { LucideIcon } from 'lucide-react'
 import {
   X, Palette, Bell, Shield, Database, User, Wallet, Monitor, Laptop, Smartphone, Tablet,
-  CalendarClock, Landmark, Users, PiggyBank, KeyRound, Hash, ChevronRight, Check, Sun, Moon, SunMoon,
+  CalendarClock, Users, PiggyBank, KeyRound, Hash, ChevronRight, Check, Sun, Moon, SunMoon,
   AlertTriangle, Trash2, RotateCcw, UserX, Ban, ArrowLeft,
   ShieldCheck,
 } from 'lucide-react'
@@ -38,9 +38,6 @@ import { ExportDataModal } from '../components/ExportDataModal'
 import type { ExportFormat, ExportPeriod } from '../components/ExportDataModal'
 import type { ApiTransaction, UserSession } from '../types'
 import { apiErrorMessage } from '../utils/apiError'
-import { useFormatters } from '../hooks/useFormatters'
-import { decimalSeparator, formatAmountInput, parseAmountInput } from '../utils/amountInput'
-import { useQueryClient } from '@tanstack/react-query'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -251,8 +248,6 @@ export function SettingsPage() {
   const CURRENCIES = useMemo(() => currencyOptions(locale), [locale])
   const pluralForm = (n: number, one: string, few: string, many: string) => pluralFormOf(n, { one, few, many }, locale)
   const { user, updateMonthlyEmail, refreshUser } = useAuth()
-  const { formatAmount } = useFormatters()
-  const queryClient = useQueryClient()
   const { setupPin, hasPin, removePin } = usePinLockContext()
 
   const compactStorageKey = window.innerWidth < 768 ? 'finvu_compact_mobile' : 'finvu_compact_desktop'
@@ -804,35 +799,6 @@ export function SettingsPage() {
   const { dialogProps: changePwModalDialogProps, panelRef: changePwModalPanelRef } = useModalA11y({ open: changePwOpen, onClose: changePwLoading ? undefined : () => setChangePwOpen(false) })
   const { dialogProps: devicesModalDialogProps, panelRef: devicesModalPanelRef } = useModalA11y({ open: devicesModalOpen, onClose: () => setDevicesModalOpen(false) })
   const { dialogProps: deactivationModalDialogProps, panelRef: deactivationModalPanelRef } = useModalA11y({ open: deactivationModalOpen, onClose: () => setDeactivationModalOpen(false) })
-  // Opening balance (what was in the account when tracking began)
-  const [openingModalOpen, setOpeningModalOpen] = useState(false)
-  const [openingInput, setOpeningInput] = useState('')
-  const [openingSaving, setOpeningSaving] = useState(false)
-  const { dialogProps: openingModalDialogProps, panelRef: openingModalPanelRef } = useModalA11y({ open: openingModalOpen, onClose: openingSaving ? undefined : () => setOpeningModalOpen(false) })
-  const openingBalance = user?.opening_balance ?? 0
-  // Empty = 0; a leading minus (overdraft) is allowed, the rest is a normal amount
-  const openingParsed = (() => {
-    const raw = openingInput.trim()
-    if (!raw) return 0
-    const negative = /^[-−]/.test(raw)
-    const value = parseAmountInput(raw.replace(/^[-−]\s*/, ''))
-    return value === null ? null : (negative ? -value : value)
-  })()
-  function openOpeningModal() {
-    setOpeningInput(openingBalance ? `${openingBalance < 0 ? '-' : ''}${formatAmountInput(Math.abs(openingBalance), decimalSeparator(locale))}` : '')
-    setOpeningModalOpen(true)
-  }
-  async function handleSaveOpening() {
-    if (openingParsed === null) return
-    setOpeningSaving(true)
-    try {
-      await updateUserSettings({ openingBalance: openingParsed })
-      await refreshUser()
-      await queryClient.invalidateQueries({ queryKey: ['summaryCards'] })
-      setOpeningModalOpen(false)
-    } catch { /* stays open with the value */ }
-    finally { setOpeningSaving(false) }
-  }
   const { dialogProps: trackingModalDialogProps, panelRef: trackingModalPanelRef } = useModalA11y({ open: trackingModalOpen, onClose: trackingSaving ? undefined : () => setTrackingModalOpen(false) })
 
   async function handleSaveTrackingDate() {
@@ -1129,14 +1095,6 @@ export function SettingsPage() {
                   sublabel={user?.tracking_start_date ? formatDateLocale(user.tracking_start_date, locale, { day: 'numeric', month: 'long', year: 'numeric' }) : t.common.notSet}
                   onClick={() => setTrackingModalOpen(true)}
                 />
-                <ChevronRow
-                  icon={Landmark}
-                  iconColor="var(--aurora-emerald)"
-                  iconBg="rgba(52,211,153,0.12)"
-                  label={t.settings.openingBalanceLabel}
-                  sublabel={openingBalance ? formatAmount(openingBalance) : `${t.common.notSet} · ${t.settings.openingBalanceHint}`}
-                  onClick={openOpeningModal}
-                />
               </SectionCard>
 
               {/* Section: Rodinné financie + Sporenie — side by side on desktop */}
@@ -1318,17 +1276,6 @@ export function SettingsPage() {
                         onClick={() => setPinSetupOpen(true)}
                       />
                     </div>
-                    {hasPin && (
-                      <button
-                        type="button"
-                        onClick={() => { setPinRemoveOpen(true); setPinRemoveInput(''); setPinRemoveError(null) }}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--aurora-faint)', cursor: 'pointer', padding: 8, marginRight: 8, flexShrink: 0 }}
-                        title={t.profile.removePin}
-                        aria-label={t.profile.removePin}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
                   </div>
 
                   {/* Automatické uzamknutie */}
@@ -1723,43 +1670,6 @@ export function SettingsPage() {
       )}
 
       {/* ── OPENING BALANCE MODAL ── */}
-      {openingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => { if (!openingSaving) setOpeningModalOpen(false) }}>
-          <div ref={openingModalPanelRef} {...openingModalDialogProps} style={{ outline: 'none', background: 'var(--aurora-panel)', border: '1px solid var(--aurora-gline)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 380 }} className="modal-in" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--aurora-hi)', margin: 0 }}>{t.settings.openingBalanceLabel}</h2>
-              <button type="button" className="hit-44" aria-label={t.common.close} title={t.common.close} onClick={() => setOpeningModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aurora-faint)', padding: 4 }}><X size={16} /></button>
-            </div>
-            <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, color: 'var(--aurora-faint)', margin: '0 0 16px', lineHeight: 1.5 }}>
-              {t.settings.openingBalanceDesc}
-            </p>
-            <input
-              type="text"
-              inputMode="decimal"
-              aria-label={t.settings.openingBalanceLabel}
-              aria-invalid={openingParsed === null}
-              value={openingInput}
-              placeholder="0"
-              onChange={e => setOpeningInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') void handleSaveOpening() }}
-              style={{
-                background: 'var(--aurora-glass)', border: `1px solid ${openingParsed === null ? 'var(--aurora-rose)' : 'var(--aurora-gline)'}`,
-                borderRadius: 10, padding: '11px 14px', fontSize: 16, marginBottom: 16,
-                color: 'var(--aurora-hi)', width: '100%', outline: 'none',
-                fontFamily: "'Outfit', sans-serif", boxSizing: 'border-box',
-              }}
-            />
-            <button
-              onClick={handleSaveOpening}
-              disabled={openingSaving || openingParsed === null}
-              style={{ width: '100%', height: 44, borderRadius: 10, fontSize: 14, fontWeight: 600, background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))', color: 'white', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", opacity: (openingSaving || openingParsed === null) ? 0.6 : 1 }}
-            >
-              {openingSaving ? t.common.saving : t.common.save}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── TRACKING DATE MODAL ── */}
       {trackingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in" onClick={() => setTrackingModalOpen(false)}>
@@ -1829,6 +1739,8 @@ export function SettingsPage() {
       <PinSetupModal
         open={pinSetupOpen}
         onClose={() => setPinSetupOpen(false)}
+        // Turning the PIN off lives in the PIN's own dialog (no bin beside the row)
+        onRemove={hasPin ? () => { setPinSetupOpen(false); setPinRemoveOpen(true); setPinRemoveInput(''); setPinRemoveError(null) } : undefined}
         identityCheck={hasPin ? 'pin' : (user?.has_password ? 'password' : (user?.has_google ? 'google' : null))}
         onSetPin={async (pin, identity) => {
           await setupPin(pin, identity?.currentPassword, identity?.currentPin, identity?.googleAccessToken)

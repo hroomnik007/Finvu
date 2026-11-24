@@ -590,7 +590,6 @@ export const cs: Translations = {
     colorViolet: 'Fialová',
     colorBlue: 'Modrá',
     colorTeal: 'Tyrkysová',
-    openingBalanceHint: 'Celkový zůstatek na Přehledu pak bude odpovídat stavu účtu',
     colorGreen: 'Zelená',
     colorOrange: 'Oranžová',
     colorPink: 'Růžová',

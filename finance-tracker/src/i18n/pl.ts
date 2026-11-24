@@ -590,7 +590,6 @@ export const pl: Translations = {
     colorViolet: 'Fioletowy',
     colorBlue: 'Niebieski',
     colorTeal: 'Turkusowy',
-    openingBalanceHint: 'Saldo na Przeglądzie będzie wtedy zgodne ze stanem konta',
     colorGreen: 'Zielony',
     colorOrange: 'Pomarańczowy',
     colorPink: 'Różowy',

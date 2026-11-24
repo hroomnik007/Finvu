@@ -200,21 +200,27 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
     const tiles = categories
       .filter(c => c.type === 'expense' && c.id)
       .map(c => {
-        const perMember = (stats?.per_member ?? [])
+        const withIds = (stats?.per_member ?? [])
           .map(m => ({
+            id: m.user_id,
             name: m.name,
             amount: m.category_breakdown.filter(b => key(b.name ?? '') === key(c.name)).reduce((sum, b) => sum + b.amount, 0),
           }))
           .filter(pm => pm.amount > 0)
+        const perMember = withIds.map(({ name, amount }) => ({ name, amount }))
+        // Member colours as on Kategórie: the user blue, the others from the palette
+        const others = (stats?.per_member ?? []).filter(m => m.user_id !== user?.id).map(m => m.user_id)
+        const palette = ['#C084FC', '#34D399', '#FBBF24', '#F472B6']
+        const split = withIds.map(m => ({ ...m, me: m.id === user?.id, color: m.id === user?.id ? '#60A5FA' : palette[Math.max(0, others.indexOf(m.id)) % palette.length] }))
         return {
           id: c.id!, name: c.name, icon: c.icon, color: c.color, shared: !!c.shared,
           limit: c.budgetLimit ?? 0, spent: perMember.reduce((sum, pm) => sum + pm.amount, 0), perMember,
-          limitFixedOnly: limitIsFixedOnly(c),
+          limitFixedOnly: limitIsFixedOnly(c), category: c, split,
         }
       })
     const used = (x: SharedCategoryTile) => (x.limit > 0 ? x.spent / x.limit : 0)
     return tiles.sort((x, y) => Number(y.shared) - Number(x.shared) || (x.shared ? used(y) - used(x) : x.name.localeCompare(y.name)))
-  }, [stats, categories])
+  }, [stats, categories, user?.id])
 
   // "Kto koľko platí": each member's part of the shared categories' spend next
   // to their part of the income (the same per-member stats as the tiles)

@@ -475,59 +475,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     )
   )
 
-  // Desktop: the latest entries of the viewed month under the charts (that
-  // column used to end early while the right panel kept going)
-  const recentRows = useMemo(() => {
-    const today = todayISO()
-    const catOf = (id: string) => categories.find(c => c.id === id)
-    return [
-      ...variableExpenses.filter(v => v.date <= today).map(v => {
-        const cat = catOf(v.categoryId)
-        return { key: `v-${v.id ?? `${v.date}-${v.note}-${v.amount}`}`, date: v.date, name: v.note || v.categoryName || cat?.name || t.annual.noCategory, sub: v.categoryName ?? cat?.name ?? '', icon: v.categoryIcon ?? cat?.icon, color: v.categoryColor ?? cat?.color ?? FALLBACK_COLOR, amount: -v.amount, ownerId: v.created_by ?? undefined }
-      }),
-      ...incomes.filter(i => !i.recurring && i.date <= today).map(i => ({ key: `i-${i.id ?? `${i.date}-${i.label}`}`, date: i.date, name: i.label, sub: t.dashboard.income, icon: '📈', color: '#34D399', amount: i.amount, ownerId: i.created_by ?? undefined })),
-    ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8)
-  }, [variableExpenses, incomes, categories, t])
-
-  const recentCard = recentRows.length > 0 && !dashLoading && !dashFailed ? (
-    <GlassCard radius={20}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-        <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>{t.dashboard.recentTransactions}</h3>
-        <button
-          onClick={() => onNavigate('variable-expenses')}
-          style={{ fontSize: 12, fontWeight: 600, color: 'var(--aurora-cyan)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif" }}
-        >
-          {t.dashboard.showAll}
-        </button>
-      </div>
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', columnGap: 24 }}>
-        {recentRows.map(r => {
-          const Icon = CATEGORY_ICON_MAP[r.icon ?? ''] ?? Tag
-          const owner = familyView && r.ownerId ? ownerOf(r.ownerId) : undefined
-          return (
-            <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid var(--aurora-gline)' }}>
-              <div style={{ width: 30, height: 30, borderRadius: 10, background: catBg(r.color), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon size={14} color={r.color} strokeWidth={1.8} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sub} · {formatLongDate(r.date, { day: 'numeric', month: 'numeric' })}</div>
-              </div>
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: r.amount > 0 ? 'var(--aurora-emerald)' : 'var(--aurora-expense)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                {r.amount > 0 ? '+' : '−'}{formatAmount(Math.abs(r.amount))}
-              </span>
-              {owner && (
-                <span title={owner.name} aria-label={owner.name} style={{ display: 'flex', flexShrink: 0 }}>
-                  <MemberAvatar userId={owner.id} userName={owner.name} size={22} avatarUrl={owner.avatar_url} />
-                </span>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </GlassCard>
-  ) : null
-
   const heatmapCard = (
     <ExpenseHeatmap
       expenses={variableExpenses}
@@ -779,7 +726,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
             {heatmapCard}
             {pieChartCard}
           </div>
-          {recentCard}
         </div>
 
         {/* RIGHT panel */}

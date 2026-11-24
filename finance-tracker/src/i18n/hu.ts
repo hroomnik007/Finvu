@@ -590,7 +590,6 @@ export const hu: Translations = {
     colorViolet: 'Lila',
     colorBlue: 'Kék',
     colorTeal: 'Türkiz',
-    openingBalanceHint: 'Az Áttekintés teljes egyenlege így a számlával egyezik',
     colorGreen: 'Zöld',
     colorOrange: 'Narancs',
     colorPink: 'Rózsaszín',

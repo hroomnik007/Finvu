@@ -588,7 +588,6 @@ export const sk = {
     colorViolet: 'Fialová',
     colorBlue: 'Modrá',
     colorTeal: 'Tyrkysová',
-    openingBalanceHint: 'Celkový zostatok na Prehľade bude zodpovedať stavu na účte',
     colorGreen: 'Zelená',
     colorOrange: 'Oranžová',
     colorPink: 'Ružová',

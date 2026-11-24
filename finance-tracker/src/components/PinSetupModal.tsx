@@ -20,11 +20,13 @@ interface PinSetupModalProps {
    * delete-account flow does). Omit/null when nothing applies.
    */
   identityCheck?: 'pin' | 'password' | 'google' | null
+  /** An existing PIN can be turned off from here (it was a bin icon in the Settings row). */
+  onRemove?: () => void
 }
 
 const KEYS = ['1','2','3','4','5','6','7','8','9','','0','⌫']
 
-export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }: PinSetupModalProps) {
+export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null, onRemove }: PinSetupModalProps) {
   const { t } = useTranslation()
   const [step, setStep] = useState<'identity' | 'enter' | 'confirm' | 'success'>(identityCheck ? 'identity' : 'enter')
   const [identityPin, setIdentityPin] = useState('')
@@ -278,6 +280,13 @@ export function PinSetupModal({ open, onClose, onSetPin, identityCheck = null }:
                   ))}
                 </div>
               </>
+            )}
+            {onRemove && (
+              <button
+                type="button"
+                onClick={onRemove}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: 'var(--aurora-rose)', padding: 4 }}
+              >{t.profile.removePin}</button>
             )}
           </div>
         </div>
