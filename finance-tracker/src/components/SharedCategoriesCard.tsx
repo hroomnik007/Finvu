@@ -64,7 +64,7 @@ export function SharedCategoriesCard({ tiles, onShare, onUnshare }: Props) {
           </span>
         )}
       </div>
-      <p style={{ ...small, fontSize: 12.5, lineHeight: 1.5, margin: '6px 0 16px' }}>{ht.sharedCategoriesDesc}</p>
+      <div style={{ height: 14 }} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
         {tiles.map(x => {

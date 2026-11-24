@@ -13,8 +13,6 @@ interface CompactModalProps {
   iconColor: string
   iconBg: string
   title: string
-  accent: string
-  accent2: string
   /** May return a promise: while it is pending the save button shows a
    * spinner, is disabled and further submits are ignored. */
   onSubmit: () => void | Promise<unknown>
@@ -36,7 +34,7 @@ interface CompactModalProps {
 
 export function CompactModal({
   open, onClose, icon: Icon, iconColor, iconBg, title,
-  accent, accent2, onSubmit, submitDisabled, submitHint, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount, onDelete, submitLabel,
+  onSubmit, submitDisabled, submitHint, submitting, onImportCsv, children, maxWidth = 420, autoFocusAmount, onDelete, submitLabel,
 }: CompactModalProps) {
   const { t } = useTranslation()
   const [padSlot, setPadSlot] = useState<HTMLDivElement | null>(null)
@@ -162,13 +160,14 @@ export function CompactModal({
             onClick={handleSubmit}
             disabled={disabled}
             aria-busy={busy}
-            // A labelled button says what happens; the bare ✓ circle did not
+            // A labelled button says what happens; the bare ✓ circle did not.
+            // Same accent as every primary button (Nastavenia → Vzhľad), whatever the form
             style={{
               minHeight: 44, padding: '0 18px', borderRadius: 14, gap: 8,
-              background: `linear-gradient(135deg,${accent},${accent2})`,
+              background: 'linear-gradient(135deg,var(--aurora-violet),var(--aurora-fuchsia))',
               border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontFamily: "'Manrope', sans-serif", fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap',
-              boxShadow: disabled ? 'none' : `0 8px 22px ${accent}66`,
+              boxShadow: disabled ? 'none' : '0 8px 22px color-mix(in srgb, var(--aurora-violet) 40%, transparent)',
               cursor: busy ? 'progress' : disabled ? 'not-allowed' : 'pointer',
               opacity: submitDisabled && !busy ? 0.5 : busy ? 0.8 : 1,
               transition: 'all 0.2s',

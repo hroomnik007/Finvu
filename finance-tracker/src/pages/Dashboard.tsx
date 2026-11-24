@@ -1,7 +1,7 @@
 import { useState, useMemo, type ReactNode } from 'react'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarRange, Tag, Target } from 'lucide-react'
+import { CalendarRange, CheckCircle2, Tag, Target } from 'lucide-react'
 import { ExpenseHeatmap } from '../components/ExpenseHeatmap'
 import { CategoryDonutCard } from '../components/CategoryDonutCard'
 import { ForecastCard } from '../components/ForecastCard'
@@ -171,7 +171,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
     enabled: !!user,
   })
   const prevMonthExpenses = prevMonth?.expense ?? 0
-  const prevMonthName = t.months[(month + 10) % 12].toLocaleLowerCase(locale)
 
   const { data: summaryCards = null, isLoading: sumLoading, isError: sumError, refetch: sumRetry } = useQuery({
     queryKey: ['summaryCards', year, month, dashView],
@@ -363,9 +362,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
   const heroExpenses = summaryCards?.expenses ?? (dashView === 'personal' ? totalExpenses : 0)
   const monthResult = heroIncome - heroExpenses
   const signedAmount = (n: number) => `${n >= 0 ? '+' : '−'}${formatAmount(Math.abs(n))}`
-  const prevLine = (value: string) => prevMonth && !dashLoading && !dashFailed
-    ? <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 11, color: 'var(--aurora-faint)', marginTop: 3, display: 'flex', flexWrap: 'wrap', columnGap: 4 }}><span>{prevMonthName}</span><span style={{ whiteSpace: 'nowrap' }}>{value}</span></div>
-    : null
   const animatedBalance = useCountUp(heroBalance, 800)
   const animatedIncome = useCountUp(heroIncome, 800)
   const animatedExpenses = useCountUp(heroExpenses, 800)
@@ -433,7 +429,6 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
         >
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.income}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedIncome))}</div>
-          {prevLine(formatAmount(prevMonth?.income ?? 0))}
         </div>
         <div
           onClick={() => onNavigate('variable-expenses')}
@@ -443,12 +438,10 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
         >
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.expenses}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-expense)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(formatAmount(animatedExpenses))}</div>
-          {prevLine(formatAmount(prevMonth?.expense ?? 0))}
         </div>
         <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.dashboard.monthResult}</div>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: monthResult < 0 ? 'var(--aurora-rose)' : 'var(--aurora-emerald)', lineHeight: 1.15, wordBreak: 'break-word' }}>{heroValue(signedAmount(monthResult))}</div>
-          {prevLine(signedAmount((prevMonth?.income ?? 0) - (prevMonth?.expense ?? 0)))}
         </div>
       </div>
     </HeroCard>
@@ -541,6 +534,12 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
               </div>
             )}
           </div>
+        ) : allMonthFixedExpenses.length > 0 ? (
+          // The month has fixed payments and none is left: say they are paid
+          <p style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--aurora-hi)', margin: 0 }}>
+            <CheckCircle2 size={17} color="var(--aurora-emerald)" strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
+            {t.dashboard.allPaidThisMonth}
+          </p>
         ) : (
           <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)', margin: 0 }}>{t.dashboard.noUpcomingPayments}</p>
         )}
@@ -619,8 +618,8 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
 
   // Desktop panel: payments first (the panel sits beside the balance).
   const rightPanelCards = <>{upcomingCard}{budgetCard}{forecastCard}{savingsCard}</>
-  // Phone: what needs attention first — budget and month end before the payments.
-  const mobileCards = <>{budgetCard}{forecastCard}{upcomingCard}{savingsCard}</>
+  // Phone: the payments come right under the balance (see below), then budget and month end.
+  const mobileCards = <>{budgetCard}{forecastCard}{savingsCard}</>
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -701,8 +700,9 @@ export function Dashboard({ month, year, onNavigate, dashView, budgetTemplateOff
       <div className="flex flex-col gap-4 lg:hidden" style={{ paddingBottom: 'var(--page-pad-bottom)' }}>
         <div>{greetingRow}</div>
         {heroSection}
+        {/* Daily-use order: balance → upcoming payments → budget → month end → charts */}
+        {upcomingCard}
         {subscriptionHints}
-        {/* Daily-use order: balance → budget → month end → upcoming payments → charts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {mobileCards}
         </div>

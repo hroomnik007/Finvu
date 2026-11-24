@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Copy, Check, Crown, Users } from 'lucide-react'
+import { Copy, Check, ChevronDown, Crown, Users } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { MemberAvatar } from '../components/MemberAvatar'
 import { BottomSheet } from '../components/BottomSheet'
@@ -78,6 +78,13 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
     await reloadCategories()
   }
   const [leavePending, setLeavePending] = useState(false)
+  // Members whose "Rozdelenie výdavkov" shows every category, not only the top three
+  const [breakdownOpen, setBreakdownOpen] = useState<Set<string>>(new Set())
+  const toggleBreakdown = (id: string) => setBreakdownOpen(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
   // Leaving / removing a member are rare and destructive: only shown in "Spravovať"
   const [manage, setManage] = useState(false)
   const [leaveLoading, setLeaveLoading] = useState(false)
@@ -322,11 +329,12 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{ht.totalIncomeStat}</div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', wordBreak: 'break-word' }}>{signFor(totalIncome, '+')}{formatAmount(totalIncome)}</div>
+            {/* No +/− here (the label and colour say it, as on Prehľad): the sign pushed "€" to a third line */}
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-emerald)', whiteSpace: 'nowrap' }}>{formatAmount(totalIncome)}</div>
           </div>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{ht.totalExpensesStat}</div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-expense)', wordBreak: 'break-word' }}>{signFor(totalExpenses, '−')}{formatAmount(totalExpenses)}</div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--aurora-expense)', whiteSpace: 'nowrap' }}>{formatAmount(totalExpenses)}</div>
           </div>
           <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{ht.membersCount}</div>
@@ -458,11 +466,12 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                     strip with a dotted paragraph under it could not be read) */}
                 {exp > 0 && (() => {
                   const catTotal = catBreakdown.reduce((sum, x) => sum + x.val, 0)
+                  const open = breakdownOpen.has(m.id)
                   return (
                     <>
                       <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)', marginBottom: 8 }}>{ht.expenseBreakdown}</p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                        {catBreakdown.slice(0, 3).map(c => (
+                        {(open ? catBreakdown : catBreakdown.slice(0, 3)).map(c => (
                           <div key={c.name}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginBottom: 3 }}>
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
@@ -474,9 +483,18 @@ export function HouseholdPage({ month, year, showToast }: HouseholdPageProps) {
                           </div>
                         ))}
                         {catBreakdown.length > 3 && (
-                          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-faint)' }}>
-                            {ht.andMore.replace('{n}', String(catBreakdown.length - 3))} · {formatAmount(catBreakdown.slice(3).reduce((sum, x) => sum + x.val, 0))}
-                          </span>
+                          // Opens the rest of the categories in place
+                          <button
+                            type="button"
+                            onClick={() => toggleBreakdown(m.id)}
+                            aria-expanded={open}
+                            style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 5, minHeight: 32, padding: '0 2px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-violet-text)' }}
+                          >
+                            {open
+                              ? ht.showLess
+                              : `${ht.andMore.replace('{n}', String(catBreakdown.length - 3))} · ${formatAmount(catBreakdown.slice(3).reduce((sum, x) => sum + x.val, 0))}`}
+                            {!open && <ChevronDown size={14} aria-hidden />}
+                          </button>
                         )}
                       </div>
                     </>

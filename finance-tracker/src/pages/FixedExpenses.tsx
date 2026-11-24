@@ -451,43 +451,48 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
 
           {/* Compact month-grid calendar — mobile only */}
           <div className={mobileView === 'calendar' ? 'lg:hidden' : 'hidden'}>
-            <GlassCard radius={18}>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', marginBottom: 14 }}>{t.expenses.fixed.monthCalendar}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
+            {/* Compact grid: 30 px rows, plain numbers; only payment days get a
+                fill (the same accent ramp as the desktop strip), today a ring */}
+            <GlassCard radius={18} style={{ padding: '14px 14px 12px' }}>
+              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--aurora-hi)', marginBottom: 10 }}>{t.expenses.fixed.monthCalendar}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 4 }}>
                 {t.daysShort.map(d => (
-                  <div key={d} style={{ textAlign: 'center', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--aurora-faint)' }}>{d}</div>
+                  <div key={d} style={{ textAlign: 'center', fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--aurora-faint)' }}>{d}</div>
                 ))}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
                 {calendarCells.map((day, i) => {
                   if (day === null) return <div key={`empty-${i}`} />
                   const dayFixed = fixedExpenses.filter(f => f.dayOfMonth === day && occursInMonth(f, month))
+                  const sum = dayFixed.reduce((s, f) => s + f.amount, 0)
                   const hasPayment = dayFixed.length > 0
                   const isToday = day === calendarToday
                   const isPast = calendarToday > 0 && day < calendarToday
                   const isSelected = selectedCalendarDay === day
-                  const daysUntil = ((day - (calendarToday > 0 ? calendarToday : new Date().getDate()) + 31) % 31)
-                  const dotColor = hasPayment ? countdownBadge(daysUntil).color : 'transparent'
                   return (
                     <button
                       key={day}
                       type="button"
-                      onClick={() => hasPayment && setSelectedCalendarDay(isSelected ? null : day)}
+                      disabled={!hasPayment}
+                      aria-pressed={hasPayment ? isSelected : undefined}
+                      title={hasPayment ? dayFixed.map(f => `${f.label} ${formatAmount(f.amount)}`).join(', ') : undefined}
+                      onClick={() => setSelectedCalendarDay(isSelected ? null : day)}
                       style={{
-                        aspectRatio: '1',
-                        borderRadius: 10,
-                        background: isSelected ? 'rgba(139,92,246,0.15)' : 'var(--aurora-glass)',
-                        border: isToday ? '1.5px solid var(--aurora-violet)' : isSelected ? '1px solid rgba(139,92,246,0.4)' : '1px solid var(--aurora-gline)',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                        fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
-                        color: isPast ? 'var(--aurora-faint)' : isToday ? 'var(--aurora-violet-text)' : 'var(--aurora-lo)',
-                        opacity: isPast ? 0.6 : 1,
+                        height: 30,
+                        borderRadius: 8,
+                        background: hasPayment ? heatBg(heatLevel(sum)) : 'transparent',
+                        border: 'none',
+                        boxShadow: isSelected ? 'inset 0 0 0 1.5px var(--aurora-hi)' : isToday ? 'inset 0 0 0 1.5px var(--aurora-violet)' : 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12.5, fontWeight: hasPayment || isToday ? 700 : 500, fontFamily: "'Outfit', sans-serif",
+                        color: hasPayment ? heatInk(heatLevel(sum)) : isToday ? 'var(--aurora-violet-text)' : isPast ? 'var(--aurora-faint)' : 'var(--aurora-lo)',
+                        filter: hasPayment && isPast ? 'saturate(0.5)' : undefined,
+                        opacity: hasPayment && isPast ? 0.75 : 1,
                         cursor: hasPayment ? 'pointer' : 'default',
                         padding: 0,
                       }}
                     >
                       {day}
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor }} />
                     </button>
                   )
                 })}
@@ -796,7 +801,6 @@ export function FixedExpensesPage({ month, year, scope = 'personal' }: FixedExpe
         icon={Repeat} iconColor="#FBBF24" iconBg="rgba(251,191,36,.16)"
         title={editing ? t.expenses.fixed.editTitle : t.expenses.fixed.newTitle}
         submitLabel={editing ? t.common.saveChanges : t.fab.saveFixed}
-        accent="#FBBF24" accent2="#f59e0b"
         onSubmit={handleSave}
         autoFocusAmount={!editing}
         onDelete={editing?.id ? () => { const id = editing.id!; closeSheet(); setDeleteId(id) } : undefined}

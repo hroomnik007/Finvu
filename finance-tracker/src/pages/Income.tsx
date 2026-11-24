@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Repeat, Edit2, Trash2, Calendar, Plus, CalendarDays, PiggyBank, ArrowUp } from 'lucide-react'
+import { Repeat, Edit2, Trash2, Calendar, Plus, PiggyBank, ArrowUp } from 'lucide-react'
 import { EmptyStateAction } from '../components/EmptyStateAction'
 
 import { useSaveFeedback } from '../hooks/useSaveFeedback'
@@ -245,9 +245,9 @@ export function IncomePage({ month, year, scope = 'personal' }: IncomePageProps)
                 <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}>{t.income.oneTimeLabel}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-hi)' }}>{formatAmount(oneTimeTotal)}</div>
               </div>
-              {/* The year's income as a third tile (it was a full-width card for one number) */}
+              {/* The year's income as a third tile; a short label ("Rok 2026") so it fits a phone tile */}
               <div title={`${t.income.yearlyIncomeDesc} ${year}`} style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '8px 12px', flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4 }}><CalendarDays size={12} aria-hidden /> {t.income.yearlyIncomeTitle} {year}</div>
+                <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4, whiteSpace: 'nowrap' }}>{t.income.yearlyIncomeTitle.replace('{year}', String(year))}</div>
                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--aurora-emerald)' }}>{formatAmount(yearlyIncome)}</div>
               </div>
             </div>
@@ -369,7 +369,6 @@ export function IncomePage({ month, year, scope = 'personal' }: IncomePageProps)
         icon={ArrowUp} iconColor="#34D399" iconBg="rgba(52,211,153,.16)"
         title={editing ? t.income.editTitle : t.income.addTitle}
         submitLabel={editing ? t.common.saveChanges : t.fab.saveIncome}
-        accent="#34D399" accent2="#22D3EE"
         onSubmit={handleSave}
         autoFocusAmount={!editing}
         onDelete={editing?.id ? () => { const inc = editing; setSheetOpen(false); requestDelete(inc) } : undefined}

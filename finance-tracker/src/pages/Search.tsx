@@ -123,7 +123,9 @@ export function SearchPage({ scope }: { scope: 'personal' | 'family' }) {
         <GlassCard radius={18} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <input
             type="search"
-            autoFocus
+            // Focus straight away only with a mouse: on a phone it would pop up
+            // the keyboard before the user taps the field
+            autoFocus={typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches}
             value={text}
             onChange={e => setText(e.target.value)}
             placeholder={t.search.text}

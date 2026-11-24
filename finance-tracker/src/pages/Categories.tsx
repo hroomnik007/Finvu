@@ -643,24 +643,19 @@ export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 6 }}>
               {t.expenses.categories.title} · {t.expenses.activeCount.replace('{n}', String(heroCatCount))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' as const, gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                <span style={{
-                  fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
-                  background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-violet))',
-                  WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-                }}>
-                  {formatAmountParts(animatedHeroSpent).main}
-                </span>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
-                  {formatAmountParts(animatedHeroSpent).rest}
-                </span>
-              </div>
-              {heroTotalLimit > 0 && (
-                <span style={{ marginLeft: 'auto', fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 99, background: `${heroBarColor}22`, color: heroBarColor, border: `1px solid ${heroBarColor}55` }}>
-                  {t.expenses.categories.pctOfLimit.replace('{pct}', String(heroOverallPct)).replace('{limit}', formatAmount(heroTotalLimit))}
-                </span>
-              )}
+            {/* The bar below already shows how much of the limit is used; the
+                "38 % z 3 778,86 €" chip beside the amount repeated the tiles */}
+            <div style={{ display: 'flex', alignItems: 'baseline' }}>
+              <span style={{
+                fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 'clamp(34px, 9vw, 44px)', lineHeight: 1,
+                background: 'linear-gradient(120deg, var(--aurora-hi), var(--aurora-violet))',
+                WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+              }}>
+                {formatAmountParts(animatedHeroSpent).main}
+              </span>
+              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: 'var(--aurora-hi)' }}>
+                {formatAmountParts(animatedHeroSpent).rest}
+              </span>
             </div>
             {/* Says what the big number is: spent this month in categories that have a limit */}
             <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-lo)', marginTop: 6 }}>
@@ -837,9 +832,8 @@ export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (
       <CompactModal
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
-        icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
+        icon={Tag} iconColor="var(--aurora-violet)" iconBg="color-mix(in srgb, var(--aurora-violet) 16%, transparent)"
         title={t.expenses.categories.bulkEditTitle.replace('{n}', String(selectedIds.size))}
-        accent="#8B5CF6" accent2="#EC4899"
         onSubmit={requestApplyBulk}
         submitDisabled={!bulkLimit && !bulkColor && bulkShared === 'keep'}
         submitting={bulkBusy}
@@ -905,10 +899,9 @@ export function CategoriesPage({ showToast, scope = 'personal' }: { showToast: (
       <CompactModal
         open={sheetOpen}
         onClose={closeSheet}
-        icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
+        icon={Tag} iconColor="var(--aurora-violet)" iconBg="color-mix(in srgb, var(--aurora-violet) 16%, transparent)"
         title={editing ? t.expenses.categories.editTitle : t.expenses.categories.newTitle}
         submitLabel={editing ? t.common.saveChanges : t.fab.saveCategory}
-        accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         onDelete={editing?.id ? () => { const id = editing.id!; closeSheet(); setDeleteId(id) } : undefined}
         submitDisabled={!name.trim()}

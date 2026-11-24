@@ -490,11 +490,10 @@ export function SavingsPage({ openAddTrigger }: { openAddTrigger?: number }) {
         open={view === 'edit'}
         onClose={closeEdit}
         icon={PiggyBank}
-        iconColor="#8B5CF6"
-        iconBg="rgba(139,92,246,.16)"
+        iconColor="var(--aurora-violet)"
+        iconBg="color-mix(in srgb, var(--aurora-violet) 16%, transparent)"
         title={selectedGoal ? t.savings.editTitle : t.savings.addTitle}
         submitLabel={selectedGoal ? t.common.saveChanges : t.fab.saveSavings}
-        accent="#8B5CF6" accent2="#EC4899"
         onSubmit={handleSave}
         submitDisabled={saveDisabled}
         submitting={saving}

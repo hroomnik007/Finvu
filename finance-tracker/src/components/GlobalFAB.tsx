@@ -320,8 +320,8 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
     { type: 'income', label: t.fab.incomeLabel, icon: ArrowUp, color: '#34D399', bg: 'rgba(52,211,153,.16)' },
     { type: 'variable', label: t.fab.expenseLabel, icon: ArrowDown, color: '#FB7185', bg: 'rgba(251,113,133,.16)' },
     { type: 'fixed', label: t.fab.fixedLabel, icon: Repeat, color: '#FBBF24', bg: 'rgba(251,191,36,.16)' },
-    { type: 'category', label: t.fab.categoryLabel, icon: Tag, color: '#8B5CF6', bg: 'rgba(139,92,246,.16)' },
-    ...(savingsEnabled ? [{ type: 'savings' as ModalType, label: t.fab.savingsLabel, icon: PiggyBank, color: '#A855F7', bg: 'rgba(168,85,247,.16)' }] : []),
+    { type: 'category', label: t.fab.categoryLabel, icon: Tag, color: 'var(--aurora-violet)', bg: 'color-mix(in srgb, var(--aurora-violet) 16%, transparent)' },
+    ...(savingsEnabled ? [{ type: 'savings' as ModalType, label: t.fab.savingsLabel, icon: PiggyBank, color: 'var(--aurora-violet)', bg: 'color-mix(in srgb, var(--aurora-violet) 16%, transparent)' }] : []),
   ]
 
   return (
@@ -402,7 +402,6 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         icon={ArrowUp} iconColor="#34D399" iconBg="rgba(52,211,153,.16)"
         title={t.income.addTitle}
         submitLabel={t.fab.saveIncome}
-        accent="#34D399" accent2="#22D3EE"
         onSubmit={saveIncome}
         submitDisabled={!incLabel.trim() || !incAmt}
         submitHint={!incAmt ? t.common.needAmount : t.common.needName}
@@ -439,7 +438,6 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         icon={ArrowDown} iconColor="#FB7185" iconBg="rgba(251,113,133,.16)"
         title={t.expenses.variable.addTitle}
         submitLabel={t.fab.saveExpense}
-        accent="#FB7185" accent2="#f43f5e"
         onSubmit={saveVariable}
         submitDisabled={varNewCatMode ? !varNewCatName.trim() || !varAmt : !varCatId || !varAmt}
         submitHint={!varAmt ? t.common.needAmount : varNewCatMode ? t.common.needName : t.common.needCategory}
@@ -493,7 +491,6 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
         icon={Repeat} iconColor="#FBBF24" iconBg="rgba(251,191,36,.16)"
         title={t.expenses.fixed.newTitle}
         submitLabel={t.fab.saveFixed}
-        accent="#FBBF24" accent2="#f59e0b"
         onSubmit={saveFixed}
         submitDisabled={!fixLabel.trim() || !fixAmt}
         submitHint={!fixAmt ? t.common.needAmount : t.common.needName}
@@ -571,10 +568,9 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       {/* ── ADD CATEGORY modal ────────────────────────────────────────────── */}
       <CompactModal
         open={activeModal === 'category'} onClose={closeModal}
-        icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
+        icon={Tag} iconColor="var(--aurora-violet)" iconBg="color-mix(in srgb, var(--aurora-violet) 16%, transparent)"
         title={t.expenses.categories.newTitle}
         submitLabel={t.fab.saveCategory}
-        accent="#8B5CF6" accent2="#EC4899"
         onSubmit={saveCategory}
         submitDisabled={!catName.trim()}
         submitHint={t.common.needName}
@@ -639,10 +635,9 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
       {/* ── ADD SAVINGS GOAL modal ────────────────────────────────────────── */}
       <CompactModal
         open={activeModal === 'savings'} onClose={closeModal}
-        icon={PiggyBank} iconColor="#A855F7" iconBg="rgba(168,85,247,.16)"
+        icon={PiggyBank} iconColor="var(--aurora-violet)" iconBg="color-mix(in srgb, var(--aurora-violet) 16%, transparent)"
         title={t.savings.addTitle}
         submitLabel={t.fab.saveSavings}
-        accent="#A855F7" accent2="#8B5CF6"
         onSubmit={saveSavingsGoal}
         submitDisabled={!savName.trim() || !savTarget}
         autoFocusAmount
@@ -679,7 +674,7 @@ export function GlobalFAB({ month, year, showToast, currentPage, openTrigger, la
           })}
         </div>
 
-        <AmountField value={savTarget} onChange={setSavTarget} accent="#A855F7" />
+        <AmountField value={savTarget} onChange={setSavTarget} accent="var(--aurora-violet)" />
 
         <DateInput compact value={savDeadline} onChange={setSavDeadline} />
       </CompactModal>

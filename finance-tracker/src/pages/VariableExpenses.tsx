@@ -85,7 +85,6 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
     useVariableExpenses(month, year, scope)
   const listFailed = listError && variableExpenses.length === 0
   const { fixedExpenses } = useFixedExpenses(month, year, scope)
-  const { variableExpenses: prevVariable } = useVariableExpenses(month === 1 ? 12 : month - 1, month === 1 ? year - 1 : year, scope)
   const { categories, addCategory } = useCategories()
   const budgetStatuses = useBudgetStatus({ categories, variableExpenses, fixedExpenses, month, year, family: scope === 'family' })
   const { isMine, ownerOf } = useRowOwner(scope)
@@ -254,16 +253,6 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
     ).reduce((sum, e) => sum + e.amount, 0)
   , [variableExpenses, activeCategory, inCategory])
   const animatedFilteredTotal = useCountUp(filteredTotal, 800)
-  // Days the total covers (up to today in the running month) and the month before, same filter
-  const daysCounted = (() => {
-    const n = new Date()
-    if (year > n.getFullYear() || (year === n.getFullYear() && month > n.getMonth() + 1)) return 0
-    return year === n.getFullYear() && month === n.getMonth() + 1 ? n.getDate() : new Date(year, month, 0).getDate()
-  })()
-  const prevMonthName = (getLocalizedMonthNames(locale)[(month + 10) % 12] ?? '').toLocaleLowerCase(locale)
-  const prevVariableTotal = useMemo(() =>
-    (activeCategory ? prevVariable.filter(e => inCategory(e, activeCategory)) : prevVariable).reduce((sum, e) => sum + e.amount, 0),
-  [prevVariable, activeCategory, inCategory])
 
   const categoriesWithExpenses = useMemo(
     () => categories.filter(c => c.id && variableExpenses.some(e => inCategory(e, c.id!))),
@@ -322,19 +311,13 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
               </span>
             </div>
             )}
-            {/* Three tiles like the Dashboard hero (was one small grey line) */}
+            {/* Number of entries: one tile sized to its content */}
             {!listLoading && !listFailed && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                {([
-                  [t.expenses.statTransactions, String(filteredSorted.length)],
-                  [t.expenses.statDailyAvg, daysCounted > 0 ? formatAmount(filteredTotal / daysCounted) : '—'],
-                  [prevMonthName.charAt(0).toLocaleUpperCase(locale) + prevMonthName.slice(1), prevVariableTotal > 0 ? formatAmount(prevVariableTotal) : '—'],
-                ] as const).map(([label, value]) => (
-                  <div key={label} style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', fontVariantNumeric: 'tabular-nums', wordBreak: 'break-word' }}>{value}</div>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', marginTop: 14 }}>
+                <div style={{ background: 'var(--aurora-glass)', border: '1px solid var(--aurora-gline)', borderRadius: 16, padding: '10px 14px' }}>
+                  <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, color: 'var(--aurora-hi)', fontWeight: 600, marginBottom: 4, whiteSpace: 'nowrap' }}>{t.expenses.statTransactions}</div>
+                  <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--aurora-hi)', fontVariantNumeric: 'tabular-nums' }}>{filteredSorted.length}</div>
+                </div>
               </div>
             )}
           </HeroCard>
@@ -499,7 +482,6 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
         icon={ArrowDown} iconColor="#FB7185" iconBg="rgba(251,113,133,.16)"
         title={editing ? t.expenses.variable.editTitle : t.expenses.variable.addTitle}
         submitLabel={editing ? t.common.saveChanges : t.fab.saveExpense}
-        accent="#FB7185" accent2="#f43f5e"
         onSubmit={handleSave}
         autoFocusAmount={!editing}
         onDelete={editing?.id ? () => { const id = editing.id!; setSheetOpen(false); removeWithUndo(id) } : undefined}
@@ -574,9 +556,8 @@ export function VariableExpensesPage({ month, year, showToast, scope = 'personal
       <CompactModal
         open={bulkCatOpen}
         onClose={() => setBulkCatOpen(false)}
-        icon={Tag} iconColor="#8B5CF6" iconBg="rgba(139,92,246,.16)"
+        icon={Tag} iconColor="var(--aurora-violet)" iconBg="color-mix(in srgb, var(--aurora-violet) 16%, transparent)"
         title={t.expenses.variable.bulkCategoryTitle.replace('{n}', String(selectedIds.size))}
-        accent="#8B5CF6" accent2="#EC4899"
         onSubmit={() => setBulkCatOpen(false)}
         submitDisabled
       >
